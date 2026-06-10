@@ -194,12 +194,12 @@ def _export_md(dir_path: Path, label: str, rows, year_month: str):
     md_path = dir_path / "catalog.md"
 
     lines = [f"# {label} — {year_month}\n", f"Total: {len(rows)}\n", ""]
-    for i, r in enumerate(rows, 1):
+    for r in rows:
         authors = json.loads(r["authors"])
         author_str = ", ".join(authors[:3])
         if len(authors) > 3:
             author_str += f" +{len(authors)-3}"
-        lines.append(f"## {i}. {r['title']}\n")
+        lines.append(f"## {r['title']}\n")
         lines.append(f"- **ID**: {r['id']}")
         lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
         lines.append(f"- **Authors**: {author_str}")
