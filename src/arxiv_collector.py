@@ -7,6 +7,7 @@ arXiv API를 사용하여 LDPC 관련 논문의 메타데이터를 수집하고,
 import csv
 import json
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -172,16 +173,27 @@ def export_catalog():
         source_rows = [r for r in rows if r["source"] == source]
         if not source_rows:
             continue
-        _export_md(source, label, source_rows)
-        _export_csv(source, source_rows)
+
+        by_month = {}
+        for r in source_rows:
+            ym = _extract_year_month(r["published"])
+            by_month.setdefault(ym, []).append(r)
+
+        for ym, month_rows in sorted(by_month.items(), reverse=True):
+            if ym == "unknown":
+                dir_path = PROJECT_ROOT / "papers" / source / "unknown"
+            else:
+                year, month = ym.split("-")
+                dir_path = PROJECT_ROOT / "papers" / source / year / month
+            _export_md(dir_path, label, month_rows, ym)
+            _export_csv(dir_path, month_rows)
 
 
-def _export_md(source: str, label: str, rows):
-    dir_path = PROJECT_ROOT / "papers" / source
+def _export_md(dir_path: Path, label: str, rows, year_month: str):
     dir_path.mkdir(parents=True, exist_ok=True)
     md_path = dir_path / "catalog.md"
 
-    lines = [f"# {label} — Collected Papers\n", f"Total: {len(rows)}\n", ""]
+    lines = [f"# {label} — {year_month}\n", f"Total: {len(rows)}\n", ""]
     for i, r in enumerate(rows, 1):
         authors = json.loads(r["authors"])
         author_str = ", ".join(authors[:3])
@@ -198,11 +210,10 @@ def _export_md(source: str, label: str, rows):
 
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    logger.info("%s/catalog.md 갱신 완료 (%d건)", source, len(rows))
+    logger.info("%s/catalog.md 갱신 (%d건)", dir_path.relative_to(PROJECT_ROOT), len(rows))
 
 
-def _export_csv(source: str, rows):
-    dir_path = PROJECT_ROOT / "papers" / source
+def _export_csv(dir_path: Path, rows):
     dir_path.mkdir(parents=True, exist_ok=True)
     csv_path = dir_path / "catalog.csv"
 
@@ -220,7 +231,91 @@ def _export_csv(source: str, rows):
                 r["doi"] or "",
                 r["pdf_url"], r["status"],
             ])
-    logger.info("%s/catalog.csv 갱신 완료 (%d건)", source, len(rows))
+    logger.info("%s/catalog.csv 갱신 (%d건)", dir_path.relative_to(PROJECT_ROOT), len(rows))
+
+
+_MONTH_MAP = {
+    "jan": "01", "january": "01", "feb": "02", "february": "02",
+    "mar": "03", "march": "03", "apr": "04", "april": "04",
+    "may": "05", "jun": "06", "june": "06", "jul": "07", "july": "07",
+    "aug": "08", "august": "08", "sep": "09", "sept": "09", "september": "09",
+    "oct": "10", "october": "10", "nov": "11", "november": "11",
+    "dec": "12", "december": "12",
+}
+
+
+def _extract_year_month(published: str | None) -> str:
+    """다양한 날짜 형식에서 'YYYY-MM'을 추출. 실패 시 'unknown'."""
+    if not published:
+        return "unknown"
+    # ISO format: "2026-06-05T..." → "2026-06"
+    if re.match(r"\d{4}-\d{2}", published):
+        return published[:7]
+    # IEEE format: "April 2024", "2-4 Dec. 2015", "21-23 July 2016"
+    year_match = re.search(r"(\d{4})", published)
+    if not year_match:
+        return "unknown"
+    year = year_match.group(1)
+    for token in published.lower().replace(".", "").split():
+        if token in _MONTH_MAP:
+            return f"{year}-{_MONTH_MAP[token]}"
+    return f"{year}-01"
+
+
+def _normalize_title(title: str) -> str:
+    t = title.lower().strip()
+    t = re.sub(r"[^a-z0-9\s]", "", t)
+    t = re.sub(r"\s+", " ", t)
+    return t
+
+
+def dedup_cross_source():
+    """arXiv/IEEE 교차 중복 제거. 동일 논문이 양쪽에 있고 IEEE가 더 늦으면 arXiv 삭제."""
+    conn = get_conn()
+    arxiv_rows = conn.execute(
+        "SELECT id, title, doi, published FROM papers WHERE source='arxiv'"
+    ).fetchall()
+    ieee_rows = conn.execute(
+        "SELECT id, title, doi, published FROM papers WHERE source='ieee'"
+    ).fetchall()
+
+    ieee_by_doi = {}
+    ieee_by_title = {}
+    for r in ieee_rows:
+        if r["doi"]:
+            ieee_by_doi[r["doi"]] = r
+        ieee_by_title[_normalize_title(r["title"])] = r
+
+    removed = []
+    for ar in arxiv_rows:
+        match = None
+        if ar["doi"] and ar["doi"] in ieee_by_doi:
+            match = ieee_by_doi[ar["doi"]]
+        else:
+            norm = _normalize_title(ar["title"])
+            if norm in ieee_by_title:
+                match = ieee_by_title[norm]
+
+        if match is None:
+            continue
+
+        ieee_date = match["published"] or ""
+        arxiv_date = ar["published"] or ""
+        if ieee_date >= arxiv_date:
+            conn.execute("DELETE FROM papers WHERE id = ?", (ar["id"],))
+            removed.append((ar["id"], ar["title"][:60], match["id"]))
+            logger.info("중복 제거: %s → %s 유지 (%s)", ar["id"], match["id"], ar["title"][:40])
+
+    conn.commit()
+    conn.close()
+
+    if removed:
+        logger.info("교차 중복 제거 완료: %d건 arXiv 삭제", len(removed))
+        export_catalog()
+    else:
+        logger.info("교차 중복 없음")
+
+    return removed
 
 
 def get_stats(conn=None) -> dict:
