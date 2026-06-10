@@ -203,7 +203,6 @@ def _export_md(dir_path: Path, label: str, rows, year_month: str):
         lines.append(f"- **ID**: {r['id']}")
         lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
         lines.append(f"- **Authors**: {author_str}")
-        lines.append(f"- **Status**: {r['status']}")
         lines.append(f"- **PDF**: {r['pdf_url']}")
         lines.append(f"- **Abstract**: {r['abstract'] or 'N/A'}")
         lines.append("")
