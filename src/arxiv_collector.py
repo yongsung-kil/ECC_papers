@@ -4,6 +4,7 @@ arXiv API를 사용하여 LDPC 관련 논문의 메타데이터를 수집하고,
 선택적으로 PDF를 다운로드합니다.
 """
 
+import csv
 import json
 import logging
 import time
@@ -129,6 +130,10 @@ def collect_papers(
 
     conn.close()
     logger.info("수집 완료: 신규 %d건, 중복 %d건", new_count, dup_count)
+
+    if new_count > 0:
+        export_catalog()
+
     return collected
 
 
@@ -152,6 +157,67 @@ def _download_pdf(paper_id: str, pdf_url: str) -> Path | None:
     except Exception as e:
         logger.warning("PDF 다운로드 실패 (%s): %s", paper_id, e)
         return None
+
+
+def export_catalog():
+    CATALOG_PATH = PROJECT_ROOT / "papers" / "catalog.md"
+    CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, title, authors, abstract, published, pdf_url, status "
+        "FROM papers ORDER BY published DESC"
+    ).fetchall()
+    conn.close()
+
+    arxiv_rows = [r for r in rows if r["source"] == "arxiv"]
+    ieee_rows = [r for r in rows if r["source"] == "ieee"]
+
+    lines = [f"# Collected Papers\n",
+             f"Total: {len(rows)} (arXiv: {len(arxiv_rows)}, IEEE: {len(ieee_rows)})\n", ""]
+
+    for source_label, source_rows in [("arXiv", arxiv_rows), ("IEEE Xplore", ieee_rows)]:
+        if not source_rows:
+            continue
+        lines.append(f"---\n\n# {source_label} ({len(source_rows)})\n")
+        for i, r in enumerate(source_rows, 1):
+            authors = json.loads(r["authors"])
+            author_str = ", ".join(authors[:3])
+            if len(authors) > 3:
+                author_str += f" +{len(authors)-3}"
+            lines.append(f"## {i}. {r['title']}\n")
+            lines.append(f"- **ID**: {r['id']}")
+            lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
+            lines.append(f"- **Authors**: {author_str}")
+            lines.append(f"- **Status**: {r['status']}")
+            lines.append(f"- **PDF**: {r['pdf_url']}")
+            lines.append(f"- **Abstract**: {r['abstract'] or 'N/A'}")
+            lines.append("")
+
+    with open(CATALOG_PATH, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    logger.info("catalog.md 갱신 완료 (%d건)", len(rows))
+
+    _export_csv(rows)
+
+
+def _export_csv(rows):
+    CSV_PATH = PROJECT_ROOT / "papers" / "catalog.csv"
+    with open(CSV_PATH, "w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["ID", "Source", "Title", "Authors", "Abstract",
+                         "Categories", "Published", "DOI", "PDF URL", "Status"])
+        for r in rows:
+            writer.writerow([
+                r["id"], r["source"], r["title"],
+                ", ".join(json.loads(r["authors"])),
+                r["abstract"],
+                ", ".join(json.loads(r["categories"])),
+                r["published"][:10] if r["published"] else "",
+                r["doi"] or "",
+                r["pdf_url"], r["status"],
+            ])
+    logger.info("catalog.csv 갱신 완료 (%d건)", len(rows))
 
 
 def get_stats(conn=None) -> dict:
