@@ -160,56 +160,59 @@ def _download_pdf(paper_id: str, pdf_url: str) -> Path | None:
 
 
 def export_catalog():
-    CATALOG_PATH = PROJECT_ROOT / "papers" / "catalog.md"
-    CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-
     conn = get_conn()
     rows = conn.execute(
-        "SELECT id, title, authors, abstract, published, pdf_url, status "
+        "SELECT id, source, title, authors, abstract, categories, "
+        "published, doi, pdf_url, status "
         "FROM papers ORDER BY published DESC"
     ).fetchall()
     conn.close()
 
-    arxiv_rows = [r for r in rows if r["source"] == "arxiv"]
-    ieee_rows = [r for r in rows if r["source"] == "ieee"]
-
-    lines = [f"# Collected Papers\n",
-             f"Total: {len(rows)} (arXiv: {len(arxiv_rows)}, IEEE: {len(ieee_rows)})\n", ""]
-
-    for source_label, source_rows in [("arXiv", arxiv_rows), ("IEEE Xplore", ieee_rows)]:
+    for source, label in [("arxiv", "arXiv"), ("ieee", "IEEE Xplore")]:
+        source_rows = [r for r in rows if r["source"] == source]
         if not source_rows:
             continue
-        lines.append(f"---\n\n# {source_label} ({len(source_rows)})\n")
-        for i, r in enumerate(source_rows, 1):
-            authors = json.loads(r["authors"])
-            author_str = ", ".join(authors[:3])
-            if len(authors) > 3:
-                author_str += f" +{len(authors)-3}"
-            lines.append(f"## {i}. {r['title']}\n")
-            lines.append(f"- **ID**: {r['id']}")
-            lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
-            lines.append(f"- **Authors**: {author_str}")
-            lines.append(f"- **Status**: {r['status']}")
-            lines.append(f"- **PDF**: {r['pdf_url']}")
-            lines.append(f"- **Abstract**: {r['abstract'] or 'N/A'}")
-            lines.append("")
+        _export_md(source, label, source_rows)
+        _export_csv(source, source_rows)
 
-    with open(CATALOG_PATH, "w", encoding="utf-8") as f:
+
+def _export_md(source: str, label: str, rows):
+    dir_path = PROJECT_ROOT / "papers" / source
+    dir_path.mkdir(parents=True, exist_ok=True)
+    md_path = dir_path / "catalog.md"
+
+    lines = [f"# {label} — Collected Papers\n", f"Total: {len(rows)}\n", ""]
+    for i, r in enumerate(rows, 1):
+        authors = json.loads(r["authors"])
+        author_str = ", ".join(authors[:3])
+        if len(authors) > 3:
+            author_str += f" +{len(authors)-3}"
+        lines.append(f"## {i}. {r['title']}\n")
+        lines.append(f"- **ID**: {r['id']}")
+        lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
+        lines.append(f"- **Authors**: {author_str}")
+        lines.append(f"- **Status**: {r['status']}")
+        lines.append(f"- **PDF**: {r['pdf_url']}")
+        lines.append(f"- **Abstract**: {r['abstract'] or 'N/A'}")
+        lines.append("")
+
+    with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    logger.info("catalog.md 갱신 완료 (%d건)", len(rows))
-
-    _export_csv(rows)
+    logger.info("%s/catalog.md 갱신 완료 (%d건)", source, len(rows))
 
 
-def _export_csv(rows):
-    CSV_PATH = PROJECT_ROOT / "papers" / "catalog.csv"
-    with open(CSV_PATH, "w", encoding="utf-8-sig", newline="") as f:
+def _export_csv(source: str, rows):
+    dir_path = PROJECT_ROOT / "papers" / source
+    dir_path.mkdir(parents=True, exist_ok=True)
+    csv_path = dir_path / "catalog.csv"
+
+    with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["ID", "Source", "Title", "Authors", "Abstract",
+        writer.writerow(["ID", "Title", "Authors", "Abstract",
                          "Categories", "Published", "DOI", "PDF URL", "Status"])
         for r in rows:
             writer.writerow([
-                r["id"], r["source"], r["title"],
+                r["id"], r["title"],
                 ", ".join(json.loads(r["authors"])),
                 r["abstract"],
                 ", ".join(json.loads(r["categories"])),
@@ -217,7 +220,7 @@ def _export_csv(rows):
                 r["doi"] or "",
                 r["pdf_url"], r["status"],
             ])
-    logger.info("catalog.csv 갱신 완료 (%d건)", len(rows))
+    logger.info("%s/catalog.csv 갱신 완료 (%d건)", source, len(rows))
 
 
 def get_stats(conn=None) -> dict:
