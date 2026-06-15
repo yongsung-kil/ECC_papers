@@ -16,7 +16,9 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
-from src.db import get_conn, init_db
+from src.db import (
+    get_conn, init_db, insert_paper, get_cursor, set_cursor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +144,78 @@ def parse_search_results(data: dict) -> list[dict]:
         papers.append(paper)
 
     return papers
+
+
+def collect_batch(
+    query: str,
+    batch_size: int = 100,
+    fetch_abstract: bool = True,
+    delay: float = 3.0,
+) -> dict:
+    """커서 기반 1배치 수집(이어받기).
+
+    IEEE REST는 `startRecord`(1부터 시작) 페이지네이션과 `totalRecords`를 제공한다.
+    저장된 커서(next_offset, 0-기반)를 startRecord로 변환해 이어받고, 받은 만큼
+    커서를 전진시킨다. 중복(이미 있는 ID)은 INSERT OR IGNORE로 제외한다.
+
+    반환: {"new", "dup", "fetched", "offset", "exhausted", "total"}
+    """
+    conn = get_conn()
+    init_db(conn)
+
+    cursor = get_cursor(conn, "ieee", query)
+    offset = cursor["next_offset"]
+    start_record = offset + 1  # IEEE는 1-기반
+
+    logger.info("IEEE 배치 수집: '%s' offset=%d, size=%d", query, offset, batch_size)
+
+    data = search_ieee(query, max_results=batch_size, start_record=start_record)
+    if not data:
+        conn.close()
+        logger.warning("IEEE 검색 결과 없음(또는 차단): '%s'", query)
+        return {"new": 0, "dup": 0, "fetched": 0, "offset": offset,
+                "exhausted": False, "total": cursor["total"]}
+
+    total = data.get("totalRecords", 0)
+    papers = parse_search_results(data)
+    fetched = len(papers)
+
+    new_count = dup_count = 0
+    for paper in papers:
+        article_number = paper.pop("article_number")
+        # 신규일 때만 abstract 크롤링(중복은 건너뛰어 트래픽 절약)
+        exists = conn.execute(
+            "SELECT 1 FROM papers WHERE id = ?", (paper["id"],)
+        ).fetchone()
+        if exists:
+            dup_count += 1
+            continue
+        if fetch_abstract and paper["abstract"] is None:
+            paper["abstract"] = scrape_abstract(article_number)
+            time.sleep(delay)
+        if insert_paper(conn, paper):
+            new_count += 1
+            logger.info("[+%d] %s — %s", new_count, paper["id"], paper["title"][:60])
+        else:
+            dup_count += 1
+    conn.commit()
+
+    new_offset = offset + fetched
+    # 끝 도달: 받은 게 batch_size 미만이거나, 다음 위치가 전체 건수 이상.
+    exhausted = fetched < batch_size or (total and new_offset >= total)
+    set_cursor(conn, "ieee", query, new_offset, total or None, exhausted)
+    conn.close()
+
+    logger.info("IEEE 배치 완료: 신규 %d, 중복 %d, 받음 %d/%d, 다음 offset %d%s",
+                new_count, dup_count, fetched, total, new_offset,
+                " (끝 도달)" if exhausted else "")
+
+    if new_count > 0:
+        from src.arxiv_collector import export_catalog
+        export_catalog()
+
+    return {"new": new_count, "dup": dup_count, "fetched": fetched,
+            "offset": new_offset, "exhausted": bool(exhausted), "total": total}
 
 
 def collect_papers(

@@ -15,7 +15,9 @@ from pathlib import Path
 import arxiv
 import requests
 
-from src.db import get_conn, init_db
+from src.db import (
+    get_conn, init_db, insert_paper, get_cursor, set_cursor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,94 @@ def build_query(query_terms: list[str] | None = None,
     term_part = " OR ".join(f'all:"{t}"' for t in terms)
     cat_part = " OR ".join(f"cat:{c}" for c in cats)
     return f"({term_part}) AND ({cat_part})"
+
+
+def _result_to_paper(result) -> dict:
+    """arxiv.Result → papers 테이블 행(dict)."""
+    arxiv_id = result.entry_id.split("/abs/")[-1]
+    return {
+        "id": f"arxiv:{arxiv_id}",
+        "source": "arxiv",
+        "title": result.title.replace("\n", " ").strip(),
+        "authors": json.dumps([a.name for a in result.authors]),
+        "abstract": result.summary.replace("\n", " ").strip(),
+        "categories": json.dumps(result.categories),
+        "published": result.published.isoformat() if result.published else None,
+        "updated": result.updated.isoformat() if result.updated else None,
+        "doi": result.doi,
+        "pdf_url": result.pdf_url,
+        "pdf_path": None,
+        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "status": "new",
+    }
+
+
+def collect_batch(
+    query: str | None = None,
+    batch_size: int = 100,
+    download_pdf: bool = False,
+) -> dict:
+    """커서 기반 1배치 수집(이어받기).
+
+    제출일 **오름차순**(오래된 것부터)으로 정렬해 offset 커서가 안정적으로
+    전진하도록 한다. 새 논문은 항상 결과 맨 뒤에 추가되므로 순서가 꼬이지 않는다.
+    중복(이미 있는 ID)은 INSERT OR IGNORE로 제외한다.
+
+    반환: {"new": 신규, "dup": 중복, "fetched": 이번에 받은 원시 건수,
+           "offset": 갱신된 offset, "exhausted": 끝 도달 여부}
+    """
+    if query is None:
+        query = build_query()
+
+    conn = get_conn()
+    init_db(conn)
+
+    cursor = get_cursor(conn, "arxiv", query)
+    offset = cursor["next_offset"]
+
+    logger.info("arXiv 배치 수집: offset=%d, size=%d, exhausted=%s",
+                offset, batch_size, cursor["exhausted"])
+
+    # arxiv 라이브러리에서 Search.max_results는 '전체 상한'이다. offset 이후
+    # batch_size건을 받으려면 상한을 offset+batch_size로 잡아야 한다.
+    client = arxiv.Client(page_size=min(batch_size, 100), delay_seconds=3.0, num_retries=3)
+    search = arxiv.Search(
+        query=query,
+        max_results=offset + batch_size,
+        sort_by=arxiv.SortCriterion.SubmittedDate,
+        sort_order=arxiv.SortOrder.Ascending,
+    )
+
+    new_count = dup_count = fetched = 0
+    for result in client.results(search, offset=offset):
+        fetched += 1
+        paper = _result_to_paper(result)
+        if download_pdf:
+            pdf_path = _download_pdf(paper["id"], paper["pdf_url"])
+            if pdf_path:
+                paper["pdf_path"] = str(pdf_path.relative_to(PROJECT_ROOT))
+        if insert_paper(conn, paper):
+            new_count += 1
+            logger.info("[+%d] %s — %s", new_count, paper["id"], paper["title"][:60])
+        else:
+            dup_count += 1
+    conn.commit()
+
+    # batch_size 미만을 받으면 웹 결과 끝에 도달한 것.
+    exhausted = fetched < batch_size
+    new_offset = offset + fetched
+    set_cursor(conn, "arxiv", query, new_offset, None, exhausted)
+    conn.close()
+
+    logger.info("arXiv 배치 완료: 신규 %d, 중복 %d, 받음 %d, 다음 offset %d%s",
+                new_count, dup_count, fetched, new_offset,
+                " (끝 도달)" if exhausted else "")
+
+    if new_count > 0:
+        export_catalog()
+
+    return {"new": new_count, "dup": dup_count, "fetched": fetched,
+            "offset": new_offset, "exhausted": exhausted}
 
 
 def collect_papers(

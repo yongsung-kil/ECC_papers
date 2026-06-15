@@ -1,0 +1,26 @@
+# arXiv — 2026-06
+
+
+## Affine Filtering Measurements and Their Applications to Quantum Decoding
+
+- **ID**: arxiv:2606.07852v1
+- **Published**: 2026-06-05
+- **Authors**: Avijit Mandal, Noah Shutty, Henry D. Pfister +1
+- **PDF**: https://arxiv.org/pdf/2606.07852v1
+- **Abstract**: Unambiguous state discrimination (USD) measurements are attractive because outcomes are either marked as conclusive (i.e., error free) or inconclusive (i.e., erased). We study affine filtering measurements, a structured variant of USD for decoding classical linear codes over pure-state classical-quantum channels, where a conclusive outcome identifies an affine subspace containing the transmitted codeword and an inconclusive outcome is treated as an erasure. For a group-covariant indexing of pure-state codewords, we show that the optimal design of affine filtering measurements is a semidefinite program that can be reduced to a linear program via character-based diagonalization. We use the resulting measurement to build a quantum decoding framework for local codes, and we demonstrate (via simulations on regular LDPC codes from Gallager ensembles using single parity check local constraints) that affine filtering based decoding can outperform symbol-wise USD and symbol-wise pretty good measurement based decoding methods on i.i.d. pure-state channels. In an independent and concurrent work, Buzet and Chailloux study similar fine-grained USD measurements for symmetric families of states. Their focus is on the code-agnostic setting whereas our focus is on code-aware constructions and decoding.
+
+## Breakeven demonstration of quantum low-density parity-check codes
+
+- **ID**: arxiv:2606.06455v1
+- **Published**: 2026-06-04
+- **Authors**: Edwin Tham, Michael L. Goldman, Shantanu Debnath +8
+- **PDF**: https://arxiv.org/pdf/2606.06455v1
+- **Abstract**: High-rate quantum low-density parity-check (qLDPC) codes are a leading candidate for fault-tolerant quantum computing. They feature higher encoding rates than planar alternatives such as the surface code, but their implementation often entails significant hardware hurdles like the need for long-range couplers. We leverage the flexibility of a trapped-ion quantum computer to demonstrate nine quantum error-correcting codes with starkly different qubit connectivity requirements on a single device without any hardware reconfiguration. These experiments span three families of quantum error-correcting codes: qLDPC codes, topological codes, and concatenated codes. With a qLDPC code encoding 4 logical qubits into 18 physical qubits, we achieve a logical error rate up to $9\times$ better than a previous demonstration of a similar code on superconducting solid-state qubits. Moreover, our implementation exhibits breakeven performance, with some instances achieving qubit lifetimes comparable to or slightly exceeding that of our trapped-ion qubits. We use a novel implementation of the optical-metastable-ground (OMG) architecture for addressable mid-circuit measurement and reset, which enables us to perform these experiments without any ion transport or dedicated coolant ions, requirements that typically consume a large fraction of the runtime or ion count of trapped-ion quantum computers.
+
+## Multidimensional Reconciliation in Continuous-Variable QKD: Review, Coding Schemes, and Open Source Simulation
+
+- **ID**: arxiv:2606.02323v2
+- **Published**: 2026-06-01
+- **Authors**: Lucien Martial, Alexis Rosio, Eleni Diamanti +2
+- **PDF**: https://arxiv.org/pdf/2606.02323v2
+- **Abstract**: Continuous-variable quantum key distribution (CV-QKD) requires highly efficient reconciliation techniques to operate at low signal-to-noise ratios and long distances. Multidimensional reconciliation addresses this challenge by transforming the physical Gaussian quantum channel into a virtual binary-input additive white Gaussian noise (BIAWGN) channel, enabling the use of modern errorcorrecting codes. In this work, we review the principles of multidimensional reconciliation, with a particular focus on high-dimensional constructions beyond the algebraic dimensions 1, 2, 4, 8. We describe the construction of the virtual channel, discuss practical coding schemes for reverse reconciliation, and analyse their integration with linear error-correcting codes. We also present an opensource simulation framework, HDirac, implementing multidimensional reconciliation for arbitrary dimensions, and use it to evaluate state-of-the-art LDPC codes. The results highlight key trade-offs between dimension, reconciliation efficiency, and frame error rate, providing practical guidance for CV-QKD system design.

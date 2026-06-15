@@ -1,0 +1,10 @@
+# IEEE Xplore — 2014-04
+
+
+## Comparative analysis of different hardware decoder architectures for IEEE 802.11ad LDPC code
+
+- **ID**: ieee:6820570
+- **Published**: 13-16 Apri
+- **Authors**: Andrey Shevchenko, Roman Maslennikov, Alexander Maltsev
+- **PDF**: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6820570
+- **Abstract**: This paper considers the LDPC code designed for the IEEE 802.11ad WLAN standard and analyzes different architectural options for the hardware decoder. Three decoder architectures are studied that provide different tradeoffs between the throughput and the required amount of the resources for the FPGA implementation. The standard fully parallel decoder is demonstrated to have the maximum throughput of above 6.5 Gbit/s and also the maximum hardware efficiency (a ratio of the decoder throughput to the amount of the consumed hardware logic). The layered decoder architecture allows reusing the hardware check nodes blocks between the sub-iterations to achieve 46% lower hardware resources utilization relative to the fully parallel decoder though at the expense of the 42% lower hardware efficiency and providing the throughput of 2.1 Gbit/s. The serial-parallel decoder architecture exploits the layered and quasi-cyclic properties of the code matrix and occupies only 11% of the hardware resources needed by the fully parallel decoder but with the throughput of only 159 Mbit/s.

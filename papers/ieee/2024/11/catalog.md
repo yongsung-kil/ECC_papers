@@ -1,0 +1,10 @@
+# IEEE Xplore — 2024-11
+
+
+## LVLDPC: Intra-Layer Variation Aware LDPC Coding for 3D TLC NAND Flash Memory
+
+- **ID**: ieee:10818002
+- **Published**: 18-20 Nov.
+- **Authors**: Lanlan Cui, Meng Zhang, Fei Wu
+- **PDF**: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10818002
+- **Abstract**: NAND flash memory employs high code rate low-density parity-check (LDPC) code to minimize redundant data. High code rates reduce redundancy but compromise error cor-rection compared to medium/low code rates. Raw bit error rate (RBER) varies among the storage layers for 3D triple-level cell (TLC) NAND flash memory, which causes the number of using read retry to increase. Repeatedly initiating read retry seriously increases the decoding latency and decreases the performance of the 3D TLC NAND flash memory. To alleviate this problem, this article proposes Intra-Layer Variation aware LDPC coding, called LVLDPC. The LVLDPC scheme categorizes RBER into distinct levels. Then, we select LDPC codes with appropriate error correction capabilities to decode data with varying levels of RBER. Through this scheme, we don't need to start read-retry when RBER <tex xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">$&lt; 1.56\times 10^{-2}$</tex>. The iteration number is reduced by 67% in total. This scheme only causes 1.15 % space overhead, which is negliaible,
