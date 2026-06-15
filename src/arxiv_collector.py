@@ -24,35 +24,18 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PDF_DIR = PROJECT_ROOT / "papers" / "pdfs"
 
+# 광범위 수집: LDPC 논문을 전부 취합한 뒤 Phase 2에서 하나씩 선별.
+# (양자/카테고리 제한 없이 recall 최대화 — 좁은 쿼리는 모두 이 집합의 부분집합)
 SEARCH_QUERIES = [
     "LDPC",
+    "low-density parity-check",
     "low density parity check",
-    "LDPC decoding",
-    "LDPC decoder",
-    "LDPC code design",
-    "LDPC belief propagation",
-    "min-sum LDPC",
-    "LDPC NAND flash",
-    "LDPC SSD",
-    "LDPC error floor",
-]
-
-CATEGORIES = [
-    "cs.IT",   # Information Theory
-    "eess.SP", # Signal Processing
-    "cs.AR",   # Hardware Architecture
-    "cs.ET",   # Emerging Technologies
 ]
 
 
-def build_query(query_terms: list[str] | None = None,
-                categories: list[str] | None = None) -> str:
+def build_query(query_terms: list[str] | None = None) -> str:
     terms = query_terms or SEARCH_QUERIES
-    cats = categories or CATEGORIES
-
-    term_part = " OR ".join(f'all:"{t}"' for t in terms)
-    cat_part = " OR ".join(f"cat:{c}" for c in cats)
-    return f"({term_part}) AND ({cat_part})"
+    return " OR ".join(f'all:"{t}"' for t in terms)
 
 
 def _result_to_paper(result) -> dict:

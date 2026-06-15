@@ -113,14 +113,14 @@ def run_once(batch_size: int = 100, sources=("arxiv", "ieee"),
                 error = f"arxiv: {e}"
 
         if "ieee" in sources:
-            for query in ieee_collector.SEARCH_QUERIES:
+            for term, year in ieee_collector.bucket_queries():
                 try:
-                    r = ieee_collector.collect_batch(query, batch_size=batch_size)
+                    r = ieee_collector.collect_batch(term, year, batch_size=batch_size)
                     for k in totals:
                         totals[k] += r[k]
                 except Exception as e:
-                    logger.exception("IEEE 수집 실패(%s): %s", query, e)
-                    error = f"ieee[{query}]: {e}"
+                    logger.exception("IEEE 수집 실패(%s %d): %s", term, year, e)
+                    error = f"ieee[{term}#{year}]: {e}"
 
         # 교차 중복 제거(내부에서 변경 시 카탈로그 재생성)
         try:

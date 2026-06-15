@@ -37,18 +37,30 @@ HEADERS = {
 SEARCH_URL = "https://ieeexplore.ieee.org/rest/search"
 ABSTRACT_URL = "https://ieeexplore.ieee.org/document/{article_number}"
 
-SEARCH_QUERIES = [
-    "LDPC NAND",
-    "LDPC flash memory",
-    "LDPC decoder hardware",
-    "LDPC error floor",
-    "LDPC min-sum decoding",
-    "low density parity check SSD",
+# 광범위 수집(arXiv와 동일 철학): LDPC 전부 취합 후 Phase 2에서 선별.
+# IEEE는 결과량이 많고 startRecord 페이지네이션 상한이 있어, 연도별 버킷으로 쪼개
+# 각 (term, year)를 독립 커서로 drain 한다.
+SEARCH_TERMS = [
+    "LDPC",
+    "low-density parity-check",
 ]
+YEAR_START = 2005  # 이 해부터 현재까지 연도별로 수집
 
 
-def search_ieee(query: str, max_results: int = 25, start_record: int = 1) -> dict:
-    """IEEE Xplore REST endpoint로 검색 요청."""
+def year_buckets(start: int = YEAR_START) -> list[int]:
+    """수집 대상 연도 목록(최신 연도부터)."""
+    now = datetime.now(timezone.utc).year
+    return list(range(now, start - 1, -1))
+
+
+def bucket_queries() -> list[tuple[str, int]]:
+    """(term, year) 버킷 전체 — runner가 이걸 순회한다."""
+    return [(term, year) for year in year_buckets() for term in SEARCH_TERMS]
+
+
+def search_ieee(query: str, max_results: int = 25, start_record: int = 1,
+                year: int | None = None) -> dict:
+    """IEEE Xplore REST endpoint로 검색 요청. year 지정 시 해당 연도로 한정."""
     payload = {
         "newsearch": True,
         "queryText": query,
@@ -58,7 +70,11 @@ def search_ieee(query: str, max_results: int = 25, start_record: int = 1) -> dic
         "matchPubs": True,
         "rowsPerPage": min(max_results, 100),
         "startRecord": start_record,
+        "sortType": "newest",   # 최신순(시간 역순)
     }
+    if year is not None:
+        # IEEE Xplore REST의 발행연도 범위 필터 (시작_끝_Year)
+        payload["ranges"] = [f"{year}_{year}_Year"]
 
     try:
         resp = requests.post(SEARCH_URL, json=payload, headers=HEADERS, timeout=30)
@@ -147,32 +163,39 @@ def parse_search_results(data: dict) -> list[dict]:
 
 
 def collect_batch(
-    query: str,
+    term: str,
+    year: int,
     batch_size: int = 100,
     fetch_abstract: bool = True,
     delay: float = 3.0,
 ) -> dict:
-    """커서 기반 1배치 수집(이어받기).
+    """커서 기반 1배치 수집(이어받기) — (term, year) 버킷 단위.
 
-    IEEE REST는 `startRecord`(1부터 시작) 페이지네이션과 `totalRecords`를 제공한다.
-    저장된 커서(next_offset, 0-기반)를 startRecord로 변환해 이어받고, 받은 만큼
-    커서를 전진시킨다. 중복(이미 있는 ID)은 INSERT OR IGNORE로 제외한다.
+    IEEE는 결과량이 많고 startRecord 페이지네이션 상한이 있어 연도별로 쪼갠다.
+    버킷마다 독립 커서(`{term}#{year}`)를 두고, 해당 연도 안에서 startRecord로
+    이어받는다(최신순). 중복(이미 있는 ID)은 INSERT OR IGNORE로 제외한다.
+
+    NOTE: 이 REST endpoint는 현재 봇 차단(HTTP 418) 상태이며 날짜 필터는 '연 단위'만
+    지원한다(월 단위 미지원). 접근 해제 후 동작 검증 필요.
 
     반환: {"new", "dup", "fetched", "offset", "exhausted", "total"}
     """
+    cursor_key = f"{term}#{year}"
     conn = get_conn()
     init_db(conn)
 
-    cursor = get_cursor(conn, "ieee", query)
+    cursor = get_cursor(conn, "ieee", cursor_key)
     offset = cursor["next_offset"]
     start_record = offset + 1  # IEEE는 1-기반
 
-    logger.info("IEEE 배치 수집: '%s' offset=%d, size=%d", query, offset, batch_size)
+    logger.info("IEEE 배치 수집: '%s' year=%d offset=%d, size=%d",
+                term, year, offset, batch_size)
 
-    data = search_ieee(query, max_results=batch_size, start_record=start_record)
+    data = search_ieee(term, max_results=batch_size, start_record=start_record,
+                       year=year)
     if not data:
         conn.close()
-        logger.warning("IEEE 검색 결과 없음(또는 차단): '%s'", query)
+        logger.warning("IEEE 검색 결과 없음(또는 차단 418): '%s' %d", term, year)
         return {"new": 0, "dup": 0, "fetched": 0, "offset": offset,
                 "exhausted": False, "total": cursor["total"]}
 
@@ -203,7 +226,7 @@ def collect_batch(
     new_offset = offset + fetched
     # 끝 도달: 받은 게 batch_size 미만이거나, 다음 위치가 전체 건수 이상.
     exhausted = fetched < batch_size or (total and new_offset >= total)
-    set_cursor(conn, "ieee", query, new_offset, total or None, exhausted)
+    set_cursor(conn, "ieee", cursor_key, new_offset, total or None, exhausted)
     conn.close()
 
     logger.info("IEEE 배치 완료: 신규 %d, 중복 %d, 받음 %d/%d, 다음 offset %d%s",
@@ -218,91 +241,14 @@ def collect_batch(
             "offset": new_offset, "exhausted": bool(exhausted), "total": total}
 
 
-def collect_papers(
-    queries: list[str] | None = None,
-    max_per_query: int = 25,
-    fetch_abstract: bool = True,
-    delay: float = 3.0,
-) -> list[dict]:
-    """IEEE Xplore에서 LDPC 논문을 수집하여 DB에 저장."""
-    if queries is None:
-        queries = SEARCH_QUERIES
-
-    conn = get_conn()
-    init_db(conn)
-
-    collected = []
-    new_count = 0
-    dup_count = 0
-
-    for query in queries:
-        logger.info("IEEE 검색: '%s' (max=%d)", query, max_per_query)
-        data = search_ieee(query, max_results=max_per_query)
-
-        if not data:
-            logger.warning("검색 결과 없음: '%s'", query)
-            continue
-
-        total = data.get("totalRecords", 0)
-        logger.info("검색 결과: %d건 (총 %d건 중)", len(data.get("records", [])), total)
-
-        papers = parse_search_results(data)
-
-        for paper in papers:
-            existing = conn.execute(
-                "SELECT id FROM papers WHERE id = ?", (paper["id"],)
-            ).fetchone()
-            if existing:
-                dup_count += 1
-                continue
-
-            if fetch_abstract and paper["abstract"] is None:
-                logger.info("Abstract 크롤링: %s", paper["article_number"])
-                paper["abstract"] = scrape_abstract(paper["article_number"])
-                time.sleep(delay)
-
-            article_number = paper.pop("article_number")
-
-            paper["collected_at"] = datetime.now(timezone.utc).isoformat()
-            paper["status"] = "new"
-            paper["pdf_path"] = None
-
-            conn.execute("""
-                INSERT INTO papers (id, source, title, authors, abstract, categories,
-                                    published, updated, doi, pdf_url, pdf_path,
-                                    collected_at, status)
-                VALUES (:id, :source, :title, :authors, :abstract, :categories,
-                        :published, :updated, :doi, :pdf_url, :pdf_path,
-                        :collected_at, :status)
-            """, paper)
-            conn.commit()
-
-            collected.append(paper)
-            new_count += 1
-            logger.info("[%d] %s — %s", new_count, paper["id"], paper["title"][:60])
-
-        time.sleep(delay)
-
-    conn.close()
-    logger.info("IEEE 수집 완료: 신규 %d건, 중복 %d건", new_count, dup_count)
-
-    if new_count > 0:
-        from src.arxiv_collector import export_catalog
-        export_catalog()
-
-    return collected
-
-
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
-    papers = collect_papers(
-        queries=["LDPC NAND flash"],
-        max_per_query=5,
-        fetch_abstract=True,
-    )
-    print(f"\n=== IEEE 수집 결과: {len(papers)}건 ===")
-    for p in papers[:5]:
-        print(f"  - {p['id']}: {p['title'][:70]}")
+    # 최신 연도 1버킷 시범 수집 (현재 IEEE REST는 418 차단 상태일 수 있음)
+    buckets = bucket_queries()
+    print(f"버킷 수: {len(buckets)} (예: {buckets[:3]} ...)")
+    term, year = buckets[0]
+    r = collect_batch(term, year, batch_size=5)
+    print(f"\n=== IEEE 시범 수집({term} {year}): {r} ===")
