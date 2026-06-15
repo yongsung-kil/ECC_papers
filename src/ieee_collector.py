@@ -85,6 +85,28 @@ def search_ieee(query: str, max_results: int = 100, page_number: int = 1,
         return {}
 
 
+def _content_type(rec: dict) -> str:
+    """IEEE 레코드를 콘텐츠 타입으로 정규화(journal/conference/magazine/standard/book/course/other).
+
+    displayContentType 문자열(예: 'Journal Article', 'Conference')과 is* 플래그를
+    함께 보고 분류한다. 'journal article' → 'journal' 처럼 정규화한다.
+    """
+    dct = (rec.get("displayContentType") or "").lower()
+    if "conference" in dct or rec.get("isConference"):
+        return "conference"
+    if "journal" in dct or rec.get("isJournal"):
+        return "journal"
+    if "magazine" in dct or rec.get("isMagazine"):
+        return "magazine"
+    if "standard" in dct or rec.get("isStandard"):
+        return "standard"
+    if "book" in dct or rec.get("isBook") or rec.get("isBookWithoutChapters"):
+        return "book"
+    if "course" in dct:
+        return "course"
+    return dct or "other"
+
+
 def parse_search_results(data: dict) -> list[dict]:
     """검색 결과 JSON에서 논문 메타데이터(+초록)를 파싱."""
     papers = []
@@ -113,6 +135,7 @@ def parse_search_results(data: dict) -> list[dict]:
             "updated": None,
             "doi": rec.get("doi", ""),
             "pdf_url": f"https://ieeexplore.ieee.org/document/{article_number}",
+            "content_type": _content_type(rec),
         })
     return papers
 

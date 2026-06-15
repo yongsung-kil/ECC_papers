@@ -53,6 +53,7 @@ def _result_to_paper(result) -> dict:
         "pdf_url": result.pdf_url,
         "pdf_path": None,
         "collected_at": datetime.now(timezone.utc).isoformat(),
+        "content_type": "preprint",
         "status": "new",
     }
 
@@ -240,7 +241,7 @@ def export_catalog():
     conn = get_conn()
     rows = conn.execute(
         "SELECT id, source, title, authors, abstract, categories, "
-        "published, doi, pdf_url, status "
+        "published, doi, pdf_url, content_type, status "
         "FROM papers ORDER BY published DESC"
     ).fetchall()
     conn.close()
@@ -277,6 +278,7 @@ def _export_md(dir_path: Path, label: str, rows, year_month: str):
             author_str += f" +{len(authors)-3}"
         lines.append(f"## {r['title']}\n")
         lines.append(f"- **ID**: {r['id']}")
+        lines.append(f"- **Type**: {r['content_type'] or 'N/A'}")
         lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
         lines.append(f"- **Authors**: {author_str}")
         lines.append(f"- **PDF**: {r['pdf_url']}")
@@ -294,11 +296,11 @@ def _export_csv(dir_path: Path, rows):
 
     with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["ID", "Title", "Authors", "Abstract",
+        writer.writerow(["ID", "Type", "Title", "Authors", "Abstract",
                          "Categories", "Published", "DOI", "PDF URL", "Status"])
         for r in rows:
             writer.writerow([
-                r["id"], r["title"],
+                r["id"], r["content_type"] or "", r["title"],
                 ", ".join(json.loads(r["authors"])),
                 r["abstract"],
                 ", ".join(json.loads(r["categories"])),

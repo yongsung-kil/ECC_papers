@@ -35,6 +35,7 @@ def init_db(conn: sqlite3.Connection | None = None):
         pdf_url         TEXT,
         pdf_path        TEXT,               -- local path (relative)
         collected_at    TEXT NOT NULL,       -- ISO datetime
+        content_type    TEXT,                -- journal|conference|magazine|standard|book|preprint|other
         status          TEXT NOT NULL DEFAULT 'new'
                         CHECK(status IN ('new','filtered_in','filtered_out',
                                          'analyzed','archived','deleted'))
@@ -79,6 +80,10 @@ def init_db(conn: sqlite3.Connection | None = None):
         error       TEXT
     );
     """)
+    # 마이그레이션: 기존 DB에 content_type 컬럼이 없으면 추가
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(papers)")]
+    if "content_type" not in cols:
+        conn.execute("ALTER TABLE papers ADD COLUMN content_type TEXT")
     conn.commit()
     if close:
         conn.close()
@@ -121,7 +126,7 @@ def set_cursor(conn: sqlite3.Connection, source: str, query: str,
 PAPER_COLUMNS = (
     "id", "source", "title", "authors", "abstract", "categories",
     "published", "updated", "doi", "pdf_url", "pdf_path",
-    "collected_at", "status",
+    "collected_at", "content_type", "status",
 )
 
 
