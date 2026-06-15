@@ -142,22 +142,69 @@ def run_once(batch_size: int = 100, sources=("arxiv", "ieee"),
     return totals
 
 
+def drain(batch_size: int = 100, sources=("arxiv", "ieee"),
+          download_pdf: bool = False, push: bool = True,
+          max_cycles: int = 1000) -> dict:
+    """모든 쿼리가 끝(exhausted)에 도달할 때까지 반복 수집 — 1회성 전체 백필.
+
+    push는 마지막에 한 번만 수행한다(매 사이클 커밋 방지).
+    """
+    _setup_logging()
+    logger.info(">>> 전체 백필(drain) 시작 — 끝까지 수집 <<<")
+    totals = {"new": 0, "dup": 0, "fetched": 0}
+
+    for cycle in range(1, max_cycles + 1):
+        if _all_exhausted(sources):
+            logger.info("모든 쿼리가 끝에 도달 — drain 종료")
+            break
+        logger.info("--- drain 사이클 %d ---", cycle)
+        r = run_once(batch_size=batch_size, sources=sources,
+                     download_pdf=download_pdf, push=False)
+        for k in totals:
+            totals[k] += r[k]
+        # 아무것도 못 받았으면(차단/에러 등) 무한루프 방지로 중단
+        if r["fetched"] == 0:
+            logger.info("이번 사이클 수집 0건 — drain 중단")
+            break
+
+    logger.info(">>> 전체 백필 종료: 신규 %d, 중복 %d, 받음 %d <<<",
+                totals["new"], totals["dup"], totals["fetched"])
+    if push:
+        git_commit_push(totals["new"])
+    return totals
+
+
+def _all_exhausted(sources) -> bool:
+    """대상 소스의 모든 등록된 쿼리 커서가 exhausted인지. 커서가 하나도 없으면 False."""
+    conn = get_conn()
+    init_db(conn)
+    placeholders = ",".join("?" for _ in sources)
+    rows = conn.execute(
+        f"SELECT exhausted FROM collect_state WHERE source IN ({placeholders})",
+        tuple(sources),
+    ).fetchall()
+    conn.close()
+    if not rows:
+        return False
+    return all(r["exhausted"] for r in rows)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="LDPC 논문 자동 수집 스케줄러")
+    parser = argparse.ArgumentParser(description="LDPC 논문 수집 러너")
     parser.add_argument("-n", "--batch-size", type=int, default=100,
                         help="쿼리당 1회 수집 건수(이어받기 단위, 기본 100)")
     parser.add_argument("--sources", default="arxiv,ieee",
                         help="수집 소스(쉼표 구분, 기본 arxiv,ieee)")
+    parser.add_argument("--drain", action="store_true",
+                        help="끝까지 전체 수집(1회성 백필). 미지정 시 1배치만.")
     parser.add_argument("--pdf", action="store_true", help="PDF도 다운로드")
     parser.add_argument("--no-push", action="store_true", help="git commit/push 생략")
     args = parser.parse_args()
 
-    run_once(
-        batch_size=args.batch_size,
-        sources=tuple(s.strip() for s in args.sources.split(",") if s.strip()),
-        download_pdf=args.pdf,
-        push=not args.no_push,
-    )
+    sources = tuple(s.strip() for s in args.sources.split(",") if s.strip())
+    fn = drain if args.drain else run_once
+    fn(batch_size=args.batch_size, sources=sources,
+       download_pdf=args.pdf, push=not args.no_push)
 
 
 if __name__ == "__main__":
