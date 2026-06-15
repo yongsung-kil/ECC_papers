@@ -28,8 +28,7 @@ PDF_DIR = PROJECT_ROOT / "papers" / "pdfs"
 # (양자/카테고리 제한 없이 recall 최대화 — 좁은 쿼리는 모두 이 집합의 부분집합)
 SEARCH_QUERIES = [
     "LDPC",
-    "low-density parity-check",
-    "low density parity check",
+    "low density parity check code",
 ]
 
 
@@ -80,6 +79,10 @@ def collect_batch(
 
     cursor = get_cursor(conn, "arxiv", query)
     offset = cursor["next_offset"]
+
+    if cursor["exhausted"]:
+        conn.close()
+        return {"new": 0, "dup": 0, "fetched": 0, "offset": offset, "exhausted": True}
 
     logger.info("arXiv 배치 수집: offset=%d, size=%d, exhausted=%s",
                 offset, batch_size, cursor["exhausted"])
