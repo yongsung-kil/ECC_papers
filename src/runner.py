@@ -1,8 +1,14 @@
-"""수집 스케줄러 진입점.
+"""수집 러너 진입점.
 
-Windows 작업 스케줄러가 주기적으로 `python -m src.runner`를 호출한다.
+수집은 주기 스케줄이 아니라 **한 번에 전량(drain)** 받는 방식이다.
+
+  python -m src.runner --drain          # 끝까지 전량 수집(arXiv+IEEE)
+  python -m src.runner -n 100           # 1배치만(쿼리/버킷당 100건)
+  python -m src.runner --sources arxiv  # 특정 소스만
+  python -m src.runner --no-push        # git 업로드 생략
+
 한 번의 실행(run_once)은:
-  1. arXiv·IEEE 각 쿼리를 커서 기반으로 batch_size건씩 수집(이어받기, 중복 제외)
+  1. arXiv 단일 광범위 쿼리 + IEEE (term,year) 버킷을 커서 기반으로 수집(이어받기, 중복 제외)
   2. arXiv/IEEE 교차 중복 제거 + 카탈로그 재생성
   3. 실행 로그를 파일(logs/) + DB(run_log)에 기록
   4. 신규 수집이 있으면 DB·카탈로그를 git commit & push (GitHub 업로드)
