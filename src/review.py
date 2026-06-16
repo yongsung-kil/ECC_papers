@@ -17,6 +17,7 @@ API를 호출하지 않는다. 대신:
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -149,6 +150,50 @@ def show_stats():
     conn.close()
 
 
+def _pub_year(published: str | None) -> int:
+    """published 문자열에서 4자리 연도 추출(없으면 0). 정렬용."""
+    m = re.search(r"(19|20)\d{2}", published or "")
+    return int(m.group(0)) if m else 0
+
+
+def make_batches(limit: int, per: int, out_dir: str) -> dict:
+    """미선별 논문을 에이전트별 파일(out_dir/agent_NN.json)로 분할 — **최신 연도부터**.
+
+    병렬 선별용. 메인은 초록을 읽지 않고 분할만 하며, 각 에이전트가 자기 파일만 읽는다.
+    """
+    conn = get_conn()
+    init_db(conn)
+    conn.create_function("pub_year", 1, _pub_year)
+    rows = conn.execute(
+        """
+        SELECT p.id, p.source, p.title, p.abstract, p.published
+        FROM papers p LEFT JOIN filter_results f ON p.id = f.paper_id
+        WHERE f.paper_id IS NULL AND p.status = 'new'
+        ORDER BY pub_year(p.published) DESC, p.published DESC, p.id
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+
+    out = PROJECT_ROOT / out_dir
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("agent_*.json"):
+        old.unlink()
+
+    n_files = 0
+    for idx, start in enumerate(range(0, len(rows), per)):
+        sl = rows[start:start + per]
+        (out / f"agent_{idx:02d}.json").write_text(
+            json.dumps([dict(r) for r in sl], ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        n_files += 1
+
+    print(f"미선별 {len(rows)}편 → {n_files}개 파일: {out_dir}/agent_NN.json (에이전트 {n_files}개)")
+    return {"papers": len(rows), "files": n_files}
+
+
 def main():
     parser = argparse.ArgumentParser(description="1차 선별(Phase 2) 도구")
     sub = parser.add_subparsers(dest="cmd")
@@ -164,6 +209,11 @@ def main():
 
     sub.add_parser("stats", help="선별 현황")
 
+    p_batch = sub.add_parser("batch", help="미선별 논문을 에이전트별 파일로 분할(병렬 선별용)")
+    p_batch.add_argument("-n", type=int, default=100, help="한 청크 편수(기본 100)")
+    p_batch.add_argument("--per", type=int, default=10, help="에이전트당 편수(기본 10)")
+    p_batch.add_argument("--dir", default="_batch", help="출력 폴더(기본 _batch)")
+
     args = parser.parse_args()
 
     if args.cmd == "pending":
@@ -174,6 +224,8 @@ def main():
         apply_judgments(json.loads(raw))
     elif args.cmd == "stats":
         show_stats()
+    elif args.cmd == "batch":
+        make_batches(limit=args.n, per=args.per, out_dir=args.dir)
     else:
         parser.print_help()
 
