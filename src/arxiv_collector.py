@@ -130,91 +130,6 @@ def collect_batch(
             "offset": new_offset, "exhausted": exhausted}
 
 
-def collect_papers(
-    max_results: int = 100,
-    query: str | None = None,
-    download_pdf: bool = False,
-    sort_by: arxiv.SortCriterion = arxiv.SortCriterion.SubmittedDate,
-) -> list[dict]:
-    if query is None:
-        query = build_query()
-
-    logger.info("arXiv 검색 시작: %s (max=%d)", query[:80], max_results)
-
-    client = arxiv.Client(
-        page_size=50,
-        delay_seconds=3.0,
-        num_retries=3,
-    )
-    search = arxiv.Search(
-        query=query,
-        max_results=max_results,
-        sort_by=sort_by,
-        sort_order=arxiv.SortOrder.Descending,
-    )
-
-    conn = get_conn()
-    init_db(conn)
-
-    collected = []
-    new_count = 0
-    dup_count = 0
-
-    for result in client.results(search):
-        arxiv_id = result.entry_id.split("/abs/")[-1]
-        paper_id = f"arxiv:{arxiv_id}"
-
-        existing = conn.execute(
-            "SELECT id FROM papers WHERE id = ?", (paper_id,)
-        ).fetchone()
-        if existing:
-            dup_count += 1
-            continue
-
-        paper = {
-            "id": paper_id,
-            "source": "arxiv",
-            "title": result.title.replace("\n", " ").strip(),
-            "authors": json.dumps([a.name for a in result.authors]),
-            "abstract": result.summary.replace("\n", " ").strip(),
-            "categories": json.dumps(result.categories),
-            "published": result.published.isoformat() if result.published else None,
-            "updated": result.updated.isoformat() if result.updated else None,
-            "doi": result.doi,
-            "pdf_url": result.pdf_url,
-            "pdf_path": None,
-            "collected_at": datetime.now(timezone.utc).isoformat(),
-            "status": "new",
-        }
-
-        if download_pdf:
-            pdf_path = _download_pdf(paper_id, result.pdf_url)
-            if pdf_path:
-                paper["pdf_path"] = str(pdf_path.relative_to(PROJECT_ROOT))
-
-        conn.execute("""
-            INSERT INTO papers (id, source, title, authors, abstract, categories,
-                                published, updated, doi, pdf_url, pdf_path,
-                                collected_at, status)
-            VALUES (:id, :source, :title, :authors, :abstract, :categories,
-                    :published, :updated, :doi, :pdf_url, :pdf_path,
-                    :collected_at, :status)
-        """, paper)
-        conn.commit()
-
-        collected.append(paper)
-        new_count += 1
-        logger.info("[%d] %s — %s", new_count, paper_id, paper["title"][:60])
-
-    conn.close()
-    logger.info("수집 완료: 신규 %d건, 중복 %d건", new_count, dup_count)
-
-    if new_count > 0:
-        export_catalog()
-
-    return collected
-
-
 def _download_pdf(paper_id: str, pdf_url: str) -> Path | None:
     PDF_DIR.mkdir(parents=True, exist_ok=True)
     safe_name = paper_id.replace(":", "_").replace("/", "_")
@@ -395,33 +310,10 @@ def dedup_cross_source():
     return removed
 
 
-def get_stats(conn=None) -> dict:
-    close = conn is None
-    if conn is None:
-        conn = get_conn()
-    row = conn.execute("""
-        SELECT
-            COUNT(*) as total,
-            SUM(CASE WHEN source='arxiv' THEN 1 ELSE 0 END) as arxiv_count,
-            SUM(CASE WHEN source='ieee' THEN 1 ELSE 0 END) as ieee_count,
-            SUM(CASE WHEN status='new' THEN 1 ELSE 0 END) as new_count,
-            SUM(CASE WHEN status='filtered_in' THEN 1 ELSE 0 END) as filtered_in,
-            SUM(CASE WHEN status='analyzed' THEN 1 ELSE 0 END) as analyzed
-        FROM papers
-    """).fetchone()
-    if close:
-        conn.close()
-    return dict(row)
-
-
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
-    papers = collect_papers(max_results=20, download_pdf=False)
-    print(f"\n=== 수집 결과: {len(papers)}건 ===")
-    for p in papers[:5]:
-        print(f"  - {p['id']}: {p['title'][:70]}")
-    if len(papers) > 5:
-        print(f"  ... 외 {len(papers) - 5}건")
+    result = collect_batch(batch_size=10)
+    print(f"\n=== arXiv 배치 수집: {result} ===")
