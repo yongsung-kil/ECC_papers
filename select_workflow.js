@@ -14,9 +14,14 @@ export const meta = {
 }
 
 // ── 파라미터 (args로 덮어쓰기 가능) ───────────────────────────────
-const DIR           = (args && args.dir) || '_batch'
-const N_AGENTS      = (args && args.nAgents) || 0
-const CRITERIA_FILE = (args && args.criteriaFile) || 'criteria/selection_criteria.md'
+// args가 JSON 문자열로 들어오는 경우 파싱
+let ARGS = args
+if (typeof ARGS === 'string') {
+  try { ARGS = JSON.parse(ARGS) } catch (e) { ARGS = {} }
+}
+const DIR           = (ARGS && ARGS.dir) || '_batch'
+const N_AGENTS      = (ARGS && ARGS.nAgents) || 0
+const CRITERIA_FILE = (ARGS && ARGS.criteriaFile) || 'criteria/selection_criteria.md'
 // ─────────────────────────────────────────────────────────────────
 
 const SCHEMA = {
