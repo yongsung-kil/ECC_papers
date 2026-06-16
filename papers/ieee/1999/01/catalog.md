@@ -1,0 +1,173 @@
+# IEEE Xplore — 1999-01
+
+
+## Constructing low-density parity-check codes with circulant matrices
+
+- **ID**: ieee:814359
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: J. W. Bond, S. Hui, H. Schmidt
+- **PDF**: https://ieeexplore.ieee.org/document/814359
+- **Abstract**: This is a report on the authors' ongoing effort to implement low-density parity-check codes with iterative belief propagation decoding in a communication system. The system requires the codes to have block lengths from 1000 to 2000 bits. We describe two different methods of constructing the codes using: (1) a combination of random and circulant matrices, and (2) random and circulant matrices with constraints to control the number of low weight codewords. We illustrate the performances of the different constructions with simulations.
+
+## Channel code blocklength and rate optimization for progressive image transmission
+
+- **ID**: ieee:796817
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: P. G. Sherwood, Xiaodong Tian, K. Zeger
+- **PDF**: https://ieeexplore.ieee.org/document/796817
+- **Abstract**: We investigate the problem of selecting blocklength and code rate for progressive image transmission, motivated by turbo coding methods where the performance improves with blocklength. The problem is to balance the tradeoff among error protection, source coding rate, and delay. We propose a general performance measure for evaluating progressive transmission and use dynamic programming to determine the channel code parameters based on the progressive performance. Performance results are provided for the evaluation of the gains over less complex methods as a function of channel error rate.
+
+## The impact of using multicode transmission in the WCDMA system
+
+- **ID**: ieee:780607
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: T. Ottosson, T. Palenius
+- **PDF**: https://ieeexplore.ieee.org/document/780607
+- **Abstract**: The multicode transmission scheme for achieving higher data rates in the WCDMA system is studied especially considering envelope variations and nonlinear power amplifiers. Results show that using three codes instead of a single code reduces the power efficiency of the power amplifier from about 40% down to 25% at a adjacent channel power ratio of -40 dB. However, by the introduction of a simple but very effective precoder it is possible to maintain the power efficiency of the amplifier at 40%. This precoder is a simple parity check code where the fourth bit is the parity of the three first bits. Assuming that four orthogonal spreading codes are used this precoder construction limits the envelope variations to that of a single code transmission thus allowing for the same output backoff of the power amplifier as for the single code transmission scheme. It is furthermore shown that the precoded scheme performs as well as the multicode scheme using three codes.
+
+## Parity check codes for partial response channels
+
+- **ID**: ieee:830156
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: M. Oberg, P. H. Siegel
+- **PDF**: https://ieeexplore.ieee.org/document/830156
+- **Abstract**: The use of turbo coding and decoding techniques in digital magnetic recording is now being given serious consideration. Major technical concerns are implementation complexity and decoding delay. In this paper, we present and analyze the performance of a simple, serial concatenation scheme comprising an outer parity check code, interleaver, and a precoded partial response channel. We apply an iterative decoding procedure incorporating separate a posteriori probability (APP) detectors for the code and precoded channel. Simulation results for a dicode channel show a bit-error-rate (BER) of 10/sup -5/ at rate-normalized signal-to-noise ratio SNR=6.7 dB for a rate 8/9 code, representing a gain of about 3.5 dB over the uncoded channel. We also present simulation results for higher-rate codes and other partial response channels, confirming the performance benefits of the new scheme.
+
+## Interleaved parity check codes and reduced complexity detection
+
+- **ID**: ieee:765514
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: Zi-Ning Wu, P. A. McEwan, K. K. Fitzpatrick +1
+- **PDF**: https://ieeexplore.ieee.org/document/765514
+- **Abstract**: We show that high rate interleaved parity check (IPC) codes provide significant coding gain on the magnetic recording channel. A reduced complexity detector performing joint channel detection and IPC decoding is introduced. Simulation result shows an SNR gain of 1.6 dB for the E/sup 2/PR4 channel at a bit error rate of 10/sup -5/, using a rate 196/200 4-way interleaved parity check code.
+
+## Impact of amplifier constraints on modem design for broadband wireless links
+
+- **ID**: ieee:810917
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: B. Cochran, R. McCallister, J. Lieberreu
+- **PDF**: https://ieeexplore.ieee.org/document/810917
+- **Abstract**: Broadband wireless access (BWA) must make sound business sense to be a successful 'last-mile' solution technology, for it faces stiff cost competition from phone-line and cable broadband-access alternatives. The challenge to modem designers is to develop technology which improves the BWA return-on-investment (ROI), to wit: minimize the installed equipment (total system, not just modem) cost while maximizing the data-bearing capacity of millimeter-wave links. BWA links exhibit pathologies and cost models distinct from those of wired links, and these distinctions should be reflected in a well-designed BWA modem. This tutorial paper discusses BWA ROI within the context of a system-level cost concept relates this model to primary LMDS link pathologies, and suggests several modem-level features which will be required to address BWA ROI challenges. A few specific modem design approaches are noted to demonstrate that these BWA design challenges are readily addressable.
+
+## Generalized low density (Tanner) codes
+
+- **ID**: ieee:767979
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: J. Boutros, O. Pothier, G. Zemor
+- **PDF**: https://ieeexplore.ieee.org/document/767979
+- **Abstract**: We build a class of pseudo-random error correcting codes, called generalized low density codes (GLD), from the intersection of two interleaved block codes. GLD code performance approaches the channel capacity limit and the GLD decoder is based on simple and fast SISO (soft input-soft output) decoders of smaller block codes. GLD codes are a special case of Tanner codes and a generalization of Gallager's LDPC codes. It is also proved by an ensemble performance argument that these codes are asymptotically good in the sense of the minimum distance criterion. The flexibility in selecting the parameters of GLD codes makes them suitable for small and large block length forward error correcting schemes.
+
+## A low complexity FEC scheme based on the intersection of interleaved block codes
+
+- **ID**: ieee:778060
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: O. Pothier, L. Brunel, J. Boutros
+- **PDF**: https://ieeexplore.ieee.org/document/778060
+- **Abstract**: We describe a class of asymptotically good codes built from the intersection of randomly permuted binary BCH codes. This family of pseudo-random error correcting codes, called generalized low density (GLD) codes, is a direct generalization of Gallager's low density parity check (LDPC) codes. GLD codes belong to the larger family of Tanner codes based on a random bipartite graph. We study the GLD ensemble performance and prove the asymptotically good property. We also compare GLD codes minimum distance and performance to the Varshamov-Gilbert bound and BSC capacity respectively. The results show that maximum-likelihood decoding of GLD codes achieves near capacity efficiency. The suboptimal iterative decoding of GLD codes is briefly presented. Experimental results of small and large blocklength codes are finally illustrated on both AWGN and Rayleigh fading channels.
+
+## Good error-correcting codes based on very sparse matrices
+
+- **ID**: ieee:748992
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: D. J. C. MacKay
+- **PDF**: https://ieeexplore.ieee.org/document/748992
+- **Abstract**: We study two families of error-correcting codes defined in terms of very sparse matrices. "MN" (MacKay-Neal (1995)) codes are recently invented, and "Gallager codes" were first investigated in 1962, but appear to have been largely forgotten, in spite of their excellent properties. The decoding of both codes can be tackled with a practical sum-product algorithm. We prove that these codes are "very good", in that sequences of codes exist which, when optimally decoded, achieve information rates up to the Shannon limit. This result holds not only for the binary-symmetric channel but also for any channel with symmetric stationary ergodic noise. We give experimental results for binary-symmetric channels and Gaussian channels demonstrating that practical performance substantially better than that of standard convolutional and concatenated codes can be achieved; indeed, the performance of Gallager codes is almost as close to the Shannon limit as that of turbo codes.
+
+## Time-varying periodic convolutional codes with low-density parity-check matrix
+
+- **ID**: ieee:782171
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: A. Jimenez Felstrom, K. S. Zigangirov
+- **PDF**: https://ieeexplore.ieee.org/document/782171
+- **Abstract**: We present a class of convolutional codes defined by a low-density parity-check matrix and an iterative algorithm for decoding these codes. The performance of this decoding is close to the performance of turbo decoding. Our simulation shows that for the rate R=1/2 binary codes, the performance is substantially better than for ordinary convolutional codes with the same decoding complexity per information bit. As an example, we constructed convolutional codes with memory M=1025, 2049, and 4097 showing that we are about 1 dB from the capacity limit at a bit-error rate (BER) of 10/sup -5/ and a decoding complexity of the same magnitude as a Viterbi decoder for codes having memory M=10.
+
+## On generalized low-density parity-check codes based on Hamming component codes
+
+- **ID**: ieee:781010
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: M. Lentmaier, K. S. Zigangirov
+- **PDF**: https://ieeexplore.ieee.org/document/781010
+- **Abstract**: In this paper we investigate a generalization of Gallager's (1963) low-density (LD) parity-check codes, where as component codes single error correcting Hamming codes are used instead of single error detecting parity-check codes. It is proved that there exist such generalized low-density (GLD) codes for which the minimum distance is growing linearly with the block length, and a lower bound of the minimum distance is given. We also study iterative decoding of GLD codes for the communication over an additive white Gaussian noise channel. The performance in terms of the bit error rate, obtained by computer simulations, is presented for GLD codes of different lengths.
+
+## Type II codes over F/sub 2/+uF/sub 2/
+
+- **ID**: ieee:746770
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: S. T. Dougherty, P. Gaborit, M. Harada +1
+- **PDF**: https://ieeexplore.ieee.org/document/746770
+- **Abstract**: The alphabet F/sub 2/+uF/sub 2/ is viewed here as a quotient of the Gaussian integers by the ideal (2). Self-dual F/sub 2/+uF/sub 2/ codes with Lee weights a multiple of 4 are called Type II. They give even unimodular Gaussian lattices by Construction A, while Type I codes yield unimodular Gaussian lattices. Construction B makes it possible to realize the Leech lattice as a Gaussian lattice. There is a Gray map which maps Type II codes into Type II binary codes with a fixed point free involution in their automorphism group. Combinatorial constructions use weighing matrices and strongly regular graphs. Gleason-type theorems for the symmetrized weight enumerators of Type II codes are derived. All self-dual codes are classified for length up to 8. The shadow of the Type I codes yields bounds on the highest minimum Hamming and Lee weights.
+
+## Which codes have cycle-free Tanner graphs?
+
+- **ID**: ieee:782170
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: T. Etzion, A. Trachtenberg, A. Vardy
+- **PDF**: https://ieeexplore.ieee.org/document/782170
+- **Abstract**: If a linear block code C of length n has a Tanner graph without cycles, then maximum-likelihood soft-decision decoding of C can be achieved in time O(n/sup 2/). However, we show that cycle-free Tanner graphs cannot support good codes. Specifically, let C be an (n,k,d) linear code of rate R=k/n that can be represented by a Tanner graph without cycles. We prove that if R/spl ges/0.5 then d/spl les/2, while if R<0.5 then C is obtained from a code of rate /spl ges/0.5 and distance /spl les/2 by simply repeating certain symbols. In the latter case, we prove that d/spl les/[n/k+1]+[n+1/k+1]<2/R. Furthermore, we show by means of an explicit construction that this bound is tight for all values of n and k. We also prove that binary codes which have cycle-free Tanner graphs belong to the class of graph-theoretic codes, known as cut-set codes of a graph. Finally, we discuss the asymptotics for Tanner graphs with cycles, and present a number of open problems for future research.
+
+## High-speed indoor wireless communications at 60 GHz with coded OFDM
+
+- **ID**: ieee:803506
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: D. Dardari, V. Tralli
+- **PDF**: https://ieeexplore.ieee.org/document/803506
+- **Abstract**: A high-speed indoor wireless communication system using coded orthogonal frequency-division multiplexing (OFDM) and working at 60 GHz is proposed and analyzed. An actual propagation environment consisting of a medium sized research laboratory, characterized by means of a ray-tracing technique, is considered for the analysis. In this contest the paper investigates and discusses the effects of frequency diversity, antenna sectorization, OFDM clustering, and different block coding strategies. Moreover, to characterize the communication between stationary indoor terminals at millimeter waves, a new definition of coverage is introduced. In order to evaluate the performance of the coded system in the actual environment, a suitable semianalytical algorithm is defined and applied. In the results the feasibility of a coded OFDM system for 155 Mbit/s packet transmission is checked. It is shown that all the line-of-sight (LOS) positions and 70% of the no LOS points can be covered in the scenario considered with a transmitted power of 10 dBm.
+
+## Symbol-based turbo codes
+
+- **ID**: ieee:798019
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: M. Bingeman, A. K. Khandani
+- **PDF**: https://ieeexplore.ieee.org/document/798019
+- **Abstract**: We present a new turbo-coding method which parses the input block into n-bit symbols and interleaves on a symbol-by-symbol basis. This is used in conjunction with different modulation techniques to take advantage of tradeoffs between bit error rate performance, code-rate, spectral efficiency, and decoder complexity. The structure of the encoder and decoder of these codes, which We call symbol-based turbo codes, are outlined. The bit error rate performance of a few specific codes are examined. A discussion on decoder complexity is also included. Symbol-based turbo codes are good candidates for low delay transmission of speech and data in spread spectrum communication systems.
+
+## Reduced complexity iterative decoding of low-density parity check codes based on belief propagation
+
+- **ID**: ieee:768759
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: M. P. C. Fossorier, M. Mihaljevic, H. Imai
+- **PDF**: https://ieeexplore.ieee.org/document/768759
+- **Abstract**: Two simplified versions of the belief propagation algorithm for fast iterative decoding of low-density parity check codes on the additive white Gaussian noise channel are proposed. Both versions are implemented with real additions only, which greatly simplifies the decoding complexity of belief propagation in which products of probabilities have to be computed. Also, these two algorithms do not require any knowledge about the channel characteristics. Both algorithms yield a good performance-complexity trade-off and can be efficiently implemented in software as well as in hardware, with possibly quantized received values.
+
+## Comparison of constructions of irregular Gallager codes
+
+- **ID**: ieee:795809
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: D. J. C. MacKay, S. T. Wilson, M. C. Davey
+- **PDF**: https://ieeexplore.ieee.org/document/795809
+- **Abstract**: The low-density parity check codes whose performance is closest to the Shannon limit are "Gallager codes" based on irregular graphs. We compare alternative methods for constructing these graphs and present two results. First, we find a "super-Poisson" construction which gives a small improvement in empirical performance over a random construction. Second, whereas Gallager codes normally take N/sup 2/ time to encode, we investigate constructions of regular and irregular Gallager codes that allow more rapid encoding and have smaller memory requirements in the encoder. We find that these "fast encoding" Gallager codes have equally good performance.
+
+## Type IV self-dual codes over rings
+
+- **ID**: ieee:796375
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: S. T. Dougherty, P. Gaborit, M. Harada +2
+- **PDF**: https://ieeexplore.ieee.org/document/796375
+- **Abstract**: We study Type IV self-dual codes over the commutative rings of order 4. Gleason-type theorems of Type IV codes and their shadow codes are investigated. A mass formula of Type IV codes over these rings are given. We give a classification of Type TV codes over Z/sub 4/ and F2+uF/sub 2/ for reasonable lengths. We also construct a number of optimal Type TV codes.
+
+## Throughput analysis of the go-back-N protocol in fading radio channels
+
+- **ID**: ieee:768202
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: W. Turin
+- **PDF**: https://ieeexplore.ieee.org/document/768202
+- **Abstract**: We derive a formula for calculating the throughput efficiency of the go-back-N (GBN) protocol when error sources in the forward and backward channels are modeled by a hidden Markov model. The result is presented in the matrix form which makes it applicable to models with any number of states. We consider also the relationship between bit-level and block-level models and obtain the probability distribution of the time that a message spends in the system.

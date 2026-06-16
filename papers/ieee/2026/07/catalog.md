@@ -8,13 +8,4 @@
 - **Published**: July 2026
 - **Authors**: Xincheng Feng, Wenyong Zhou, Taiqiang Wu +3
 - **PDF**: https://ieeexplore.ieee.org/document/11499434
-- **Abstract**: Multivariate nonlinear functions are fundamental to many tasks in artificial intelligence (AI) and communication systems but are difficult to implement efficiently in hardware due to high computational complexity and resource demands, especially on edge and embedded devices. Existing stochastic computing (SC) approaches are mostly limited to univariate cases and do not scale well for high-dimensio...
-
-## Optical access networks—an operator view from past to future system—technologies and applications [Invited]
-
-- **ID**: ieee:11514749
-- **Type**: journal
-- **Published**: July 2026
-- **Authors**: Dezhi Zhang, Xinran Huang, Dekun Liu +2
-- **PDF**: https://ieeexplore.ieee.org/document/11514749
-- **Abstract**: The passive optical network (PON) has emerged as the dominant broadband access technology globally, owing to its superior bandwidth scalability, cost-effectiveness, and reliability. This paper systematically reviews the progress in standardization, the technical evolution, and practical applications of optical access networks (OANs) from an operator’s perspective. Beginning with the fundamental ar...
+- **Abstract**: Multivariate nonlinear functions are fundamental to many tasks in artificial intelligence (AI) and communication systems but are difficult to implement efficiently in hardware due to high computational complexity and resource demands, especially on edge and embedded devices. Existing stochastic computing (SC) approaches are mostly limited to univariate cases and do not scale well for high-dimensional approximation. This paper presents SMURF (Stochastic Multivariate Universal-Radix Finite-State Machine) and its enhanced variant HI-SMURF (HIgh-Dimensional Stochastic Multivariate Universal-Radix Finite-State Machine) that uses tensor-train (TT) factorization to approximate high-dimensional functions without exponential state growth. SMURF analytically derives steady-state distributions and employs convex optimization for parameter synthesis, while HI-SMURF preserves accuracy under scalable input dimensionality by factorizing the parameter space. Both architectures use configurable state resolution and simple logic circuits driven by stochastic bitstreams. We evaluate SMURF and HI-SMURF on low-density parity-check (LDPC) decoding, image classification, image reconstruction, and high-dimensional nonlinear benchmarks against baselines including Taylor-series expansions, look-up table (LUT) methods, Bernstein polynomial SC, tensor-factorization methods, and quantized multilayer perceptrons (MLPs). Results show that our methods maintain comparable accuracy while dramatically reducing hardware area, power, and area-delay product (ADP), demonstrating superior scalability and efficiency for resource-constrained systems.

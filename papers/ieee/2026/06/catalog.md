@@ -8,7 +8,7 @@
 - **Published**: June 2026
 - **Authors**: Shaohua Wang, Zhihao Zeng, Qiang Cao +4
 - **PDF**: https://ieeexplore.ieee.org/document/11217176
-- **Abstract**: Emerging communication and storage embrace low-density parity-check (LDPC) codes to fully exploit their physical channels. A field-programmable gate array (FPGA) is widely employed to fast prototype and accelerate the LDPC decoding with high complexity. For varying channel conditions, the FPGA decoder is desired to elastically stop iteration when meeting the success condition, avoiding conservativ...
+- **Abstract**: Emerging communication and storage embrace low-density parity-check (LDPC) codes to fully exploit their physical channels. A field-programmable gate array (FPGA) is widely employed to fast prototype and accelerate the LDPC decoding with high complexity. For varying channel conditions, the FPGA decoder is desired to elastically stop iteration when meeting the success condition, avoiding conservatively performing a predefined and large number of iterations. However, the dynamical-execution algorithms with adjustable parameters generally are challenging for a scalable decoder structure, preferred to deterministic execution logic. To overcome the problem, this article presents an elastic and scalable HLS-based FPGA LDPC decoder architecture with early termination to achieve high throughput and flexibility. To this end, eLDPC first provides a universal operation, fully leveraging the features of HLS to efficiently implement optimized small-scale hardware units for low-level data-update operations. Second, eLDPC presents a decoding-iteration pipeline that adds a termination-check (TC) stage to terminate the following iteration for current codeword decoding. eLDPC also presents an HLS-enhanced approach to address memory access conflicts associated with the DU pipeline. Furthermore, eLDPC extends the number of DU decoding-iteration pipelines within a single stream to decode multiple codewords in parallel. Third, eLDPC designs elastic and independent multiple decoding streams by using FIFO queues to decouple the input, output, and a decoding unit (DU) with variable iterations while avoiding the potential blockage of the queueing. We implement and evaluate eLDPC on a Xilinx U55C. Experiments show that eLDPC outperforms recent decoders by up to  $5\times $  with the same parameter and achieves the actual decoding throughput of up to 49.5 Gb/s with high scalability and flexibility.
 
 ## AquaLink: A QR Code-Driven Optical Camera Communication Framework for Underwater Network Applications
 
@@ -17,7 +17,7 @@
 - **Published**: June 2026
 - **Authors**: Tahreem Iqbal, Jiancheng Chi, Lei Wang +3
 - **PDF**: https://ieeexplore.ieee.org/document/11296855
-- **Abstract**: Underwater networking is vital for enabling collaboration between divers, vehicles, and sensors in marine exploration, monitoring, and emergency response. Yet achieving reliable communication in such dynamic, bandwidth constrained environments remains challenging. Acoustic and radio frequency technologies suffer from attenuation, latency, and hardware overhead, while optical wireless systems typic...
+- **Abstract**: Underwater networking is vital for enabling collaboration between divers, vehicles, and sensors in marine exploration, monitoring, and emergency response. Yet achieving reliable communication in such dynamic, bandwidth constrained environments remains challenging. Acoustic and radio frequency technologies suffer from attenuation, latency, and hardware overhead, while optical wireless systems typically require specialized transceivers or strict alignment, limiting practicality in mobile underwater networks. To address these limitations, we present AquaLink, a QR code–driven Optical Camera Communication (OCC) framework that enables robust underwater messaging using commodity smartphones and tablets. At its core, AquaQR employs blue–green 2-bit color encoding, Low-Density Parity-Check (LDPC) error correction, and geometric augmentations tailored for optical stability in turbid waters. An auto-configuration module adapts parameters before transmission, and a lightweight enhancement pipeline ensures real-time robustness under diverse conditions. Field trials in pool, lake, and coastal environments achieve over 90% decoding success at 5 m and up to 2× higher throughput than prior QR-based systems. By eliminating specialized hardware, AquaLink provides a scalable, low cost foundation for underwater visual networking, supporting message exchange, peer interaction, and localized link formation.
 
 ## QFEC: A 9.97 Gb/s Fully Configurable Quad-Mode Decoder for LDPC, Polar, Turbo, and Convolutional Codes
 
@@ -26,16 +26,7 @@
 - **Published**: June 2026
 - **Authors**: Yufan Yue, Kuan-Yu Chen, Xiangdong Wei +5
 - **PDF**: https://ieeexplore.ieee.org/document/11424013
-- **Abstract**: Rapidly evolving wireless channel conditions and communication standards demand adaptable forward error correction (FEC) decoders. Existing rigid architectures, designed for a single standard, exhibit limited adaptability in terms of throughput and/or coding gain, hindering the timely deployment of new applications. To overcome these limitations, we propose QFEC (quad-mode FEC decoder), a unified ...
-
-## Faster-Than-Nyquist Signaling for Next-Generation Wireless: Principles, Applications, and Challenges
-
-- **ID**: ieee:11349346
-- **Type**: magazine
-- **Published**: June 2026
-- **Authors**: Shuangyang Li, Melda Yuksel, Tongyang Xu +4
-- **PDF**: https://ieeexplore.ieee.org/document/11349346
-- **Abstract**: Future wireless networks are expected to deliver ultra-high throughput for supporting emerging applications. In such scenarios, conventional Nyquist signaling may falter. As a remedy, faster-than-Nyquist (FTN) signaling facilitates the transmission of more symbols than Nyquist signaling without expanding the time-frequency resources. We provide an accessible and structured introduction to FTN sign...
+- **Abstract**: Rapidly evolving wireless channel conditions and communication standards demand adaptable forward error correction (FEC) decoders. Existing rigid architectures, designed for a single standard, exhibit limited adaptability in terms of throughput and/or coding gain, hindering the timely deployment of new applications. To overcome these limitations, we propose QFEC (quad-mode FEC decoder), a unified and highly configurable FEC decoder. QFEC enables a wide range of throughput vs. coding gain tradeoffs across QC-LDPC, Turbo, Polar, and Convolutional codes (CC) by providing full configurability for existing standards and proprietary systems. This ensures communication reliability under varying channel conditions and seamless support for both legacy and emerging communication protocols. Our hardware-unified approach leverages a shared memory and computation unit architecture that exploits the inherent commonalities in the iterative message-passing dataflow of all four code types. We attain outstanding flexibility at high data rates through an innovative combination of a fully customizable interconnect and a multi-mode computation datapath. The QFEC chip, fabricated in GF 12 nm FinFET technology, achieves 9.97 Gb/s throughput for the Optical Communication Terminal (OCT) standard and 6.52 Gb/s for 5G BG1, while consuming normalized energy efficiency (NEE) of 1.04 pJ/b and 1.53 pJ/b, respectively. This design can reach a maximum of 25.4 Gb/s using a proprietary QC-LDPC configuration. This design significantly surpasses existing solutions in flexibility by offering the broadest support for standards and parameters with a unified, efficient architecture. To the best of our knowledge, this is the first chip implementation of a fully flexible quad-mode FEC decoder for QC-LDPC, Polar, Turbo, CC codes.
 
 ## Capacities of Entanglement Distribution From a Central Source
 
@@ -44,7 +35,7 @@
 - **Published**: June 2026
 - **Authors**: Xinan Chen, Stefano Chessa, Ian George +2
 - **PDF**: https://ieeexplore.ieee.org/document/11482228
-- **Abstract**: Distribution of entanglement is an essential task in quantum information processing and the realization of quantum networks. In our work, we theoretically investigate the scenario where a central source prepares an  $N$ -partite entangled state and transmits each entangled subsystem to one of  $N$  receivers through noisy quantum channels. The receivers are then able to perform local operations as...
+- **Abstract**: Distribution of entanglement is an essential task in quantum information processing and the realization of quantum networks. In our work, we theoretically investigate the scenario where a central source prepares an  $N$ -partite entangled state and transmits each entangled subsystem to one of  $N$  receivers through noisy quantum channels. The receivers are then able to perform local operations assisted by unlimited classical communication to distill target entangled states from the noisy channel output. In this operational context, we define the EPR distribution capacity and the GHZ distribution capacity of a quantum channel as the largest rates at which Einstein-Podolsky-Rosen (EPR) states and Greenberger-Horne-Zeilinger (GHZ) states can be faithfully distributed through the channel, respectively. We establish lower and upper bounds on the EPR distribution capacity by connecting it with the task of assisted entanglement distillation. We also construct an explicit protocol consisting of a combination of a quantum communication code and a classical-post-processing-assisted entanglement generation code, which yields a simple achievable lower bound for generic channels. As applications of these results, we give an exact expression for the EPR distribution capacity over two erasure channels and bounds on the EPR distribution capacity over two generalized amplitude damping channels. We also bound the GHZ distribution capacity, which results in an exact characterization of the GHZ distribution capacity when the most noisy channel is a dephasing channel.
 
 ## Performance Measurements of ATSC 3.0 MIMO System in Brazil: Field Tests
 
@@ -53,16 +44,7 @@
 - **Published**: June 2026
 - **Authors**: Rodrigo A. Bilobran, Leonardo H. Gonsioroski, Amanda B. dos Santos +7
 - **PDF**: https://ieeexplore.ieee.org/document/11363483
-- **Abstract**: New digital television standards are emerging to meet the demand for new services from TV broadcasters, as well as to support new high-resolution audio and video formats available on the market. In Brazil, the Brazilian Digital TV System (SBTVD) Forum defines the standard to be adopted. Among the currently available physical layer technologies, the Advanced Television Systems Committee (ATSC) 3.0 ...
-
-## Physical-Layer CTC From LoRa to Wi-Fi With IEEE 802.11ax
-
-- **ID**: ieee:11329176
-- **Type**: journal
-- **Published**: June 2026
-- **Authors**: Demin Gao, Xin Lv, Wenchao Jiang +5
-- **PDF**: https://ieeexplore.ieee.org/document/11329176
-- **Abstract**: Wi-Fi is the de facto standard for providing wireless access to the Internet using the 2.4 GHz ISM (Industrial Scientific Medical) band. LoRa (Long Range) is specially designed for Low-Power, Wide-Area Networks (LPWANs) and has a broad range of applications in Internet of Things. Tens of billions of mobile devices (e.g., smartphones) are manufactured with limited types of wireless radio, making it...
+- **Abstract**: New digital television standards are emerging to meet the demand for new services from TV broadcasters, as well as to support new high-resolution audio and video formats available on the market. In Brazil, the Brazilian Digital TV System (SBTVD) Forum defines the standard to be adopted. Among the currently available physical layer technologies, the Advanced Television Systems Committee (ATSC) 3.0 standard offers great flexibility in operating modes, depending on the broadcasters’ requirements and propagation conditions, for both fixed and mobile reception. This allows the system to be configured to balance robustness and transmission efficiency. This paper presents the performance test results in various mobile reception scenarios in the city of Rio de Janeiro, using an ATSC 3.0 signal with a transmission rate of 32.3 Mbps in a  $2\times 2$  Multiple-Input Multiple-Output (MIMO) configuration. The results showed a reception success rate of 53.6%, with an increase in reception errors for Carrier-to-Noise Ratio (C/N) lower than 26 dB. Furthermore, reception errors were detected with greater intensity when the received signal level was below -70 dBm. Although the overall success rate was around 50%, the complementary metrics (C/N threshold, RSSI, and PLP0 error behavior) were consistent with theoretical expectations, demonstrating that ATSC 3.0 performs effectively under real urban mobility conditions at high spectral efficiency. ATSC 3.0 thus proved effective in broadcast transmission, meeting the needs for ultra-high-definition (UHD) audio and video broadcasting.
 
 ## A Combined Visible Light and Ultraviolet Communication Approach for Industrial Internet of Things
 
@@ -71,13 +53,4 @@
 - **Published**: June 2026
 - **Authors**: Zichen Yu, Nuo Huang, Yanyu Zhang +2
 - **PDF**: https://ieeexplore.ieee.org/document/11477091
-- **Abstract**: This paper proposes a dual-spectrum communication strategy for Industrial Internet of Things (IIoT) scenarios that integrates visible light communication (VLC) and ultraviolet communication (UVC). In the proposed approach, VLC leverages existing lighting infrastructure to deliver low-cost, short-range access, while UVC provides reliable backup in VLC dead zones. Given stringent delay requirements ...
-
-## Architecture for Efficient Local Content Insertion in ATSC 3.0 SFNs
-
-- **ID**: ieee:11232484
-- **Type**: journal
-- **Published**: June 2026
-- **Authors**: Orlando Landrove, Erick Jimenez, Pablo Angueira +3
-- **PDF**: https://ieeexplore.ieee.org/document/11232484
-- **Abstract**: This paper presents a novel approach for seamless and efficient local content insertion in Single Frequency Network (SFN) networks. In practical deployments, the proposed architecture supports content replacement with services of varying bitrates, as long as they conform to the Physical Layer Pipes (PLP’s) configured capacity. This work proposes the introduction of a new entity, Stream Processor, ...
+- **Abstract**: This paper proposes a dual-spectrum communication strategy for Industrial Internet of Things (IIoT) scenarios that integrates visible light communication (VLC) and ultraviolet communication (UVC). In the proposed approach, VLC leverages existing lighting infrastructure to deliver low-cost, short-range access, while UVC provides reliable backup in VLC dead zones. Given stringent delay requirements in IIoT, finite-blocklength coding is introduced to minimize end-to-end latency. Based on short-packet information theory, the system's achievable rate is analyzed, and the optimal rates under different channel conditions are determined via simulation. An adaptive large-dynamic-range transmission scheme that combines UVC and VLC is designed. The spatial distribution of the rate field is characterized for the hybrid transmission strategy. We conduct bit-error-rate tests in an industrial workshop to validate the performance of the proposed approach, particularly its adequate coverage of UVC in VLC dead zones. It has been demonstrated that UVC can achieve a rate of 0.30 bits/symbol within VLC dead zones.

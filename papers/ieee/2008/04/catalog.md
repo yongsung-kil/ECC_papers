@@ -8,7 +8,7 @@
 - **Published**: April 2008
 - **Authors**: Michael Chertkov, Mikhail G. Stepanov
 - **PDF**: https://ieeexplore.ieee.org/document/4475359
-- **Abstract**: In linear programming (LP) decoding of a low-density parity-check (LDPC) code one minimizes a linear functional, with coefficients related to log-likelihood ratios, over a relaxation of the polytope spanned by the codewords. In order to quantify LP decoding it is important to study vertexes of the relaxed polytope, so-called pseudocodewords. We propose a technique to heuristcally create a list of ...
+- **Abstract**: In linear programming (LP) decoding of a low-density parity-check (LDPC) code one minimizes a linear functional, with coefficients related to log-likelihood ratios, over a relaxation of the polytope spanned by the codewords. In order to quantify LP decoding it is important to study vertexes of the relaxed polytope, so-called pseudocodewords. We propose a technique to heuristcally create a list of pseudocodewords close to the zero codeword and their distances. Our pseudocodeword-search algorithm starts by randomly choosing configuration of the noise. The configuration is modified through a discrete number of steps. Each step consists of two substeps: one applies an LP decoder to the noise-configuration deriving a pseudocodeword, and then finds configuration of the noise equidistant from the pseudocodeword and the zero codeword. The resulting noise configuration is used as an entry for the next step. The iterations converge rapidly to a pseudocodeword neighboring the zero codeword. Repeated many times, this procedure is characterized by the distribution function of the pseudocodeword effective distance. The efficiency of the procedure is demonstrated on examples of the Tanner code and Margulis codes operating over an additive white Gaussian noise (AWGN) channel.
 
 ## Construction of quasi-cyclic LDPC codes from quadratic congruences
 
@@ -17,7 +17,7 @@
 - **Published**: April 2008
 - **Authors**: Chun-Ming Huang, Jen-Fa Huang, Chao-Chin Yang
 - **PDF**: https://ieeexplore.ieee.org/document/4489678
-- **Abstract**: In this paper, we proposed a novel method for constructing quasi-cyclic low-density parity-check (QC-LDPC) codes based on circulant permutation matrices via a simple quadratic congruential equation. The main advantage is that QC-LDPC codes with a variety of block lengths and rates can be easily constructed with no cycles of length four or less. Simulation results show that the proposed QC-LDPC cod...
+- **Abstract**: In this paper, we proposed a novel method for constructing quasi-cyclic low-density parity-check (QC-LDPC) codes based on circulant permutation matrices via a simple quadratic congruential equation. The main advantage is that QC-LDPC codes with a variety of block lengths and rates can be easily constructed with no cycles of length four or less. Simulation results show that the proposed QC-LDPC codes perform slight better than the random regular LDPC codes for short to moderate block lengths and have almost the same performance as Sridara-Fuja-Tanner codes.
 
 ## Low-Density Lattice Codes
 
@@ -26,7 +26,7 @@
 - **Published**: April 2008
 - **Authors**: Naftali Sommer, Meir Feder, Ofir Shalvi
 - **PDF**: https://ieeexplore.ieee.org/document/4475389
-- **Abstract**: Low-density lattice codes (LDLC) are novel lattice codes that can be decoded efficiently and approach the capacity of the additive white Gaussian noise (AWGN) channel. In LDLC a codeword x is generated directly at the n-dimensional Euclidean space as a linear transformation of a corresponding integer message vector b, i.e., x = Gb-1, where H = G-1 is restricted to be sparse. The fact that H is spa...
+- **Abstract**: Low-density lattice codes (LDLC) are novel lattice codes that can be decoded efficiently and approach the capacity of the additive white Gaussian noise (AWGN) channel. In LDLC a codeword x is generated directly at the n-dimensional Euclidean space as a linear transformation of a corresponding integer message vector b, i.e., x = Gb-1, where H = G-1 is restricted to be sparse. The fact that H is sparse is utilized to develop a linear-time iterative decoding scheme which attains, as demonstrated by simulations, good error performance within ~0.5 dB from capacity at block length of n =100,000 symbols. The paper also discusses convergence results and implementation considerations.
 
 ## On Convergence Speed of Capacity-Achieving Sequences for Erasure Channel
 
@@ -35,7 +35,7 @@
 - **Published**: April 2008
 - **Authors**: Min Lu
 - **PDF**: https://ieeexplore.ieee.org/document/4475380
-- **Abstract**: Oswald and Shokrollahi carried out a systematic study of capacity-achieving sequences of low-density parity-check (LDPC) codes for the binary erasure channel. Two quantities mu and Delta were suggested to measure the convergence speed of these sequences. They gave an upper bound of mu for a certain type of capacity-achieving sequences. In this correspondence, a lower bound of mu for this type of s...
+- **Abstract**: Oswald and Shokrollahi carried out a systematic study of capacity-achieving sequences of low-density parity-check (LDPC) codes for the binary erasure channel. Two quantities mu and Delta were suggested to measure the convergence speed of these sequences. They gave an upper bound of mu for a certain type of capacity-achieving sequences. In this correspondence, a lower bound of mu for this type of sequences is provided. It follows that, under a certain condition, the exact value of mu can be determined, which answers an open question posed by Oswald and Shokrollahi in their paper. If the condition is not satisfied the upper bound may not be tight. A counterexample is given.
 
 ## Transactions Papers - Constructions of Nonbinary Quasi-Cyclic LDPC Codes: A Finite Field Approach
 
@@ -44,7 +44,7 @@
 - **Published**: April 2008
 - **Authors**: Lingqi Zeng, Lan Lan, Ying Y. Tai +3
 - **PDF**: https://ieeexplore.ieee.org/document/4489627
-- **Abstract**: This paper is concerned with construction of efficiently encodable nonbinary quasi-cyclic LDPC codes based on finite fields. Four classes of nonbinary quasi-cyclic LDPC codes are constructed. Experimental results show that codes constructed perform well with iterative decoding using a fast Fourier transform based q-ary sum-product algorithm and they achieve significant coding gains over Reed-Solom...
+- **Abstract**: This paper is concerned with construction of efficiently encodable nonbinary quasi-cyclic LDPC codes based on finite fields. Four classes of nonbinary quasi-cyclic LDPC codes are constructed. Experimental results show that codes constructed perform well with iterative decoding using a fast Fourier transform based q-ary sum-product algorithm and they achieve significant coding gains over Reed-Solomon codes of the same lengths and rates decoded with either algebraic hard- decision Berlekamp-Massey algorithm or algebraic soft-decision Kotter-Vardy algorithm.
 
 ## EXIT Functions of Hadamard Components in Repeat–Zigzag–Hadamard (RZH) Codes With Parallel Decoding
 
@@ -53,7 +53,7 @@
 - **Published**: April 2008
 - **Authors**: Kai Li, Xiaodong Wang, Alexei Ashikhmin
 - **PDF**: https://ieeexplore.ieee.org/document/4475378
-- **Abstract**: The extrinsic information transfer (EXIT) functions of Hadamard codes in the context of repeat-zigzag-Hadamard (RZH) codes with parallel decoding are investigated. EXIT functions over both the binary erasure channel (BEC) and the binary-input additive white Gaussian noise (BIAWGN) channel are derived. The application of these EXIT functions in the design of low-rate capacity-approaching irregular ...
+- **Abstract**: The extrinsic information transfer (EXIT) functions of Hadamard codes in the context of repeat-zigzag-Hadamard (RZH) codes with parallel decoding are investigated. EXIT functions over both the binary erasure channel (BEC) and the binary-input additive white Gaussian noise (BIAWGN) channel are derived. The application of these EXIT functions in the design of low-rate capacity-approaching irregular RZH (IRZH) codes is also considered. Using the EXIT functions, the bit error rate (BER) for a given code profile can be easily estimated and the differential evolution (DE) technique can be employed to find the optimal degree profile for given design parameters. The EXIT functions derived in this communication can serve as an effective tool for designing low-rate IRZH codes with parallel decoding in both BEC and BIAWGN channels.
 
 ## Transactions Letters - Random Redundant Iterative Soft-in Soft-out Decoding
 
@@ -71,7 +71,7 @@
 - **Published**: April 2008
 - **Authors**: Dongning Guo, Chih-chun Wang
 - **PDF**: https://ieeexplore.ieee.org/document/4481368
-- **Abstract**: Code-division multiple access (CDMA) is the basis of a family of advanced air interfaces in current and future generation networks. The benefits promised by CDMA have not been fully realized partly due to the prohibitive complexity of optimal detection and decoding of many users communicating simultaneously using the same frequency band. From both theoretical and practical perspectives, this paper...
+- **Abstract**: Code-division multiple access (CDMA) is the basis of a family of advanced air interfaces in current and future generation networks. The benefits promised by CDMA have not been fully realized partly due to the prohibitive complexity of optimal detection and decoding of many users communicating simultaneously using the same frequency band. From both theoretical and practical perspectives, this paper advocates a new paradigm of CDMA with sparse spreading sequences, which enables near-optimal multiuser detection using belief propagation (BP) with low-complexity. The scheme is in part inspired by capacity-approaching low-density parity-check (LDPC) codes and the success of iterative decoding techniques. Specifically, it is shown that BP-based detection is optimal in the large-system limit under many practical circumstances, which is a unique advantage of sparsely spread CDMA systems. Moreover, it is shown that, from the viewpoint of an individual user, the CDMA channel is asymptotically equivalent to a scalar Gaussian channel with some degradation in the signal-to-noise ratio (SNR). The degradation factor, known as the multiuser efficiency, can be determined from a fixed-point equation. The results in this paper apply to a broad class of sparse, semi-regular CDMA systems with arbitrary input and power distribution. Numerical results support the theoretical findings for systems of moderate size, which further demonstrate the appeal of sparse spreading in practical applications.
 
 ## Reduced-Complexity Belief Propagation for System-Wide MUD in the Uplink of Cellular Networks
 
@@ -80,7 +80,7 @@
 - **Published**: April 2008
 - **Authors**: Sara Bavarian, James K. Cavers
 - **PDF**: https://ieeexplore.ieee.org/document/4481378
-- **Abstract**: System-wide multiuser detection (MUD), in which all base stations (BSs) of a cellular system cooperate to detect the data of all mobile stations (MSs), has much promise. However, little is known at present about practical techniques or their performance. An attractive method is belief propagation (BP), with message exchange between nearby cooperating BSs over a backbone landline network, but its p...
+- **Abstract**: System-wide multiuser detection (MUD), in which all base stations (BSs) of a cellular system cooperate to detect the data of all mobile stations (MSs), has much promise. However, little is known at present about practical techniques or their performance. An attractive method is belief propagation (BP), with message exchange between nearby cooperating BSs over a backbone landline network, but its performance is known only for a greatly simplified network model and its computation load grows exponentially with the number of interfering MS symbols at each BS. In this paper, we present a reduced complexity variation of BP (RCBP) and show that its performance is close to or identical to that of BP in the simplified network. We also observe excellent performance by iterative multiuser detection and decoding of low-density parity check codes (LDPC). Furthermore, we examine RCBP performance in a realistic wireless network model, with path loss, shadowing, fading and power control. These results, though poorer than those of the simplified network, show that system-wide MUD with cooperating BSs provides great improvement compared with conventional systems.
 
 ## Stopping Set Analysis of Iterative Row-Column Decoding of Product Codes
 
@@ -89,7 +89,7 @@
 - **Published**: April 2008
 - **Authors**: Eirik Rosnes
 - **PDF**: https://ieeexplore.ieee.org/document/4475386
-- **Abstract**: In this paper, we introduce stopping sets for iterative row-column decoding of product codes using optimal constituent decoders. When transmitting over the binary erasure channel (BEC), iterative row-column decoding of product codes using optimal constituent decoders will either be successful, or stop in the unique maximum-size stopping set that is contained in the (initial) set of erased position...
+- **Abstract**: In this paper, we introduce stopping sets for iterative row-column decoding of product codes using optimal constituent decoders. When transmitting over the binary erasure channel (BEC), iterative row-column decoding of product codes using optimal constituent decoders will either be successful, or stop in the unique maximum-size stopping set that is contained in the (initial) set of erased positions. Let Cp denote the product code of two binary linear codes Cc and Cr of minimum distances dc and dr and second generalized Hamming weights d2(Cc) and d2(Cr), respectively. We show that the size smin of the smallest noncode- word stopping set is at least mm(drd2(Cc),dcd2(Cr)) > drdc, where the inequality follows from the Griesmer bound. If there are no codewords in Cp with support set S, where S is a stopping set, then S is said to be a noncodeword stopping set. An immediate consequence is that the erasure probability after iterative row-column decoding using optimal constituent decoders of (finite-length) product codes on the BEC, approaches the erasure probability after maximum-likelihood decoding as the channel erasure probability decreases. We also give an explicit formula for the number of noncodeword stopping sets of size smin, which depends only on the first nonzero coefficient of the constituent (row and column) first and second support weight enumerators, for the case when d2(Cr) < 2dr and d2(Cc) < 2dc. Finally, as an example, we apply the derived results to the product of two (extended) Hamming codes and two Golay codes.
 
 ## Turbo Codes in Binary Erasure Channel
 
@@ -98,7 +98,7 @@
 - **Published**: April 2008
 - **Authors**: Jeong W. Lee, RÜdiger L. Urbanke, Richard E. Blahut
 - **PDF**: https://ieeexplore.ieee.org/document/4475377
-- **Abstract**: In this correspondence, the stopping set of turbo codes with iterative decoding in the binary erasure channel is defined. Block and bit erasure probabilities of turbo codes are studied by using the stopping set analysis. It is found that block and bit erasure probabilities of turbo codes with iterative decoding are higher than those with maximum-likelihood decoding, where the differences are negli...
+- **Abstract**: In this correspondence, the stopping set of turbo codes with iterative decoding in the binary erasure channel is defined. Block and bit erasure probabilities of turbo codes are studied by using the stopping set analysis. It is found that block and bit erasure probabilities of turbo codes with iterative decoding are higher than those with maximum-likelihood decoding, where the differences are negligible in the error floor region. It is shown that in the error floor region, block and bit erasure probabilities of turbo codes with iterative decoding are dominated by small stopping sets and are asymptotically dominated by low weight codewords.
 
 ## Scalable Joint Source and Channel Coding of Meshes
 
@@ -107,16 +107,7 @@
 - **Published**: April 2008
 - **Authors**: Dan C. Cernea, Adrian Munteanu, Alin Alecu +2
 - **PDF**: https://ieeexplore.ieee.org/document/4456690
-- **Abstract**: This paper proposes a new approach for joint source and channel coding (JSCC) of meshes, simultaneously providing scalability and optimized resilience against transmission errors. An unequal error protection approach is followed, to cope with the different error-sensitivity levels characterizing the various resolution and quality layers produced by the input scalable source codec. The number of la...
-
-## Design of cages with a randomized progressive edge-growth algorithm
-
-- **ID**: ieee:4489674
-- **Type**: journal
-- **Published**: April 2008
-- **Authors**: Auguste Venkiah, David Declercq, Charly Poulliat
-- **PDF**: https://ieeexplore.ieee.org/document/4489674
-- **Abstract**: The progressive edge-growth (PEG) construction is a well known algorithm for constructing bipartite graphs with good girth properties. In this letter, we propose some improvements in the PEG algorithm which greatly improve the girth properties of the resulting graphs: given a graph size, they increase the girth g achievable by the algorithm, and when the girth cannot be increased, our modified alg...
+- **Abstract**: This paper proposes a new approach for joint source and channel coding (JSCC) of meshes, simultaneously providing scalability and optimized resilience against transmission errors. An unequal error protection approach is followed, to cope with the different error-sensitivity levels characterizing the various resolution and quality layers produced by the input scalable source codec. The number of layers and the protection levels to be employed for each layer are determined by solving a joint source and channel coding problem. In this context, a novel fast algorithm for solving the optimization problem is conceived, enabling a real-time implementation of the JSCC rate-allocation. An instantiation of the proposed JSCC approach is demonstrated for MeshGrid, which is a scalable 3-D object representation method, part of MPEG-4 AFX. In this context, the L-inflnite distortion metric is employed, which is to our knowledge a unique feature in mesh coding. Numerical results show the superiority of the L-inflnite norm over the classical L-2 norm in a JSCC setting. One concludes that the proposed joint source and channel coding approach offers resilience against transmission errors, provides graceful degradation, enables a fast real-time implementation, and preserves all the scalability features and animation capabilities of the employed scalable mesh codec.
 
 ## Nonbinary LDPC Coding for Multicarrier Underwater Acoustic Communications
 
@@ -125,7 +116,7 @@
 - **Published**: 8-11 April
 - **Authors**: Jie Huang, Shengli Zhou, Peter Willett
 - **PDF**: https://ieeexplore.ieee.org/document/4530955
-- **Abstract**: In this paper, we propose to use nonbinary low density parity check (LDPC) codes to address two main issues in underwater acoustic OFDM communication: i) plain OFDM has poor performance in the presence of channel fading, and ii) OFDM transmission has a high peak-to-average-power ratio (PAPR). We propose new methods to construct nonbinary irregular LDPC codes that achieve excellent performance, mat...
+- **Abstract**: In this paper, we propose to use nonbinary low density parity check (LDPC) codes to address two main issues in underwater acoustic OFDM communication: i) plain OFDM has poor performance in the presence of channel fading, and ii) OFDM transmission has a high peak-to-average-power ratio (PAPR). We propose new methods to construct nonbinary irregular LDPC codes that achieve excellent performance, match well with the underlying modulation, and can be encoded in linear time and in parallel. Simulation and experimental results confirm the excellent performance of the proposed nonbinary LDPC codes. Based on the property that the generator matrix of LDPC codes has high density, we further show how to reduce the PAPR considerably with minimal overhead.
 
 ## High-performance scheduling algorithm for partially parallel LDPC decoder
 
@@ -134,7 +125,7 @@
 - **Published**: 31 March-4
 - **Authors**: Cheng-Zhou Zhan, Xin-Yu Shih, An-Yeu Wu
 - **PDF**: https://ieeexplore.ieee.org/document/4518325
-- **Abstract**: In this paper, we propose a new scheduling algorithm for the overlapped message passing decoding, which can be applied to general low-density parity check (LDPC) codes. The partially parallel LDPC architecture is commonly used for reducing the area cost of the processing units. The dependency of two kinds of processing units, check node unit (CNU) and bit node unit (BNU), should be considered to e...
+- **Abstract**: In this paper, we propose a new scheduling algorithm for the overlapped message passing decoding, which can be applied to general low-density parity check (LDPC) codes. The partially parallel LDPC architecture is commonly used for reducing the area cost of the processing units. The dependency of two kinds of processing units, check node unit (CNU) and bit node unit (BNU), should be considered to enhance the hardware utilization efficiency (HUE). Based on the properties of the parity check matrix of LDPC codes, the updating calculation of the CNU and BNU can be overlapped to reduce the decoding latency by enhancing the HUE with the matrix scheduling algorithm. By applying our proposed LDPC scheduling algorithm to a (1944, 972)-irregular LDPC code, we can get about 60% throughput gain in average without any performance degradation.
 
 ## Structure of non-binary regular ldpc cycle codes
 
@@ -143,7 +134,7 @@
 - **Published**: 31 March-4
 - **Authors**: Jie Huang, Shengli Zhou, Peter Willett
 - **PDF**: https://ieeexplore.ieee.org/document/4518271
-- **Abstract**: In this paper, we study non-binary regular LDPC cycle codes whose parity check matrix has fixed column weight 2 and fixed row weight d. We prove that the parity check matrix of any regular cycle code can be put into a concatenation form of row-permuted block-diagonal matrices after row and column permutations if d is even, or, if d is odd and the code&#39;s associated graph contains at least one spann...
+- **Abstract**: In this paper, we study non-binary regular LDPC cycle codes whose parity check matrix has fixed column weight 2 and fixed row weight d. We prove that the parity check matrix of any regular cycle code can be put into a concatenation form of row-permuted block-diagonal matrices after row and column permutations if d is even, or, if d is odd and the code's associated graph contains at least one spanning subgraph that consists of disjoint edges. Utilizing this structure enables parallel processing in linear-time encoding, and parallel processing in sequential belief-propagation decoding, which increases the throughput without compromising performance or complexity. Numerical results are presented to compare the code performance and the decoding complexity.
 
 ## Implementation of message-passing algorithms for the acquisition of spreading codes
 
@@ -152,7 +143,7 @@
 - **Published**: 31 March-4
 - **Authors**: Massimo Rovini, Fabio Principe, Luca Fanucci +1
 - **PDF**: https://ieeexplore.ieee.org/document/4517891
-- **Abstract**: A new technique to acquire pseudo-noise (PN) sequences has been recently proposed in [1] and [2]. It is based on the paradigm of iterative message passing (iMP) to be run on loopy graph. This technique approximates the maximum-likelihood (ML) estimator, providing a sub-optimal algorithm that searches all possible code phases in parallel, at low complexity and fast acquisition time. This work is ad...
+- **Abstract**: A new technique to acquire pseudo-noise (PN) sequences has been recently proposed in [1] and [2]. It is based on the paradigm of iterative message passing (iMP) to be run on loopy graph. This technique approximates the maximum-likelihood (ML) estimator, providing a sub-optimal algorithm that searches all possible code phases in parallel, at low complexity and fast acquisition time. This work is addressed to the design of the architecture of an iMP detector, following the implementation methodologies typical of standard low-density parity-check (LDPC) decoders, and demonstrates its benefits in terms of acquisition time and complexity, compared with standard techniques.
 
 ## Using input/output queues to increase LDPC decoder performance
 
@@ -161,7 +152,7 @@
 - **Published**: 31 March-4
 - **Authors**: Esa Alghonaim, Aiman El-Maleh, M. Adnan Landolsi
 - **PDF**: https://ieeexplore.ieee.org/document/4493550
-- **Abstract**: The paper presents a novel approach to increase the performance and/or throughput of iterative belief propagation (BP) decoding of low density parity check (LDPC) codes. The proposed approach is based on utilizing the decoder idle time by introducing two queue s: one at the decoder input and the other at the decoder output. At the presence of an input queue, the decoder runs extra iterations beyon...
+- **Abstract**: The paper presents a novel approach to increase the performance and/or throughput of iterative belief propagation (BP) decoding of low density parity check (LDPC) codes. The proposed approach is based on utilizing the decoder idle time by introducing two queue s: one at the decoder input and the other at the decoder output. At the presence of an input queue, the decoder runs extra iterations beyond the maximum allowable iterations as long as the input queue is not full. The function of the output queue is to preserve decoder timing, guaranteeing frames to be decoded within a fixed time similar to a conventional LDPC decoder, making it practical for real time applications. Simulation results for a rate ½ (1024,512) progressive edge-growth (PEG) LDPC code show that the proposed approach can increase the decoder performance up to 69% keeping the same throughput, or doubling the throughput while keeping performance almost the same.
 
 ## Design of block-structured LDPC codes for iterative receivers with soft sphere detection
 
@@ -170,7 +161,7 @@
 - **Published**: 31 March-4
 - **Authors**: Predrag Radosavljevic, Joseph R. Cavallaro
 - **PDF**: https://ieeexplore.ieee.org/document/4518204
-- **Abstract**: In this paper we design block-structured LDPC codes for iterative MIMO receivers with soft sphere detection in particular channel environments. The receiver EXIT charts are used as a design tool. The main design constraint is to preserve the block-structure of parity-check matrices supporting modular semi-parallel decoder architectures. We show that newly designed block-structured code profiles pr...
+- **Abstract**: In this paper we design block-structured LDPC codes for iterative MIMO receivers with soft sphere detection in particular channel environments. The receiver EXIT charts are used as a design tool. The main design constraint is to preserve the block-structure of parity-check matrices supporting modular semi-parallel decoder architectures. We show that newly designed block-structured code profiles provide improved error-rate performance of between 0.5 dB and 1 dB in different channel environments for moderate codeword size.
 
 ## Audio authentication based on distributed source coding
 
@@ -179,7 +170,7 @@
 - **Published**: 31 March-4
 - **Authors**: David Varodayan, Yao-Chung Lin, Bernd Girod
 - **PDF**: https://ieeexplore.ieee.org/document/4517587
-- **Abstract**: Audio authentication is important in content delivery via untrusted intermediaries, for example peer-to-peer (P2P) file sharing. Many differently encoded versions of the original audio might exist. Distinguishing the legitimate diversity of encodings from malicious tampering is the challenge addressed in this paper. We develop an approach based on distributed source coding for the problem of backw...
+- **Abstract**: Audio authentication is important in content delivery via untrusted intermediaries, for example peer-to-peer (P2P) file sharing. Many differently encoded versions of the original audio might exist. Distinguishing the legitimate diversity of encodings from malicious tampering is the challenge addressed in this paper. We develop an approach based on distributed source coding for the problem of backward-compatible audio authentication. The key idea is to provide a Slepian-Wolf encoded quantized perceptually significant audio projection as authentication data. This version can be correctly decoded only with the help of authentic audio as side information. Distributed source coding provides the desired robustness against legitimate encoding variations, while detecting illegitimate modification. We demonstrate reliable authentication at a Slepian-Wolf bitrate of less than 100 bit/s.
 
 ## Distributed stereo image coding with improved disparity and noise estimation
 
@@ -188,7 +179,7 @@
 - **Published**: 31 March-4
 - **Authors**: David Chen, David Varodayan, Markus Flierl +1
 - **PDF**: https://ieeexplore.ieee.org/document/4517815
-- **Abstract**: Distributed coding of correlated grayscale stereo images is effectively addressed by a recently proposed codec that learns block-wise disparity at the decoder. Based on the Slepian-Wolf theorem, one image can be transmitted at a rate approaching the conditional entropy if the other image is referenced as side information at the decoder. This paper improves the methods in the decoder design by refi...
+- **Abstract**: Distributed coding of correlated grayscale stereo images is effectively addressed by a recently proposed codec that learns block-wise disparity at the decoder. Based on the Slepian-Wolf theorem, one image can be transmitted at a rate approaching the conditional entropy if the other image is referenced as side information at the decoder. This paper improves the methods in the decoder design by refining disparity estimates to pixel resolution, generating more accurate initial disparity estimates, and modeling noise as a nonstationary random field. The new decoder enables up to an additional 9 percent bit rate savings for lossless coding. When the rate is insufficient for lossless reconstruction, the new decoder improves PSNR and significantly reduces visually unpleasant blocking artifacts.
 
 ## Analyzing the scalability of SIMD for the next generation software defined radio
 
@@ -197,7 +188,7 @@
 - **Published**: 31 March-4
 - **Authors**: Mark Woh, Yuan Lin, Sangwon Seo +2
 - **PDF**: https://ieeexplore.ieee.org/document/4518878
-- **Abstract**: Previous studies have shown that wireless DSP algorithms exhibit high levels of data level parallelism (DLP). Commercial and research work in the field of software defined radio (SDR) has produced designs utilizing single-instruction multiple-data (SIMD) execution units to exploit this high level of parallelism. These designs have been able to deliver the efficiency and computational power needed ...
+- **Abstract**: Previous studies have shown that wireless DSP algorithms exhibit high levels of data level parallelism (DLP). Commercial and research work in the field of software defined radio (SDR) has produced designs utilizing single-instruction multiple-data (SIMD) execution units to exploit this high level of parallelism. These designs have been able to deliver the efficiency and computational power needed to process 3G wireless technologies. Though efficient 3G processing has been achieved, next generation 4G SDR technology requires 10–1000x more computational performance but limits the power budget increase to 2–5x. In this paper, we present a breakdown of 4G and analyze the scalability of SIMD to see if it can help to meet the 4G requirement. We take a proposed SDR architecture, SODA, and modify it for different widths in order to calculate its efficiency. We consider the trade-offs with respect to computation and energy efficiency.
 
 ## Power-efficient rate allocation for Slepian-Wolf coding over wireless sensor networks
 
@@ -206,7 +197,7 @@
 - **Published**: 31 March-4
 - **Authors**: Wei Liu, Lina Dong, Wenjun Zeng
 - **PDF**: https://ieeexplore.ieee.org/document/4518209
-- **Abstract**: Power consumption is a critical concern in communications over wireless sensor networks (WSN). In this paper, we address the rate-allocation problem for Slepian-Wolf coding of multiple correlated sources. The goal is to find the optimal rate-point that allows lossless reconstruction of the sources, while minimizing the overall transmission power consumption of the WSN under an exponential cost mod...
+- **Abstract**: Power consumption is a critical concern in communications over wireless sensor networks (WSN). In this paper, we address the rate-allocation problem for Slepian-Wolf coding of multiple correlated sources. The goal is to find the optimal rate-point that allows lossless reconstruction of the sources, while minimizing the overall transmission power consumption of the WSN under an exponential cost model. A novel water-filling algorithm to be performed by the receiver is proposed to solve the problem in a recursive manner. The feasibility and optimality of the proposed solution are analyzed mathematically and verified experimentally. Compared to the conventional Lagrangian-multiplier approach, our algorithm achieves dramatic reduction in computational complexity.
 
 ## Implementing communications systems on an SDR SoC
 
@@ -215,7 +206,7 @@
 - **Published**: 31 March-4
 - **Authors**: John Glossner, Daniel Iancu, Mayan Moudgill +10
 - **PDF**: https://ieeexplore.ieee.org/document/4518876
-- **Abstract**: Software Defined Radios (SDRs) offer a programmable and dynamically reconfigurable method of reusing hardware to implement the physical layer processing of multiple communications systems. An SDR can dynamically change protocols and update communications systems over the air as a service provider allows. In this paper we present techniques for implementing communications systems in software. We de...
+- **Abstract**: Software Defined Radios (SDRs) offer a programmable and dynamically reconfigurable method of reusing hardware to implement the physical layer processing of multiple communications systems. An SDR can dynamically change protocols and update communications systems over the air as a service provider allows. In this paper we present techniques for implementing communications systems in software. We describe briefly the SB3011 platform and programming environment. We then present a number of useful techniques that can be used to implement working systems. We further describe in which systems these techniques are implemented.
 
 ## MMSE and ML estimation of chaotic sequences with coded signs with applications in coding discrete-time analog signals
 
@@ -224,7 +215,7 @@
 - **Published**: 31 March-4
 - **Authors**: Isaac Rosenhouse, Anthony J. Weiss
 - **PDF**: https://ieeexplore.ieee.org/document/4518276
-- **Abstract**: We consider estimation of a set of tent-map chaotic sequences. These sequences are obtained by iterating a one dimensional chaotic function in the (-1,1) domain. We demonstrate how to construct a set of n sequences, in which information in the form of n arbitrary samples in the (-1,1) domain is embedded. Additionally the signs of all sequences jointly form a valid digital codeword. Each sequence i...
+- **Abstract**: We consider estimation of a set of tent-map chaotic sequences. These sequences are obtained by iterating a one dimensional chaotic function in the (-1,1) domain. We demonstrate how to construct a set of n sequences, in which information in the form of n arbitrary samples in the (-1,1) domain is embedded. Additionally the signs of all sequences jointly form a valid digital codeword. Each sequence in the set consists of m elements, hence the set of sequences is equivalent to a rate \lm analog error correcting-code. We present performance in terms of coding gain when maximum likelihood (ML) and minimum-mean-square-error (MMSE) estimation approaches are employed.
 
 ## A Hybrid ARQ Scheme Based on Shortened Low-Density Parity-Check Codes
 
@@ -233,7 +224,7 @@
 - **Published**: 31 March-3
 - **Authors**: Toshihiko Okamura
 - **PDF**: https://ieeexplore.ieee.org/document/4489051
-- **Abstract**: This paper presents a hybrid ARQ (HARQ) scheme based on shortened low-density parity-check (LDPC) codes. Although conventional incremental redundancy HARQ (IR-HARQ) schemes based on punctured LDPC codes can achieve high throughput, puncturing slows the convergence of iterative decoding, and moreover, LDPC codes originally designed to be high-rate generally have lower decoding complexity for each i...
+- **Abstract**: This paper presents a hybrid ARQ (HARQ) scheme based on shortened low-density parity-check (LDPC) codes. Although conventional incremental redundancy HARQ (IR-HARQ) schemes based on punctured LDPC codes can achieve high throughput, puncturing slows the convergence of iterative decoding, and moreover, LDPC codes originally designed to be high-rate generally have lower decoding complexity for each iteration than low-rate codes. This makes computational complexity at high rates a problem for conventional IR-HARQ schemes. The proposed HARQ scheme uses a high-rate mother code: for a retransmission request, information bits are divided into smaller sub-blocks, and additional parity bits are generated for one of the sub-blocks to be used as a shortened form of the mother code. In order to achieve high throughput with the proposed HARQ scheme, it is necessary for the shortened codes of all the sub-blocks to perform well. A multi-edge type code-design is employed to construct irregular LDPC codes that meet this requirement. Simulation results show that the proposed HARQ scheme can achieve throughput comparable to that of a conventional IR-HAQR scheme over a wide range of signal-to-noise ratios and with lower computational complexity.
 
 ## Hardware Impairments on LDPC Coded SC-FDE and OFDM in Multi-Gbps WPAN (IEEE 802.15.3c)
 
@@ -242,7 +233,7 @@
 - **Published**: 31 March-3
 - **Authors**: Ming Lei, Ismail Lakkis, Chin-Sean Sum +8
 - **PDF**: https://ieeexplore.ieee.org/document/4489114
-- **Abstract**: The multi-Gbps wireless personal area network (WPAN) using 60-GHz is being standardized in the task group of IEEE 802.15.3c. In the physical (PHY) layer design, there are two competitive techniques, one is orthogonal frequency division multiplexing (OFDM) and the other is single-carrier frequency-domain equalization (SC-FDE), a.k.a., single-carrier block transmission (SCBT). This paper compared th...
+- **Abstract**: The multi-Gbps wireless personal area network (WPAN) using 60-GHz is being standardized in the task group of IEEE 802.15.3c. In the physical (PHY) layer design, there are two competitive techniques, one is orthogonal frequency division multiplexing (OFDM) and the other is single-carrier frequency-domain equalization (SC-FDE), a.k.a., single-carrier block transmission (SCBT). This paper compared the performance of low-density parity-check (LDPC) coded OFDM and SC-FDE under hardware impairments including analog-to-digital converter (ADC) resolution, non-linear distortion induced by 60- GHz power amplifier (PA), and phase noise of 60-GHz PLL circuits. The simulation results show that SC-FDE has much better performance than OFDM under hardware impairments of 60-GHz devices and circuits.
 
 ## Decoding on Graphs: LDPC-Coded MISO Systems and Belief Propagation
 
@@ -251,7 +242,7 @@
 - **Published**: 31 March-3
 - **Authors**: Amir H. Djahanshahi, Paul H. Siegel, Larry B. Milstein
 - **PDF**: https://ieeexplore.ieee.org/document/4489053
-- **Abstract**: This paper proposes a new approach for decoding LDPC codes over MISO channels. Since in an nT times 1 MISO system with a modulation of alphabet size 2M, nT transmitted symbols are combined and produce one received symbol at the receiver, we propose considering the LDPC-coded MISO system as an LDPC code over 2MnT-ary alphabet. Consequently, we propose a modified Tanner graph to introduce belief pro...
+- **Abstract**: This paper proposes a new approach for decoding LDPC codes over MISO channels. Since in an nT times 1 MISO system with a modulation of alphabet size 2M, nT transmitted symbols are combined and produce one received symbol at the receiver, we propose considering the LDPC-coded MISO system as an LDPC code over 2MnT-ary alphabet. Consequently, we propose a modified Tanner graph to introduce belief propagation for decoding MISO-LDPC systems. As a result, the MISO symbol detection and binary LDPC decoding steps are merged into a single message passing decoding. We also propose an efficient method that significantly reduces the complexity of belief propagation decoding in MISO-LDPC systems. Furthermore, we show that our proposed decoder outperforms the conventional decoder for short length LDPC codes in unknown channel scenarios.
 
 ## The Throughput Analysis of Different IR-HARQ Schemes Based on Fountain Codes
 
@@ -260,7 +251,7 @@
 - **Published**: 31 March-3
 - **Authors**: Dino Sejdinovic, Vishakan Ponnampalam, Robert J. Piechocki +1
 - **PDF**: https://ieeexplore.ieee.org/document/4489083
-- **Abstract**: In this contribution, we construct two novel IR-HARQ (automatic repeat request) schemes based on fountain codes, which combine the punctured and rateless IR-HARQ schemes, in order to attain the advantageous properties of both: nearly optimal performance of the former at the high signal-to-noise ratio (SNR) region and ratelessness of the latter. The preliminary simulation results indicate that thes...
+- **Abstract**: In this contribution, we construct two novel IR-HARQ (automatic repeat request) schemes based on fountain codes, which combine the punctured and rateless IR-HARQ schemes, in order to attain the advantageous properties of both: nearly optimal performance of the former at the high signal-to-noise ratio (SNR) region and ratelessness of the latter. The preliminary simulation results indicate that these schemes are particularly suitable for scenarios where the transmission is originally assumed to occur at the very high SNR region, but resilience to severe deterioration of channel conditions is required.
 
 ## LDPC Coded Adaptive Transmission over Fading Channels
 
@@ -269,7 +260,7 @@
 - **Published**: 31 March-3
 - **Authors**: Alireza Kobravi, Mohammad Shikh-Bahaei, Mohamed-Slim Alouini +1
 - **PDF**: https://ieeexplore.ieee.org/document/4489054
-- **Abstract**: This paper first develops a simple closed form expression for the bit error rate (BER) of low density parity check coded (LDPC) M-ary quadrature amplitude modulation (MQAM) signals as a function of the signal constellation, received signal to noise ratio (SNR), and LDPC code parameters. Based on this new expression, joint optimization of the SNR target and transmission rate is studied for LDPC cod...
+- **Abstract**: This paper first develops a simple closed form expression for the bit error rate (BER) of low density parity check coded (LDPC) M-ary quadrature amplitude modulation (MQAM) signals as a function of the signal constellation, received signal to noise ratio (SNR), and LDPC code parameters. Based on this new expression, joint optimization of the SNR target and transmission rate is studied for LDPC coded MQAM signals to maximize the average spectral efficiency (ASE) subject to an average transmit power constraint over Rayleigh flat fading channels. Total or truncated channel-inversion strategies are exploited for the inner-loop power control, since data rate and outer-loop SNR target are adapted either to coded BER (CBER) or to the SNR with instantaneous CBER constraint. It is shown that the use of BER-based adaptation instead of SNR-based adaptation is even more beneficial in coded systems than in un-coded systems in terms of ASE performance. Indeed some of our numerical examples show that adaptation based on CBER has up to 2-2.5 dB power saving over SNR-based adaptation on the ASE of coded systems.
 
 ## Sphere-Packing Modulated Space-Time Coding Using Non-Binary LDPC-Coded Iterative-Detection
 
@@ -278,7 +269,7 @@
 - **Published**: 31 March-3
 - **Authors**: O. Alamri, S. X. Ng, F. Guo +2
 - **PDF**: https://ieeexplore.ieee.org/document/4489055
-- **Abstract**: A recently proposed space-time block coding (STBC) signal construction method that combines orthogonal design with sphere packing, referred to here as (STBC-SP), has shown useful performance improvements over Alamouti&#39;s conventional orthogonal design. In this contribution, we propose a purely symbol-based LDPC-coded scheme, demonstrating that the performance of STBC-SP systems can be further impro...
+- **Abstract**: A recently proposed space-time block coding (STBC) signal construction method that combines orthogonal design with sphere packing, referred to here as (STBC-SP), has shown useful performance improvements over Alamouti's conventional orthogonal design. In this contribution, we propose a purely symbol-based LDPC-coded scheme, demonstrating that the performance of STBC-SP systems can be further improved by concatenating sphere packing aided modulation with non-binary LDPC and by performing symbol-based turbo detection between the non-binary LDPC decoder and a rate-1 non-binary inner precoder. We also investigate the convergence behaviour of this symbol-based concatenated scheme with the aid of novel non-binary extrinsic information transfer (EXIT) charts. Finally, we demonstrate that in the investigated scenarios it requires 1-2 dB lower power in comparison to equivalent effective-throughput 0.5, 0.75 and 1 bit/symbol systems employing bit-based turbo detection.
 
 ## RECFEC: A Reconfigurable FEC Processor for Viterbi, Turbo, Reed-Solomon and LDPC Coding
 
@@ -287,7 +278,7 @@
 - **Published**: 31 March-3
 - **Authors**: Afshin Niktash, Hooman T. Parizi, Amir H. Kamalizad +1
 - **PDF**: https://ieeexplore.ieee.org/document/4489143
-- **Abstract**: RECFEC is a REConfigurable processor optimized for soft implementation of Forward Error Correction (FEC) algorithms. Viterbi, Turbo, Reed-Solomon and LDPC coding algorithms are widely used in wired and wireless standards. The implantation of these algorithms on RECFEC for a multi-mode wireless system is explored and performance metrics are demonstrated. RECFEC is comprised of a pool of processing ...
+- **Abstract**: RECFEC is a REConfigurable processor optimized for soft implementation of Forward Error Correction (FEC) algorithms. Viterbi, Turbo, Reed-Solomon and LDPC coding algorithms are widely used in wired and wireless standards. The implantation of these algorithms on RECFEC for a multi-mode wireless system is explored and performance metrics are demonstrated. RECFEC is comprised of a pool of processing elements, a processing element controller and memory. Each processing element encapsulates multiple functional units which are optimized for FEC algorithms. Memory includes the configuration and the data buffers. A high bandwidth interconnect network facilitates data movements. Unlike traditional approach to programmable FEC architectures, RECFEC supports multiple algorithms and is instruction-level programmable which results the ultimate flexibility and programmability.
 
 ## ARP and QPP Interleavers for LTE Turbo Coding
 
@@ -296,7 +287,7 @@
 - **Published**: 31 March-3
 - **Authors**: Ajit Nimbalker, Yufei Blankenship, Brian Classon +1
 - **PDF**: https://ieeexplore.ieee.org/document/4489218
-- **Abstract**: The Long Term Evolution (LTE) of the WCDMA standard requires turbo decoding throughputs of up to 100 Mbps. Unfortunately, the existing WCDMA turbo interleaver does not permit an efficient high throughput implementation. The almost regular permutation (ARP) and quadratic polynomial permutation (QPP) interleavers were proposed to rectify this situation with QPP selected for LTE. In this paper, the i...
+- **Abstract**: The Long Term Evolution (LTE) of the WCDMA standard requires turbo decoding throughputs of up to 100 Mbps. Unfortunately, the existing WCDMA turbo interleaver does not permit an efficient high throughput implementation. The almost regular permutation (ARP) and quadratic polynomial permutation (QPP) interleavers were proposed to rectify this situation with QPP selected for LTE. In this paper, the interleavers are compared and a full suite of LTE designs and performance results for both are presented.
 
 ## Integrated Source-Channel Decoding for Correlated Data-Gathering Sensor Networks
 
@@ -305,7 +296,7 @@
 - **Published**: 31 March-3
 - **Authors**: Sheryl L. Howard, Paul G. Flikkema
 - **PDF**: https://ieeexplore.ieee.org/document/4489258
-- **Abstract**: This paper explores integrated source-channel decoding, driven by wireless sensor network applications where correlated information acquired by the network is gathered at a destination node. The collection of coded measurements sent to the destination, called a source-channel product codeword, has redundancy due to both correlation of the measurements and the channel code used for each measurement...
+- **Abstract**: This paper explores integrated source-channel decoding, driven by wireless sensor network applications where correlated information acquired by the network is gathered at a destination node. The collection of coded measurements sent to the destination, called a source-channel product codeword, has redundancy due to both correlation of the measurements and the channel code used for each measurement. At the destination, source-channel (SC) decoding of this code combines decoding using (i) the deterministic structure of the channel-coded individual measurements and (ii) the probabilistic structure of a prior model, called the global model, that describes the correlation structure of the SC product codewords. We demonstrate the utility of SC decoding via MAP SC decoding experiments using a (7,4,3) Hamming code and a Gaussian global model. We also show that SC decoding can exploit even the simplest possible code, a single-parity check code, using a MAP SC decoder that integrates the parity check constraint and global model. We describe the design of a low-complexity message-passing decoder and show it can improve performance in the poor-quality channels often found in multi-hop wireless data-gathering sensor networks.
 
 ## Decoding with Early Termination for Rateless (Luby Transform) Codes
 
@@ -314,7 +305,7 @@
 - **Published**: 31 March-3
 - **Authors**: Ali AbdulHussein, Anand Oka, Lutz Lampe
 - **PDF**: https://ieeexplore.ieee.org/document/4489080
-- **Abstract**: Fountain codes have recently gained wide attention in communications due to their capacity-approaching performance and rateless properties that allow them to seamlessly adapt to unknown channel statistics. In this paper, we consider the problem of low complexity decoding of Luby transform codes, which are a class of linear fountain codes. We adapt the recently proposed technique of informed dynami...
+- **Abstract**: Fountain codes have recently gained wide attention in communications due to their capacity-approaching performance and rateless properties that allow them to seamlessly adapt to unknown channel statistics. In this paper, we consider the problem of low complexity decoding of Luby transform codes, which are a class of linear fountain codes. We adapt the recently proposed technique of informed dynamic scheduling to the rateless regime, and combine it with the method of incremental decoding to obtain a decoder that has a significantly reduced computational load compared to the commonly used alternative of message-reset decoding with a flooding schedule. This reduction in complexity, in some cases as large as a factor of sixty, is obtained without affecting the error rate performance of the code.
 
 ## Cooperative Communications Using Scalable, Medium Block-length LDPC Codes
 
@@ -323,7 +314,7 @@
 - **Published**: 31 March-3
 - **Authors**: Marjan Karkooti, Joseph R. Cavallaro
 - **PDF**: https://ieeexplore.ieee.org/document/4489052
-- **Abstract**: Cooperative communications has received increasing attention in recent years because of the ubiquity of wireless devices. Each year more mobile computing devices enter the market, most of which have limitations in terms of size, number of antennas and battery power. Cooperation enables these devices to form a virtual multiple antenna system and benefit from diversity. Most of the literature on coo...
+- **Abstract**: Cooperative communications has received increasing attention in recent years because of the ubiquity of wireless devices. Each year more mobile computing devices enter the market, most of which have limitations in terms of size, number of antennas and battery power. Cooperation enables these devices to form a virtual multiple antenna system and benefit from diversity. Most of the literature on cooperation is information theoretic with often unrealistic assumptions. In this paper we examine decode and forward scheme from a practical point of view and utilize scalable, architecture-aware low density parity check (LDPC) codes. We present simulation results for two variations of decode and forward strategy and show that even with realistic assumptions about the system, relaying outperforms direct link communications with over 2.5 dB.
 
 ## Unequal Error Protection Irregular Over-Complete Mapping for Wavelet Coded Wireless Video Telephony Using Iterative Source and Channel Decoding
 
@@ -332,16 +323,7 @@
 - **Published**: 31 March-3
 - **Authors**: A. Q. Pham, L. L. Yang, L. Hanzo
 - **PDF**: https://ieeexplore.ieee.org/document/4489256
-- **Abstract**: Since the different bits of the compressed video sequence produced by the BBC&#39;s wavelet-based video codec exhibit different error sensitivity, efficient unequal error protection (UEP) schemes have to be used to ensure that the perceptually more important bits benefit from more powerful protection. Furthermore, in the context of turbo detection the over-complete mapping aided soft videobit based so...
-
-## Two-Stage Code Acquisition Employing Search Space Reduction and Iterative Detection in the DS-UWB Downlink
-
-- **ID**: ieee:4489060
-- **Type**: conference
-- **Published**: 31 March-3
-- **Authors**: Seunghwan Won, Lajos Hanzo
-- **PDF**: https://ieeexplore.ieee.org/document/4489060
-- **Abstract**: In this paper we propose and investigate an iterative code acquisition scheme assisted by both search space reduction and iterative massage passing (MP), which was designed for the direct sequence-ultra wideband (DS-UWB) downlink (DL). The performance of this iterative code acquisition scheme is analysed in terms of both the correct detection probability and the achievable mean acquisition time (M...
+- **Abstract**: Since the different bits of the compressed video sequence produced by the BBC's wavelet-based video codec exhibit different error sensitivity, efficient unequal error protection (UEP) schemes have to be used to ensure that the perceptually more important bits benefit from more powerful protection. Furthermore, in the context of turbo detection the over-complete mapping aided soft videobit based source decoder should also match the characteristics of the channel codes for the sake of attaining a good iterative decoding performance. In this paper, we address this design dilemma by proposing a novel irregular over-complete mapping (IrOM) scheme constituted by an appropriately weighted different-rate over-complete mapping. Our turbo detection scheme has attractive iterative decoding convergence properties, while maintaining unequal error protection capabilities matched to the requirements of the wavelet encoded video sequence. An EXIT chart based design guideline is presented and used in the context of protecting the different-sensitivity video bits of the BBC wavelet-based video codec. As a benefit, the unequal error protection scheme using rate 2/3 irregular over-complete mapping exhibits a transmit power advantage of about 0.7 dB at an error probability of 0.016% over the equal-protection benchmarker scheme employing rate 2/3 over-complete mapping, when communicating over the uncorrelated Rayleigh-fading channel. This leads to an approximately ldB signal-to-noise ratio gain, when considering the video PSNR performance of our UEP iterative source-channel decoding scheme using an over- complete mapping having the same rate and I = 6 iterations.
 
 ## Performance analysis of substituting DVB-S2 LDPC code for DVB-T error control coding system
 
@@ -350,7 +332,7 @@
 - **Published**: 31 March-2
 - **Authors**: Tero Jokela
 - **PDF**: https://ieeexplore.ieee.org/document/4536677
-- **Abstract**: As HDTV (High Definition Television) services are the next big thing in the television broadcasting, the work for the next generation terrestrial Digital Video Broadcasting (DVB-T2) standard has started. Since HDTV channels require more capacity, new technologies as compared to current terrestrial DVB-T standard are necessary. One improvement is to select a more efficient Forward Error Control (FE...
+- **Abstract**: As HDTV (High Definition Television) services are the next big thing in the television broadcasting, the work for the next generation terrestrial Digital Video Broadcasting (DVB-T2) standard has started. Since HDTV channels require more capacity, new technologies as compared to current terrestrial DVB-T standard are necessary. One improvement is to select a more efficient Forward Error Control (FEC) code. A potential candidate for this is the Low Density Parity Check (LDPC) code specified in the in the DVB-S2 (second generation satellite Digital Video Broadcasting) standard. It is stated in the call for technologies issued by the DVB project, that this code is the working assumption. It is further stated that if the DVB- SI LDPC code is not suitable for terrestrial channels, other channel coding schemes could be considered. In this paper the performance of a system where DVB-T concatenated Reed-Solomon-convolutional coding scheme is replaced by the DVB-S2 LDPC code is studied by simulations. The aim is to investigate the performance of the LDPC code in a terrestrial channel model.
 
 ## On the performance and efficiency of Generic Stream Encapsulation combined with LDPC coding for the terrestrial DVB systems
 
@@ -359,7 +341,7 @@
 - **Published**: 31 March-2
 - **Authors**: Piritta Hakala, Heidi Himmanen, Jarkko Paavola
 - **PDF**: https://ieeexplore.ieee.org/document/4536684
-- **Abstract**: Generic stream encapsulation (GSE) provides a simple and efficient method to encapsulate network layer packets to a format suitable for the physical layer. The performance of GSE is considered in this paper through overhead calculations and simulations over four physical layer configurations. The results are compared to the results of multi-protocol encapsulation (MPE) with Transport Stream multip...
+- **Abstract**: Generic stream encapsulation (GSE) provides a simple and efficient method to encapsulate network layer packets to a format suitable for the physical layer. The performance of GSE is considered in this paper through overhead calculations and simulations over four physical layer configurations. The results are compared to the results of multi-protocol encapsulation (MPE) with Transport Stream multiplex. The combined effect of encapsulation and forward error correction is taken into account also.
 
 ## An FPGA architecture for low density parity check codes
 
@@ -368,7 +350,7 @@
 - **Published**: 3-6 April 
 - **Authors**: Orlando J. Hernandez, Nathaniel F. Blythe
 - **PDF**: https://ieeexplore.ieee.org/document/4494283
-- **Abstract**: Low density parity check (LDPC) codes are a family of linear block codes that can approach the Shannon limit to within less than a hundredth of a decibel, and along with Turbo codes are the codes of choice for all next- generation high-noise, high-rate communication systems. A generalized architecture is cost-prohibitive, and code- specific ASICs are not flexible enough for channels with dynamic n...
+- **Abstract**: Low density parity check (LDPC) codes are a family of linear block codes that can approach the Shannon limit to within less than a hundredth of a decibel, and along with Turbo codes are the codes of choice for all next- generation high-noise, high-rate communication systems. A generalized architecture is cost-prohibitive, and code- specific ASICs are not flexible enough for channels with dynamic noise parameters. In this paper we describe a field programmable gate array (FPGA) architecture for LDPC coding that allows for code-specific architectures while providing dynamic code selection. Gate and LUT counts in the encoder are examined for various codes, and size and timing results for different decoder parameters are compared.
 
 ## Fast Simulation for the Performance Evaluation of LDPC Codes using Fast Flat Histogram Method
 
@@ -377,7 +359,7 @@
 - **Published**: 28-30 Apri
 - **Authors**: S. Kakakhail, S. Reynal, D. Declercq +1
 - **PDF**: https://ieeexplore.ieee.org/document/4520050
-- **Abstract**: The quality of transmission in digital communication systems is usually measured by frame error rate (FER). The time taken by standard Monte Carlo (MC) simulation to estimate the FER increases exponentially with the increase in signal-to-noise ratio (SNR). In this correspondence, we present an Adaptive Importance Sampling (AIS) technique inspired by statistical physics called fast flat histogram (...
+- **Abstract**: The quality of transmission in digital communication systems is usually measured by frame error rate (FER). The time taken by standard Monte Carlo (MC) simulation to estimate the FER increases exponentially with the increase in signal-to-noise ratio (SNR). In this correspondence, we present an Adaptive Importance Sampling (AIS) technique inspired by statistical physics called fast flat histogram (FFH) method to evaluate the performance of LDPC codes with a reduced simulation time. The FFH method employs Wang Landau algorithm based on a Markov Chain Monte Carlo (MCMC) sampler and we managed to decrease the simulation time by a factor of 13 to 173 for LDPC codes with block lengths up to 2640 bits.
 
 ## Turbo Equalization with Convolutional and LDPC Codes as well as Analytically Computed Metrics
 
@@ -386,7 +368,7 @@
 - **Published**: 28-29 Apri
 - **Authors**: Tobias Rankl
 - **PDF**: https://ieeexplore.ieee.org/document/5756758
-- **Abstract**: This paper compares advanced electrical equalization schemes for intensity modulated high speed fiber optic transmission. The treated equalization schemes are based on the Turbo principle and apply convolutional as well as low-density parity-check (LDPC) codes with a forward error correction (FEC) overhead of 6.7%. A bit error rate (BER) and EXIT chart analysis based on a sophisticated channel mod...
+- **Abstract**: This paper compares advanced electrical equalization schemes for intensity modulated high speed fiber optic transmission. The treated equalization schemes are based on the Turbo principle and apply convolutional as well as low-density parity-check (LDPC) codes with a forward error correction (FEC) overhead of 6.7%. A bit error rate (BER) and EXIT chart analysis based on a sophisticated channel model and analytically computed branch metrics for the BCJR and Viterbi equalizers give detailed insight into the performance and into the iterative equalization process, respectively.
 
 ## High throughput partially-parallel irregular LDPC decoder based on delta-value message-passing schedule
 
@@ -395,7 +377,7 @@
 - **Published**: 23-25 Apri
 - **Authors**: Wen Ji, Xing Li, Takeshi Ikenaga +1
 - **PDF**: https://ieeexplore.ieee.org/document/4542452
-- **Abstract**: In this paper, we propose a partially-parallel decoder architecture for irregular LDPC code targeting high throughput applications. The proposed decoder is based on a novel delta-value message-passing algorithm to facilitate the decoding throughput by removing redundant computations using the difference between the updated value and the original value. Techniques such as binary sorting, high perfo...
+- **Abstract**: In this paper, we propose a partially-parallel decoder architecture for irregular LDPC code targeting high throughput applications. The proposed decoder is based on a novel delta-value message-passing algorithm to facilitate the decoding throughput by removing redundant computations using the difference between the updated value and the original value. Techniques such as binary sorting, high performance pipelining are used to further speed up the message-passing procedure. The synthesis result in TSMC 0.18 CMOS technology shows that for (648,324) irregular LDPC code, our decoder can increase 8 times in throughput, which reaches 418 Mbps at the frequency of 200MHz.
 
 ## Distributed image coding based on integrated Markov modeling and LDPC decoding
 
@@ -404,7 +386,7 @@
 - **Published**: 23 June-26
 - **Authors**: Jinrong Zhang, Houqiang Li, Chang Wen Chen
 - **PDF**: https://ieeexplore.ieee.org/document/4607515
-- **Abstract**: We present in this paper a novel distributed image coding scheme by exploiting image spatial correlation via Markov modeling at the decoding end. The exploitation of image statistics at the decoding end allows us to design a simple yet efficient encoder suitable for various energy efficient imaging sensor network applications. Existing distributed coding schemes developed for imaging sensor networ...
+- **Abstract**: We present in this paper a novel distributed image coding scheme by exploiting image spatial correlation via Markov modeling at the decoding end. The exploitation of image statistics at the decoding end allows us to design a simple yet efficient encoder suitable for various energy efficient imaging sensor network applications. Existing distributed coding schemes developed for imaging sensor networks mostly attempt to exploit inter-image correlation. We develop in this research an integration of LDPC decoding and Markov model estimation in order to jointly exploit both inter-image and intra-image correlation. Simulations have been carried out to demonstrate that this Markov model-based approach is able to achieve significant gains over the schemes without Markov model. The simulation results also show that the 2D Markov model is able to achieve additional gains over the 1D Markov model.
 
 ## Reduced-reference image quality assessment using distributed source coding
 
@@ -413,7 +395,7 @@
 - **Published**: 23 June-26
 - **Authors**: Keiichi Chono, Yao-Chung Lin, David Varodayan +2
 - **PDF**: https://ieeexplore.ieee.org/document/4607508
-- **Abstract**: This paper presents a reduced-reference image quality assessment scheme using distributed source coding for remotely monitoring image quality. In our scheme, an image server extracts a feature vector from the original image and transmits its Slepian-Wolf syndrome using an LDPC encoder. With the rate of the Slepian-Wolf bitstream chosen according to a predetermined admissible image quality, the rec...
+- **Abstract**: This paper presents a reduced-reference image quality assessment scheme using distributed source coding for remotely monitoring image quality. In our scheme, an image server extracts a feature vector from the original image and transmits its Slepian-Wolf syndrome using an LDPC encoder. With the rate of the Slepian-Wolf bitstream chosen according to a predetermined admissible image quality, the receiver can reconstruct the feature vector using its received image, as side information, as long as the quality is higher than the admissible quality. Thus the receiver can determine the received image quality using the reconstructed feature vector. Simulation results show that distributed source coding can reduce the bit-rate of the feature vector by 50% and achieve better compression performance than conventional source coding.
 
 ## Wyner-Ziv video coding: A review of the early architectures and further developments
 
@@ -422,7 +404,7 @@
 - **Published**: 23 June-26
 - **Authors**: Fernando Pereira, Catarina Brites, Joao Ascenso +1
 - **PDF**: https://ieeexplore.ieee.org/document/4607512
-- **Abstract**: In 2002, the video coding community faced the emergence of a new video coding paradigm, the so-called Wyner-Ziv video coding, which was represented by two early solutions designed by the Stanford University and the University of California, Berkeley research teams. This paper intends to briefly review, and compare these two early Wyner-Ziv video coding solutions, notably from the functional point ...
+- **Abstract**: In 2002, the video coding community faced the emergence of a new video coding paradigm, the so-called Wyner-Ziv video coding, which was represented by two early solutions designed by the Stanford University and the University of California, Berkeley research teams. This paper intends to briefly review, and compare these two early Wyner-Ziv video coding solutions, notably from the functional point of view. Moreover, this paper reviews some important developments of the Stanford Wyner-Ziv coding architecture, which has become the most popular in the literature.
 
 ## Wyner-Ziv coding with spatio-temporal refinement based on successive turbo decoding
 
@@ -431,25 +413,7 @@
 - **Published**: 23 June-26
 - **Authors**: Bonghyuck Ko, Hiuk Jae Shim, Byeungwoo Jeon
 - **PDF**: https://ieeexplore.ieee.org/document/4607552
-- **Abstract**: Arising needs for extremely simple encoder motivate investigations on distributed video coding (DVC). The Wyner-Ziv coding, one of the representative DVC schemes, reconstructs video by correcting noise on side information using channel code. Therefore, its coding performance decisively depends on the amount of noise in the side information. However it is hard for a decoder to generate good side in...
-
-## Sparse FEC codes for flexible media protection
-
-- **ID**: ieee:4607467
-- **Type**: conference
-- **Published**: 23 June-26
-- **Authors**: Jari Korhonen, Pascal Frossard
-- **PDF**: https://ieeexplore.ieee.org/document/4607467
-- **Abstract**: In this paper, we study block codes that are optimized to recover some lost source data even in case when full recovery is not possible. Conventionally, block codes designed for packet erasure networks are aimed to recover all the lost source packets, assuming that the amount of lost data does not exceed the redundancy overhead. Unfortunately, this approach leads to poor performance if the fractio...
-
-## Wyner-Ziv video coding with block classification
-
-- **ID**: ieee:4607541
-- **Type**: conference
-- **Published**: 23 June-26
-- **Authors**: Yangli Wang, Jechang Jeong, Chengke Wu
-- **PDF**: https://ieeexplore.ieee.org/document/4607541
-- **Abstract**: Wyner-Ziv (WZ) video coding, or lossy coding of video with decoder side information (SI), is a new video coding paradigm which provides the potential of shifting encoder complexity to decoder. Due to the fact that correlation among adjacent frames varies spatially and temporally in a video sequence, in WZ video coding, the quality of SI generated at the decoder also varies accordingly. This implie...
+- **Abstract**: Arising needs for extremely simple encoder motivate investigations on distributed video coding (DVC). The Wyner-Ziv coding, one of the representative DVC schemes, reconstructs video by correcting noise on side information using channel code. Therefore, its coding performance decisively depends on the amount of noise in the side information. However it is hard for a decoder to generate good side information, especially in case that frames are less correlated., Large amount of parity bits certainly helps the decoder to correct noise but it only comes with low compression ratio. In this paper, we propose a method to enhance the quality of the side information, with incrementally transmitted parity bits from encoder. Results of our experiments have verified average PSNR gain up to 0.8 dB.
 
 ## Wyner-Ziv coding of multiview images with unsupervised learning of two disparities
 
@@ -458,7 +422,7 @@
 - **Published**: 23 June-26
 - **Authors**: David Chen, David Varodayan, Markus Flierl +1
 - **PDF**: https://ieeexplore.ieee.org/document/4607513
-- **Abstract**: Wyner-Ziv coding of multiview images is an attractive solution because it avoids communications between individual cameras. To achieve good rate-distortion performance, the Wyner-Ziv decoder must reliably estimate the disparities between the multiview images. For the scenario where two reference images exist at the decoder, we propose a codec that effectively performs unsupervised learning of the ...
+- **Abstract**: Wyner-Ziv coding of multiview images is an attractive solution because it avoids communications between individual cameras. To achieve good rate-distortion performance, the Wyner-Ziv decoder must reliably estimate the disparities between the multiview images. For the scenario where two reference images exist at the decoder, we propose a codec that effectively performs unsupervised learning of the two disparities between an image being Wyner-Ziv coded and the two reference images. The proposed two-disparity decoder disparity-compensates the two references images and generates side information more accurately than an existing one-disparity decoder. Experimental results with real multiview images demonstrate that the proposed codec achieves PSNR gains of 1-5 dB over the one-disparity codec.
 
 ## Improved bidirectionally decodable Wyner-Ziv video coding
 
@@ -467,7 +431,7 @@
 - **Published**: 23 June-26
 - **Authors**: Xiaopeng Fan, Oscar Au, Jiantao Zhou +2
 - **PDF**: https://ieeexplore.ieee.org/document/4607558
-- **Abstract**: Reverse playback is one of the most common video cassette recording (VCR) functions for video streaming systems. However, the predictive processing techniques employed in traditional hybrid video coding schemes severely complicate the reverse-play operation. In this paper, we enhance our previously proposed bidirectionally decodable Wyner-Ziv video coding scheme which supports both forward decodin...
+- **Abstract**: Reverse playback is one of the most common video cassette recording (VCR) functions for video streaming systems. However, the predictive processing techniques employed in traditional hybrid video coding schemes severely complicate the reverse-play operation. In this paper, we enhance our previously proposed bidirectionally decodable Wyner-Ziv video coding scheme which supports both forward decoding and backward decoding. We derive that in our scheme the optimal Lagrangian multiplier for the backward motion estimation should be averagely two times larger than for the forward motion estimation. The new multiplier contributes 0.2dB gain in average. We propose an optimal P-frame/M-frame selection scheme to improve rate-distortion performance when the video is transmitted over error prone channels. The new scheme outperforms both H.264 and our previous scheme at all tested loss rate, and gain up to 0.55dB over our previous scheme in low loss rate case.
 
 ## Authenticating contrast and brightness adjusted images using distributed source coding and expectation maximization
 
@@ -476,7 +440,7 @@
 - **Published**: 23 June-26
 - **Authors**: Yao-Chung Lin, David Varodayan, Torsten Fink +2
 - **PDF**: https://ieeexplore.ieee.org/document/4607509
-- **Abstract**: Media authentication is important in content delivery via untrusted intermediaries, such as peer-to-peer (P2P) file sharing. Many differently encoded versions of a media file might exist. Our previous work applied distributed source coding not only to distinguish the legitimate diversity of encoded images from tampering but also localize the tampered regions in an image already deemed to be inauth...
+- **Abstract**: Media authentication is important in content delivery via untrusted intermediaries, such as peer-to-peer (P2P) file sharing. Many differently encoded versions of a media file might exist. Our previous work applied distributed source coding not only to distinguish the legitimate diversity of encoded images from tampering but also localize the tampered regions in an image already deemed to be inauthentic. An authentication decoder was supplied with a Slepian-Wolf encoded image projection as authentication data. We extend our scheme to authenticate contrast and brightness adjusted images using an Expectation Maximization algorithm. Experimental results demonstrate that the proposed algorithm can distinguish legitimate encodings of authentic contrast and brightness adjusted images from illegitimately modified versions using authentication data of about 100 bytes.
 
 ## On the design of a superior irregular LDPC code
 
@@ -485,16 +449,7 @@
 - **Published**: 20-22 Apri
 - **Authors**: Tolga Mataracioglu, Umit Aygolu
 - **PDF**: https://ieeexplore.ieee.org/document/4632538
-- **Abstract**: In this paper, low density parity check (LDPC) codes are considered. Design techniques are examined and new LDPC codes with improved error performance are proposed for irregular LDPC codes. Especially for BPSK modulation and AWGN channel, superior LDPC codes are successfully designed for R = 0.5 and N = 1000. For the designed superior irregular codes, it can be said that not only the performance o...
-
-## Importance of side information generation for distributed video coding
-
-- **ID**: ieee:4632569
-- **Type**: conference
-- **Published**: 20-22 Apri
-- **Authors**: Cem Vedat Isik, M. Oguz Bici, Aml Aksay +1
-- **PDF**: https://ieeexplore.ieee.org/document/4632569
-- **Abstract**: Distributed Video Coding (DVC) is a new coding paradigm, based on two information-theoretic results, which allows exploiting source statistics at the decoder only. This architecture, therefore, enables very simple encoders to be used in video coding. Wyner-Ziv video coding is a particular case of DVC which deals with lossy source coding where side information is available at the decoder only. In t...
+- **Abstract**: In this paper, low density parity check (LDPC) codes are considered. Design techniques are examined and new LDPC codes with improved error performance are proposed for irregular LDPC codes. Especially for BPSK modulation and AWGN channel, superior LDPC codes are successfully designed for R = 0.5 and N = 1000. For the designed superior irregular codes, it can be said that not only the performance of the codes is good when the code block length goes to infinity, but also they approach to the channel capacity and for code rate R = 0.5, they perform better than their counterparts given in the literature, when the code block length is finite (N = 1000). For irregular codes, when the degree of the bit node that possess the maximum number of branches is large, then that code approaches to the channel capacity. During the optimization of the encoder and decoder blocks, a combination of differential evolution technique, bit filling and message passing algorithms are considered to reach superior codes. The best superior code proposed in the paper is an irregular LDPC code with rate R = 0.5 which is only 0.02 dB away from the channel capacity.
 
 ## On Reliable Communications over Channels Impaired by Bursty Impulse Noise
 
@@ -503,7 +458,7 @@
 - **Published**: 2-4 April 
 - **Authors**: Dario Fertonani, Giulio Colavolpe
 - **PDF**: https://ieeexplore.ieee.org/document/4510454
-- **Abstract**: We consider digital communications over channels affected by impulse noise. A two-state Markov channel model is adopted, which, unlike the memoryless models generally adopted in the literature, allows to describe the typical bursty nature of the impulse noise. We derive an algorithm for optimal maximum-a-posteriori symbol detection, which is first exploited for evaluating, by means of information-...
+- **Abstract**: We consider digital communications over channels affected by impulse noise. A two-state Markov channel model is adopted, which, unlike the memoryless models generally adopted in the literature, allows to describe the typical bursty nature of the impulse noise. We derive an algorithm for optimal maximum-a-posteriori symbol detection, which is first exploited for evaluating, by means of information-theoretical arguments, the ultimate performance limits imposed by the channel, and then is proposed as detection algorithm for practical communication systems employing iterative detection/decoding. The proposed scheme is finally shown to perform significantly better than the conventional ones which neglect the channel memory, and fairly close to the achievable theoretical limits.
 
 ## Joint efficiency and performance enhancement of multiband OFDM ultra-wideband (WiMedia) systems by application of LDPC codes
 
@@ -512,7 +467,7 @@
 - **Published**: 14-16 Apri
 - **Authors**: Stefan Nowak, Oliver Hundt, Ruediger Kays
 - **PDF**: https://ieeexplore.ieee.org/document/4559544
-- **Abstract**: This paper describes modifications of the WiMedia PHY which significantly increase its performance. By application of Shannon-limit approaching LDPC codes we yield a performance gain of about 4 dB at the reference bit error rate of 10-5. The simulation results are based on a realistic channel model for indoor UWB WPAN environments. Furthermore, our proposal leads to a convenient and expedient PHY ...
+- **Abstract**: This paper describes modifications of the WiMedia PHY which significantly increase its performance. By application of Shannon-limit approaching LDPC codes we yield a performance gain of about 4 dB at the reference bit error rate of 10-5. The simulation results are based on a realistic channel model for indoor UWB WPAN environments. Furthermore, our proposal leads to a convenient and expedient PHY and increases the system efficiency.
 
 ## Distributed video compression: Basics, research problems, applications
 
@@ -521,7 +476,7 @@
 - **Published**: 14-16 Apri
 - **Authors**: Christine Guillemot
 - **PDF**: https://ieeexplore.ieee.org/document/4559409
-- **Abstract**: Summary form only given. Distributed source coding has emerged as an enabling technology for sensor networks. It refers to the compression of correlated signals captured by different sensors which do not communicate between themselves. Distributed source coding finds its foundation in the seminal work of Slepian-Wolf (1973) and Wyner-Ziv (1976). The proof of the Slepian-Wolf W theorem is based on ...
+- **Abstract**: Summary form only given. Distributed source coding has emerged as an enabling technology for sensor networks. It refers to the compression of correlated signals captured by different sensors which do not communicate between themselves. Distributed source coding finds its foundation in the seminal work of Slepian-Wolf (1973) and Wyner-Ziv (1976). The proof of the Slepian-Wolf W theorem is based on random binning, which is non-constructive, i.e., it does not reveal how practical code design should be done. In 1974, Wyner suggested the use of parity check codes to approach the corner points of the Slepian-Wolf rate region. It is only recently that practical solutions based on channel capacity-achieving codes (block codes, turbo codes or LDPC codes) have been explored for applications ranging from video compression, resilient video transmission, to minimization of transmit energy in sensor networks. Video compression, as well as scalable video compression, can be recast into a distributed source coding framework leading to distributed video coding schemes targeting mainly low coding complexity and error resilience functionalities. Correlated samples (pixels or transform coefficients) from different frames are regarded as outputs of different sensors. However, the application of the Wyner-Ziv principles to video compression is not straightforward and requires solving a number of issues. This article presents the underlying theory, the latest developments of distributed video compression and some of the research trends in the area.
 
 ## Improving MIMO-OFDM-based DVB-H systems performance using LDPC codes
 
@@ -530,7 +485,7 @@
 - **Published**: 14-16 Apri
 - **Authors**: Omar Daoud, Scott Lee Linfoot
 - **PDF**: https://ieeexplore.ieee.org/document/4559560
-- **Abstract**: Handheld devices are becoming more and more popular across the world although there are often still reception problems. To solve these reception issues, technology such as multiple antenna systems are being investigated. One drawback to such systems is that of peak to average power ratio - an effect where out of band radiation can cause distortions in the transmitted stream especially where combin...
+- **Abstract**: Handheld devices are becoming more and more popular across the world although there are often still reception problems. To solve these reception issues, technology such as multiple antenna systems are being investigated. One drawback to such systems is that of peak to average power ratio - an effect where out of band radiation can cause distortions in the transmitted stream especially where combined with orthogonal frequency division multiplex (the technology behind modern hand-held television). This paper will show that by combining powerful error correction coding (in this case the low density parity check), it is possible to lower the peak to average power ratio with minimal increase in complexity.
 
 ## A New Powerful Scalable Generic Multi-Standard LDPC Decoder Architecture
 
@@ -539,7 +494,7 @@
 - **Published**: 14-15 Apri
 - **Authors**: François Charot, Christophe Wolinski, Nicolas Fau +1
 - **PDF**: https://ieeexplore.ieee.org/document/4724931
-- **Abstract**: We propose a new powerful scalable generic parallel and modular architecture well suited to LDPC code decoding. This architecture template has been instantiated in the case of the 802.16e WiMax standard. The proposed design is fully compliant with all the code classes defined by the standard. It has been validated through an implementation on a Xilinx Virtex5 FPGA component. A four or six-module F...
+- **Abstract**: We propose a new powerful scalable generic parallel and modular architecture well suited to LDPC code decoding. This architecture template has been instantiated in the case of the 802.16e WiMax standard. The proposed design is fully compliant with all the code classes defined by the standard. It has been validated through an implementation on a Xilinx Virtex5 FPGA component. A four or six-module FPGA design yields a throughput ranging from 10 to 30 Mbit/s by means of 20 iterations at a clock frequency of 160 MHz which mostly satisfies communication throughput in the case of the WiMax mobile communication.
 
 ## Maximal Recovery Network Coding under Topology Constraint
 
@@ -548,7 +503,7 @@
 - **Published**: 13-18 Apri
 - **Authors**: K. Misra, S. Karande, H. Radha
 - **PDF**: https://ieeexplore.ieee.org/document/4509877
-- **Abstract**: Recent advances have shown that channel codes can be mapped onto networks to realize efficient Network Coding (NC); this has led to the emergence of Code-on-Network-Graphs (CNG). Traditional CNG approaches (e.g Decentralized Erasure Codes) focus on a generating a sequence of encoded symbols from a given input source (of size K), such that the original symbols can be recovered from any subset of th...
+- **Abstract**: Recent advances have shown that channel codes can be mapped onto networks to realize efficient Network Coding (NC); this has led to the emergence of Code-on-Network-Graphs (CNG). Traditional CNG approaches (e.g Decentralized Erasure Codes) focus on a generating a sequence of encoded symbols from a given input source (of size K), such that the original symbols can be recovered from any subset of the encoded symbols of size equal to or slightly larger than K. However in all cases the number of source symbols recovered falls rapidly if the number of encoded symbols received falls below K. In this paper we determine the CNG code-ensembles (under statistical toplogy constraint) which result in maximal recovery of WSN source data (for different erasure-rates), thereby minimizing the deterioration in data recovery. We also perform fixed point stability analysis on the underlying LDPC code ensemble. We then propose a distributed algorithm for generating a sequence of encoded symbols adhering to the designed code ensemble. Optimal solutions for a sensor network with 1000 nodes is determined using the Differential Evolution algorithm, and the solution sensitivity to variance in number of sensor nodes and node-interconnectivity is evaluated.
 
 ## Typical performance of generalised vector channels
 
@@ -557,4 +512,4 @@
 - **Published**: 1-3 April 
 - **Authors**: Roberto C. Alamino, David Saad
 - **PDF**: https://ieeexplore.ieee.org/document/4586143
-- **Abstract**: We introduce a general matrix formulation for multiuser channels and analyse the special cases of Multiple-Input Multiple-Output channels, channels with interference and relay arrays under LDPC coding using methods developed for the statistical mechanics of disordered systems. We use the replica method to provide results for the typical overlaps of the original and recovered messages and discuss t...
+- **Abstract**: We introduce a general matrix formulation for multiuser channels and analyse the special cases of Multiple-Input Multiple-Output channels, channels with interference and relay arrays under LDPC coding using methods developed for the statistical mechanics of disordered systems. We use the replica method to provide results for the typical overlaps of the original and recovered messages and discuss their implications. The results obtained are consistent with belief propagation and density evolution results but also complement them giving additional insights into the information dynamics of these channels with unexpected effects in some cases.

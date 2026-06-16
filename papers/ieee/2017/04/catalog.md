@@ -1,15 +1,6 @@
 # IEEE Xplore — 2017-04
 
 
-## Algebraic-based nonbinary ldpc codes with flexible field orders and code rates
-
-- **ID**: ieee:7927569
-- **Type**: magazine
-- **Published**: April 2017
-- **Authors**: Hengzhou Xu, Dan Feng, Cheng Sun +1
-- **PDF**: https://ieeexplore.ieee.org/document/7927569
-- **Abstract**: In this paper, we study the rank of matrices over and propose two construction methods for algebraic-based nonbinary LDPC codes from an existing LDPC code, referred to as the original code. By multiplying all elements of each column of the binary parity-check matrix H corresponding to the original code with the same nonzero element of any field, the first class of nonbinary LDPC codes with flexibl...
-
 ## Bit Mapping Design for LDPC Coded BICM Schemes With Multi-Edge Type EXIT Chart
 
 - **ID**: ieee:7801862
@@ -17,7 +8,7 @@
 - **Published**: April 2017
 - **Authors**: Junyi Du, Lei Yang, Jinhong Yuan +2
 - **PDF**: https://ieeexplore.ieee.org/document/7801862
-- **Abstract**: In this letter, we consider the bit mapping (BM) design for regular low-density parity-check (LDPC) coded bit-interleaved coded modulation (BICM) schemes. We propose a check-node type distribution and develop multi-edge type extrinsic information transfer (EXIT) functions for the regular LDPC coded BICM schemes. Based on the EXIT functions, we propose a two-phase design method to generate the opti...
+- **Abstract**: In this letter, we consider the bit mapping (BM) design for regular low-density parity-check (LDPC) coded bit-interleaved coded modulation (BICM) schemes. We propose a check-node type distribution and develop multi-edge type extrinsic information transfer (EXIT) functions for the regular LDPC coded BICM schemes. Based on the EXIT functions, we propose a two-phase design method to generate the optimized practical BM in terms of the lowest decoding threshold for a given finite length LDPC code. Simulation results show that the proposed BM has a better decoding threshold compared with those of the existing works.
 
 ## Construction and Encoding of QC-LDPC Codes Using Group Rings
 
@@ -26,7 +17,7 @@
 - **Published**: April 2017
 - **Authors**: Hassan Khodaiemehr, Dariush Kiani
 - **PDF**: https://ieeexplore.ieee.org/document/7822940
-- **Abstract**: Quasi-cyclic (QC) low-density parity-check (LDPC) codes which are known as QC-LDPC codes, have many applications due to their simple encoding implementation by the means of cyclic shift registers. In this paper, we construct QC-LDPC codes from group rings. A group ring is a free module (at the same time a ring) constructed in a natural way from any given ring and any given group. We present a stru...
+- **Abstract**: Quasi-cyclic (QC) low-density parity-check (LDPC) codes which are known as QC-LDPC codes, have many applications due to their simple encoding implementation by the means of cyclic shift registers. In this paper, we construct QC-LDPC codes from group rings. A group ring is a free module (at the same time a ring) constructed in a natural way from any given ring and any given group. We present a structure based on the elements of a group ring for constructing QC-LDPC codes. Some of the previously addressed methods for constructing QC-LDPC codes based on finite fields are special cases of the proposed construction method. The constructed QC-LDPC codes perform very well over the additive white Gaussian noise channel with iterative decoding in terms of bit-error probability and block-error probability. Simulation results demonstrate that the proposed codes have competitive performance in comparison with the similar existing LDPC codes. Finally, we propose a new encoding method for the proposed group ring-based QC-LDPC codes that can be implemented faster than the current encoding methods. The encoding complexity of the proposed method is analyzed mathematically, and indicates a significate reduction in the required number of operations, even when compared to the available efficient encoding methods that have linear time and space complexities.
 
 ## Low-Complexity Transformed Encoder Architectures for Quasi-Cyclic Nonbinary LDPC Codes Over Subfields
 
@@ -35,7 +26,7 @@
 - **Published**: April 2017
 - **Authors**: Xinmiao Zhang, Ying Tai
 - **PDF**: https://ieeexplore.ieee.org/document/7779152
-- **Abstract**: Quasi-cyclic low-density parity-check (QC-LDPC) codes are adopted in many digital communication and storage systems. The encoding of these codes is traditionally done by multiplying the message vector with a generator matrix consisting of dense circulant submatrices. To reduce the encoder complexity, this paper introduces two schemes making use of finite Fourier transform. We focus on QC-LDPC code...
+- **Abstract**: Quasi-cyclic low-density parity-check (QC-LDPC) codes are adopted in many digital communication and storage systems. The encoding of these codes is traditionally done by multiplying the message vector with a generator matrix consisting of dense circulant submatrices. To reduce the encoder complexity, this paper introduces two schemes making use of finite Fourier transform. We focus on QC-LDPC codes whose circulant submatrices are of dimension  $(2^{r}-1)\times (2^{r}-1)$  and the entries are elements of GF $(2^{p})$ , where  $p$  divides  $r$ , and hence, GF $(2^{p})$  is a subfield of GF $(2^{r})$ . These cover a broad range of codes, and binary LDPC codes are a special case. Making use of conjugacy constraints, low-complexity architectures are developed for finite Fourier and inverse transforms over subfields in this paper. In addition, composite field arithmetic is exploited to eliminate the computations associated with message mapping and reduce the complexity of Fourier transform. For a (2016, 1074) nonbinary QC-LDPC code whose generator matrix consists of circulants of dimension  $63 \times 63$  with GF $(2^{2})$  entries, the proposed encoders achieve 22% area reduction compared with the conventional encoders without sacrificing the throughput.
 
 ## Efficient ADMM Decoding of LDPC Codes Using Lookup Tables
 
@@ -44,7 +35,7 @@
 - **Published**: April 2017
 - **Authors**: Xiaopeng Jiao, Jianjun Mu, Yu-Cheng He +1
 - **PDF**: https://ieeexplore.ieee.org/document/7835149
-- **Abstract**: Linear programming decoding with the alternating direction method of multipliers (ADMM) is a promising decoding technique for low-density parity-check (LDPC) codes, where the computational complexity of Euclidean projections onto check polytopes becomes a prominent problem. In this paper, the problem is circumvented by building lookup tables (LUTs) and quantizing the inputs to approach approximate...
+- **Abstract**: Linear programming decoding with the alternating direction method of multipliers (ADMM) is a promising decoding technique for low-density parity-check (LDPC) codes, where the computational complexity of Euclidean projections onto check polytopes becomes a prominent problem. In this paper, the problem is circumvented by building lookup tables (LUTs) and quantizing the inputs to approach approximate Euclidean projections at low computational complexities. To challenge the huge memory cost of LUTs, we first propose two commutative compositions of Euclidean projection and self-map, and show the existence of a small quantization range which does not alter the Euclidean projection. Then, we investigate the design and simplification of the LUTs by exploiting the commutative compositions and check node decomposition techniques. An efficient algorithm for the LUT-based projection is demonstrated by using one simplification method. Simulation results show that for both the regular and irregular LDPC codes, the ADMM decoding using LUT-based projection can substantially reduce the decoding time while maintaining the error rate performance at a comparatively large memory cost.
 
 ## A New Variant of the McEliece Cryptosystem Based on QC-LDPC and QC-MDPC Codes
 
@@ -62,7 +53,7 @@
 - **Published**: April 2017
 - **Authors**: Elsa Dupraz, David Declercq, Bane Vasic
 - **PDF**: https://ieeexplore.ieee.org/document/7805222
-- **Abstract**: In a circuit, timing errors occur when a logic gate output does not switch before the clock rising edge. In this letter, we consider Gallager B decoders under timing errors, following the error model derived by Amaricai et al. from SPICE measurements. For this model, we provide a theoretical analysis of the performance of LDPC decoders. This letter is based on the analysis of the computation trees...
+- **Abstract**: In a circuit, timing errors occur when a logic gate output does not switch before the clock rising edge. In this letter, we consider Gallager B decoders under timing errors, following the error model derived by Amaricai et al. from SPICE measurements. For this model, we provide a theoretical analysis of the performance of LDPC decoders. This letter is based on the analysis of the computation trees of the decoder free of logic gate errors and of the decoder with timing errors. As a main result, we show that as the number of iterations goes to infinity, the error probability of the decoder with timing errors converges to the error probability of the logic gate error-free decoder. Monte Carlo simulations confirm this result even for moderate code lengths, which is in accordance with the experimental observations.
 
 ## Toward the Prediction of Irreducible Error Floor in Space Time Trellis Code
 
@@ -71,16 +62,7 @@
 - **Published**: April 2017
 - **Authors**: Ungku Azmi Iskandar Ungku Chulan, Mardina Abdullah, Nor Fadzilah Abdullah
 - **PDF**: https://ieeexplore.ieee.org/document/7811264
-- **Abstract**: This letter presents a prediction algorithm that foresees the possibility of irreducible error floor for a particular design of a generator matrix G in space time trellis code. This is done without the need of complex and time-consuming simulation, which removes the demand of considerable computational resource. To note, the prediction achieves approximately 93% accuracy and reduces roughly 99% of...
-
-## Shaping LDLC Lattices Using Convolutional Code Lattices
-
-- **ID**: ieee:7807253
-- **Type**: journal
-- **Published**: April 2017
-- **Authors**: Fan Zhou, Brian M. Kurkoski
-- **PDF**: https://ieeexplore.ieee.org/document/7807253
-- **Abstract**: In this letter, we show how to construct low-density lattice code (LDLC) lattices shaped using convolutional code lattices. First, we give an explicit method to find the generator matrices of convolutional code lattices. The shaping gain of convolutional code lattices based on rate 1/2 convolutional codes for short block length is found by evaluating the normalized second moment; a shaping gain as...
+- **Abstract**: This letter presents a prediction algorithm that foresees the possibility of irreducible error floor for a particular design of a generator matrix G in space time trellis code. This is done without the need of complex and time-consuming simulation, which removes the demand of considerable computational resource. To note, the prediction achieves approximately 93% accuracy and reduces roughly 99% of the temporal cost of simulation. It capitalizes on error prone substructure, a well-known concept from low density parity check code to enable the predictive mechanism. This can be useful in code design where problematic generator matrices can be omitted from consideration.
 
 ## Efficient Hardware Implementation of Probabilistic Gradient Descent Bit-Flipping
 
@@ -89,7 +71,7 @@
 - **Published**: April 2017
 - **Authors**: Khoa Le, Fakhreddine Ghaffari, David Declercq +1
 - **PDF**: https://ieeexplore.ieee.org/document/7786873
-- **Abstract**: This paper deals with the hardware implementation of the recently introduced Probabilistic Gradient-Descent Bit-Flipping (PGDBF) decoder. The PGDBF is a new type of hard-decision decoder for Low-Density Parity-Check (LDPC) code, with improved error correction performance thanks to the introduction of deliberate random perturbation in the computing units. In the PGDBF, the random perturbation opera...
+- **Abstract**: This paper deals with the hardware implementation of the recently introduced Probabilistic Gradient-Descent Bit-Flipping (PGDBF) decoder. The PGDBF is a new type of hard-decision decoder for Low-Density Parity-Check (LDPC) code, with improved error correction performance thanks to the introduction of deliberate random perturbation in the computing units. In the PGDBF, the random perturbation operates during the bit-flipping step, with the objective to avoid the attraction of so-called trapping-sets of the LDPC code. In this paper, we propose an efficient hardware architecture which minimizes the resource overhead needed to implement the random perturbations of the PGDBF. Our architecture is based on the use of a Short Random Sequence (SRS) that is duplicated to fully apply the PGDBF decoding rules, and on an optimization of the maximum finder unit. The generation of good SRS is crucial to maintain the outstanding decoding performance of PGDBF, and we propose two different methods with equivalent hardware overheads, but with different behaviors on different LDPC codes. Our designs show that the improved PGDBF performance gains can be obtained with a very small additional complexity, therefore providing a competitive hard-decision LDPC decoding solution for current standards.
 
 ## On Nonuniform Noisy Decoding for LDPC Codes With Application to Radiation-Induced Errors
 
@@ -98,7 +80,7 @@
 - **Published**: April 2017
 - **Authors**: Frederic Sala, Clayton Schoeny, Shahroze Kabir +2
 - **PDF**: https://ieeexplore.ieee.org/document/7833151
-- **Abstract**: Recent studies on noisy decoding for LDPC codes rely on the assumption that the noise in each component is independent and perpetual. This paper examines a noisy decoding model that generalizes this approach: the noise is due to multi-state channels, where the channel states are governed by queue-like processes. This model is inspired by errors in decoders that are due to the high levels of radiat...
+- **Abstract**: Recent studies on noisy decoding for LDPC codes rely on the assumption that the noise in each component is independent and perpetual. This paper examines a noisy decoding model that generalizes this approach: the noise is due to multi-state channels, where the channel states are governed by queue-like processes. This model is inspired by errors in decoders that are due to the high levels of radiation. This is an important problem, as modern non-volatile memories (NVMs) must perform well in high-radiation environments if they are to be used for deep space applications. High levels of radiation have a significant impact on floating gate-based NVMs, such as flash, and therefore, require well-tuned, powerful error-correcting codes for reliable data storage along with the decoders capable of handling radiation-induced noisy components. We introduce a noisy LDPC decoding model subsuming certain previously studied models. This model is better suited to represent transient errors-in both variable nodes and check nodes-and allows for a more refined analysis compared with older, coarser models. We perform a density evolution-like theoretical evaluation, applicable to both regular and irregular codes, optimize the voting threshold for a Gallager B/E-decoder, and analyze the resulting evaluation. We also examine the finite block length case.
 
 ## Linear network coding and parallel transmission increase fault tolerance and optical reach
 
@@ -107,16 +89,7 @@
 - **Published**: April 2017
 - **Authors**: Xiaomin Chen, Anna Engelmann, Admela Jukan +1
 - **PDF**: https://ieeexplore.ieee.org/document/7901451
-- **Abstract**: Modern optical network systems are evolving toward more spectral flexibility and efficiency driven by the ever-increasing need for high-speed transmission. In spectrally efficient elastic optical networks, a more integrated, fault tolerant transmission system is becoming critical, due to the accompanying optical impairments and the resulting limitations in optical reach. Previous work has addresse...
-
-## Practical polar code construction for degraded multiple-relay networks
-
-- **ID**: ieee:7927571
-- **Type**: magazine
-- **Published**: April 2017
-- **Authors**: Bin Duo, Xiaoling Zhong, Yong Guo
-- **PDF**: https://ieeexplore.ieee.org/document/7927571
-- **Abstract**: In this paper, based on the characteristics of polar codes, a new decode-and-forward strategy called generalized partial information relaying protocol is proposed for degraded multiple-relay networks with orthogonal receiver components (MRNORCs). In such a protocol, with the help of partial information from previous nodes, each relay node tries to recover the received source message and re-encodes...
+- **Abstract**: Modern optical network systems are evolving toward more spectral flexibility and efficiency driven by the ever-increasing need for high-speed transmission. In spectrally efficient elastic optical networks, a more integrated, fault tolerant transmission system is becoming critical, due to the accompanying optical impairments and the resulting limitations in optical reach. Previous work has addressed the issue of optical reach and transmission tolerance to faults (errors) in the physical layer by deploying various forward error correction schemes. This paper proposes a different approach, complementary to the error correction mechanisms in the physical layer. In our approach, we apply randomized linear network coding (RLNC) at the source node to encode all data in the electronic layer before all-optical transmission. To achieve fault tolerance, a coded auxiliary optical channel is used in parallel with the main path. With the auxiliary path and RLNC, as shown analytically, the system is able to use more advanced modulation formats in the main path, while being highly tolerant to bit errors and packet loss caused by optical impairments. The results show that the system can alleviate the constraints on optical transmission quality and achieve better optical reach and spectral efficiency.
 
 ## Lattice Index Codes From Algebraic Number Fields
 
@@ -125,7 +98,7 @@
 - **Published**: April 2017
 - **Authors**: Yu-Chih Huang
 - **PDF**: https://ieeexplore.ieee.org/document/7822990
-- **Abstract**: Broadcasting K independent messages to multiple users where each user demands all the messages and already has a subset of the messages as side information is studied. Recently, Natarajan et al. proposed a novel broadcasting strategy called lattice index coding, which adopts lattices constructed over some principal ideal domains (PID) for transmission. Using the structure of lattices over PID, the...
+- **Abstract**: Broadcasting K independent messages to multiple users where each user demands all the messages and already has a subset of the messages as side information is studied. Recently, Natarajan et al. proposed a novel broadcasting strategy called lattice index coding, which adopts lattices constructed over some principal ideal domains (PID) for transmission. Using the structure of lattices over PID, they showed that this scheme provides uniform side information gain for any side information configuration, a desired property which essentially guarantees a fair signal-to-noise ratio gain when normalized by the amount of information contained in side information. In this paper, we generalize this strategy to a general ring of algebraic integers, which may not be a PID. Upper and lower bounds on the side information gains for the proposed scheme constructed over some interesting classes of number fields are provided and are shown to coincide asymptotically in message rate. This generalization substantially enlarges the design space and partially includes the scheme by Natarajan et al. as a special case. Perhaps more importantly, in addition to side information gains, the proposed lattice index codes benefit from diversity gains inherent in constellations carved from number fields when used over Rayleigh fading channel. Some interesting examples are provided for which the proposed scheme allows the messages to be from the same field.
 
 ## Design of Generalized Concatenated Codes Based on Polar Codes With Very Short Outer Codes
 
@@ -134,7 +107,7 @@
 - **Published**: April 2017
 - **Authors**: Hamid Saber, Ian Marsland
 - **PDF**: https://ieeexplore.ieee.org/document/7513399
-- **Abstract**: We present a new design approach to construct generalized concatenated codes (GCCs) based on polar codes (PCs). It is already known that PCs can be considered as a special class of the GCCs with polar outer and inner codes. We show how density evolution (DE) can be used to develop a channel-specific method to design outer codes of length L under maximum-likelihood (ML) decoding. Once a bank of out...
+- **Abstract**: We present a new design approach to construct generalized concatenated codes (GCCs) based on polar codes (PCs). It is already known that PCs can be considered as a special class of the GCCs with polar outer and inner codes. We show how density evolution (DE) can be used to develop a channel-specific method to design outer codes of length L under maximum-likelihood (ML) decoding. Once a bank of outer codes of length L and different rates have been designed, we develop a rate-allocation algorithm to allocate rates to the outer codes of the GCC with the goal of minimizing the overall block error rate for a given overall rate of K/N. To maintain the low complexity of the SC decoder, we only design very short outer codes (L ≤ 8). We show that, at this outer code length, it is possible to design GCC-PCs that can result in up to 0.5-dB coding gain while reducing decoding complexity.
 
 ## EXIT Chart-Based IRA Code Design for TDMR Turbo-Equalization System
 
@@ -143,7 +116,7 @@
 - **Published**: April 2017
 - **Authors**: Morteza Mehrnoush, xBenjamin J. Belzer, Krishnamoorthy Sivakumar +1
 - **PDF**: https://ieeexplore.ieee.org/document/7837588
-- **Abstract**: We present an extrinsic information transfer (EXIT) chart-based design technique for irregular repeat-accumulate (IRA) codes used in 2-D magnetic recording (TDMR) turbo-equalization systems. The channel model includes Voronoi magnetic grains, 2-D intersymbol interference (2D-ISI) and additive white Gaussian noise (AWGN). The receiver uses a 2D-ISI BCJR equalizer and an IRA decoder. For one outer e...
+- **Abstract**: We present an extrinsic information transfer (EXIT) chart-based design technique for irregular repeat-accumulate (IRA) codes used in 2-D magnetic recording (TDMR) turbo-equalization systems. The channel model includes Voronoi magnetic grains, 2-D intersymbol interference (2D-ISI) and additive white Gaussian noise (AWGN). The receiver uses a 2D-ISI BCJR equalizer and an IRA decoder. For one outer equalizer-decoder iteration, we propose theory and simulation-based methods for computing EXIT curves. The simulation method calculates experimental EXIT curves for the check node decoder (CND) and the combination of the variable node decoder (VND) and an equalizer. The theoretical approach recursively calculates CND and VND Gaussian mixture model parameters in order to calculate EXIT curves. We then fit the VND and CND EXIT curves to find optimized variable node degree distributions. Simulation results show that the TDMR-optimized IRA codes achieve up to a 6.2% density increase in user bits/grain (U/G) compared with IRA codes designed for AWGN channels. The theory-based code designs achieve the same or better U/G as the simulation-based designs, but require 98% less design computation time. We also derive optimized IRA codes for iterative turbo-equalization; these codes can achieve simultaneous U/G gains and SNR savings compared with AWGN-optimized codes.
 
 ## Quasi-Universal BATS Code
 
@@ -152,7 +125,7 @@
 - **Published**: April 2017
 - **Authors**: Xiaoli Xu, Yong Liang Guan, Yong Zeng +1
 - **PDF**: https://ieeexplore.ieee.org/document/7522090
-- **Abstract**: Batched sparse (BATS) code is a class of temporal network code that achieves near-optimal tradeoff between network throughput and coding length for multi-hop erasure networks. However, the performance of the traditional BATS code degrades dramatically when the designed degree distribution does not match the actual channel condition. In this paper, we first prove that a universal degree distributio...
+- **Abstract**: Batched sparse (BATS) code is a class of temporal network code that achieves near-optimal tradeoff between network throughput and coding length for multi-hop erasure networks. However, the performance of the traditional BATS code degrades dramatically when the designed degree distribution does not match the actual channel condition. In this paper, we first prove that a universal degree distribution that asymptotically achieves the optimal rate for all channel rank distributions does not exist for BATS code with batch size greater than one. We then propose a quasi-universal BATS (QU-BATS) code that achieves near-optimalperformance for a range of channel conditions. This makes it suitable for use in scenarios where the end-to-end channel rank distribution is not fixed or not exactly known, e.g., in multicast or wireless transmission. In the proposed QU-BATS coding scheme, multiple degree distributions are designed, and the coded packets are generated according to different degree distributions at different transmission stages. Simulation results show that the proposed QU-BATS code strictly outperforms the fountain code and the traditional BATS codes for multihop data streaming over uncertain or time-varying network links, with lower decoding complexity.
 
 ## Data-Pattern-Aware Error Prevention Technique to Improve System Reliability
 
@@ -161,25 +134,7 @@
 - **Published**: April 2017
 - **Authors**: Jie Guo, Danghui Wang, Zili Shao +1
 - **PDF**: https://ieeexplore.ieee.org/document/7814316
-- **Abstract**: Program disturb, read disturb, and retention time noise are identified as three major contributors to multilevel cell (MLC) NAND flash memory bit errors. With program/erase cycling and technology scaling, bit error rate (BER) of MLC NAND flash memory rapidly increases. Previous works revealed that BER is heavily dependent on data patterns. Based on this observation, we propose data-pattern-aware (...
-
-## High SNR Error Analysis for Bidirectional Relaying With Physical Layer Network Coding
-
-- **ID**: ieee:7833153
-- **Type**: journal
-- **Published**: April 2017
-- **Authors**: Karthik Ravindran, Andrew Thangaraj, Srikrishna Bhashyam
-- **PDF**: https://ieeexplore.ieee.org/document/7833153
-- **Abstract**: We consider a large class of bidirectional relaying scenarios with physical layer network coding, and analytically characterize the relay&#39;s error performance in decoding the network-coded combination at high signal-to-noise ratio (SNR). Our analysis applies to scenarios with 1) binary or higher order real/complex modulation, 2) real or complex channel coefficients, and 3) linear or non-linear netw...
-
-## Leveraging Systematic Unidirectional Error-Detecting Codes for fast STT-MRAM cache
-
-- **ID**: ieee:7928937
-- **Type**: conference
-- **Published**: 9-12 April
-- **Authors**: Nour Sayed, Fabian Oboril, Rajendra Bishnoi +1
-- **PDF**: https://ieeexplore.ieee.org/document/7928937
-- **Abstract**: Spin Transfer Torque Magnatic Random Access Memory (STT-MRAM) has the potential to become a universal memory technology due to its various attractive features such as non-volatility, high density, CMOS compatibility and zero leakage. However, STT-MRAM suffers from high write latency and poor reliability compared to SRAM. This is primarily due to its stochastic nature of switching, which makes it n...
+- **Abstract**: Program disturb, read disturb, and retention time noise are identified as three major contributors to multilevel cell (MLC) NAND flash memory bit errors. With program/erase cycling and technology scaling, bit error rate (BER) of MLC NAND flash memory rapidly increases. Previous works revealed that BER is heavily dependent on data patterns. Based on this observation, we propose data-pattern-aware (DPA) error protection technique to extend the lifespan of NAND flash-based storage systems. DPA manipulates the ratios of 0's and 1's in the stored data to reduce the probability of the data patterns, which are susceptible to device noises. By minimizing the vulnerable data patterns, our scheme can effectively reduce the BER and improves the system endurance. Our DPA scheme also incorporates a data management scheme to minimize the redundancy-induced performance overhead. Simulation results show that our scheme can increase flash system life expectancy by up to 4×.
 
 ## Error detection and correction in semiconductor memories using 3D parity check code with hamming code
 
@@ -188,7 +143,7 @@
 - **Published**: 6-8 April 
 - **Authors**: Shivani Tambatkar, Siddharth Narayana Menon, V. Sudarshan +2
 - **PDF**: https://ieeexplore.ieee.org/document/8286516
-- **Abstract**: Data stored in memory or buffer needs Error Detection And Correction (EDAC). Errors occur due to supply voltage fluctuations and/or noise due to electromagnetic interference or external radiation. These errors could be either temporary or permanent. In this paper, a EDAC method is proposed to detect and correct errors based on 3D parity check. In the encoder, the data bits are arranged in a matrix...
+- **Abstract**: Data stored in memory or buffer needs Error Detection And Correction (EDAC). Errors occur due to supply voltage fluctuations and/or noise due to electromagnetic interference or external radiation. These errors could be either temporary or permanent. In this paper, a EDAC method is proposed to detect and correct errors based on 3D parity check. In the encoder, the data bits are arranged in a matrix format and then parity bits are calculated for each row, column and diagonal. Errors present in parity bits are detected and corrected using Hamming code. Regeneration of data bits and Syndrome calculation at the decoder helps in detecting and correcting the error bits in the data. The 3D Parity check code can correct up to 3 bits of any combination of errors in the data and the Hamming code can correct up to 3 bits in the parity, if they occur in specific combinations. Thus, this method can detect and correct errors in both data and parity bits. This method achieves higher reliability by having a slight tradeoff in area and power consumption compared to other similar methods.
 
 ## Design of LDPC decoder using message passing algorithm
 
@@ -197,16 +152,7 @@
 - **Published**: 6-8 April 
 - **Authors**: Prerana Dhanorkar, Monica Kalbande
 - **PDF**: https://ieeexplore.ieee.org/document/8286733
-- **Abstract**: Low density parity check (LDPC) codes are most favorable error-correcting codes and also in terms of high coding gain, high throughput and low power dissipation LDPC code is advantageous. In this paper, for designing LDPC decoder the Min Sum Algorithm for decoding the LDPC codes is suggested. Min Sum algorithm is belong to soft-decision decoding techniques The hardware implementation of check node...
-
-## A review on resource efficient polar decoders-present and past
-
-- **ID**: ieee:8286701
-- **Type**: conference
-- **Published**: 6-8 April 
-- **Authors**: V. P. M. B. Aarthi Alias Ananthakirupa, G. Indumathi, M. Ramesh
-- **PDF**: https://ieeexplore.ieee.org/document/8286701
-- **Abstract**: In this paper, the ground work on polar decoder is concentrated by studying the various existing techniques in the design of polar decoders. The goal of channel coding is to detect and correct errors that appear during the transmission of information. The polar codes have an explicit construction and low-complexity encoding. Moreover, polar codes are provably capacity achieving over a wide range o...
+- **Abstract**: Low density parity check (LDPC) codes are most favorable error-correcting codes and also in terms of high coding gain, high throughput and low power dissipation LDPC code is advantageous. In this paper, for designing LDPC decoder the Min Sum Algorithm for decoding the LDPC codes is suggested. Min Sum algorithm is belong to soft-decision decoding techniques The hardware implementation of check node and variable node using a traditional technique based on HDL code is very complex and time consuming. Here a new approach for designing of LDPC decoder using Simulink modelling have been proposed. For check node and variable node the hdl code have been generated using the Simulink hdl coder in matlab.
 
 ## Maximizing System Capacity Using Adaptive Coding and Modulation Techniques for Slowly Fading Channels
 
@@ -215,7 +161,7 @@
 - **Published**: 5-7 April 
 - **Authors**: Faisal M. Alawwad, Yousef A. Al-Zahrani, Hatim M. Behairy
 - **PDF**: https://ieeexplore.ieee.org/document/8359070
-- **Abstract**: In this paper, an adaptive coding and modulation (ACM) technique is introduced in an attempt to maximize the channel throughout. This technique suggests five different pairs of coding and modulation techniques, starting from low modulation orders and code rates going through higher values. Simulation over additive white Gaussian noise (AWGN) of the physical layer of the system is performed using M...
+- **Abstract**: In this paper, an adaptive coding and modulation (ACM) technique is introduced in an attempt to maximize the channel throughout. This technique suggests five different pairs of coding and modulation techniques, starting from low modulation orders and code rates going through higher values. Simulation over additive white Gaussian noise (AWGN) of the physical layer of the system is performed using M-phase shift keying (M-PSK) modulation and convolutional codes with soft Viterbi decoding algorithm. In addition, the channel throughput for each Modulation and coding pair is obtained using specific packet retransmission mechanism. An algorithm for adaptive coding and modulation is developed and the overall throughout of the adaptive system is determined with respect to the received Eb/No values.
 
 ## Compressed Sensing Performance of Binary Matrices with Binary Column Correlations
 
@@ -233,7 +179,7 @@
 - **Published**: 24-28 Apri
 - **Authors**: L. Kong, K. Cai, P. Chen +1
 - **PDF**: https://ieeexplore.ieee.org/document/8007593
-- **Abstract**: Aiming at further increasing the data-storage density beyond 1Tb/in2[1-3], bit-patterned media recording (BPMR), shingled writing (SW)/two-dimensional magnetic recording (TDMR) have emerged as new promising technologies. However, with the reduction of the track pitch, inter-track interference (ITI) becomes a major impairment for these magnetic recording systems. ITI combined with the conventional ...
+- **Abstract**: Aiming at further increasing the data-storage density beyond 1Tb/in2[1-3], bit-patterned media recording (BPMR), shingled writing (SW)/two-dimensional magnetic recording (TDMR) have emerged as new promising technologies. However, with the reduction of the track pitch, inter-track interference (ITI) becomes a major impairment for these magnetic recording systems. ITI combined with the conventional (down-track) inter-symbol interference (ISI) forms a two-dimensional (2D) interference that severely degrades the performance of data storage systems. Motivated by the superiority of data-storage density, large attention has been turned to 2D-ISI channels. Although the symbol-based Bahl-Cocke-Jelinek-Raviv (BCJR) 2D detector (2D-DET) [2] - hereinafter called full 2D channel detector-can provide optimal detection over such 2D-ISI channels, it has prohibitive complexity for the typical 2D data size. In [4], the well known suboptimal 2D-DET, iterative row-column soft decision feedback algorithm (IRCSDFA), has been further simplified using Gaussian approximation, the resultant simplified 2D-DET is referred as “GA-IRCSDFA”. Besides 2D channel detection, coding also provides a means to combat 2D-ISI. In [2], new low-density parity-check (LDPC) codes optimized for 2D-ISI channels detected using the 2D BCJR detector have been designed, and are shown to achieve better performance than LDPC optimized for additive white Gaussian noise (AWGN) channels. LDPC codes optimized for 2D-ISI channels detected using 2D GA-IRCSDFA detector in [5], exhibit excellent error-correction capabilities, especially for high codeword lengths. However, the ISI-optimized LDPC codes are designed for a 2D-ISI channel detected by the specific 2D-DET, and code optimization procedure should be operated again for a new detector. Moreover, the 2D-DET EXIT curve cannot be expressed in closed form, need to be evaluated by Monte Carlo simulation, statistically averaged over a large number of 2D detection simulationsIn this paper, we present a detector-aware LDPC code optimization method for a 2D-ISI magnetic recording channel, adjusting the variance of the 2D-ISI channel log-likelihood ratios (L-values) according to the specific 2D-DET. The new variance builds a new bridge of LDPC code optimization between the ISI-channel and AWGN channel. Specifically, the a-posteriori mutual information of the 2D-DET is calculated. Then we re-model the distribution of L-values as an approximately Gaussian N(μ,2μ)based on the estimated mutual information of the 2D-DET. Finally, we can re-use the code optimization methods employed in the AWGN channel employing the new variance of L-values from the corresponding 2D-DET in 2D-ISI channels, instead of the original variance.
 
 ## A cascaded channel model and hybrid decoding for spin-torque transfer magnetic random access memory (STT-MRAM)
 
@@ -251,7 +197,7 @@
 - **Published**: 24-28 Apri
 - **Authors**: S. Jeong, J. Lee
 - **PDF**: https://ieeexplore.ieee.org/document/8007596
-- **Abstract**: Because of the explosion in data growth, the requirement for storage system with high density has been increased. Bit patterned media recording (BPMR) is a candidate for the next generation magnetic systems which has many advantages to achieve recording density of 1 Tb/in2 and beyond. This paper proposes an iterative channel detection scheme with low density parity check (LDPC) product code using ...
+- **Abstract**: Because of the explosion in data growth, the requirement for storage system with high density has been increased. Bit patterned media recording (BPMR) is a candidate for the next generation magnetic systems which has many advantages to achieve recording density of 1 Tb/in2 and beyond. This paper proposes an iterative channel detection scheme with low density parity check (LDPC) product code using extrinsic information between soft output Viterbi algorithm (SOVA) and LDPC for BPMR.
 
 ## Design of LDPC codes for unequal ISI channels
 
@@ -260,7 +206,7 @@
 - **Published**: 24-28 Apri
 - **Authors**: W. Phakphisut, P. Supnithi
 - **PDF**: https://ieeexplore.ieee.org/document/8007592
-- **Abstract**: In magnetic recording system, each track or sector may suffer different distortion and noise levels, for example, media noise, intersymbol interference (ISI)/inter-track interference (ITI), reader sensitivity (in case of multi-reader), resulting in unequal error rates or unequal ISI channels. A generic scenario is considered for the multi-read system whereby tracks with different areal densities e...
+- **Abstract**: In magnetic recording system, each track or sector may suffer different distortion and noise levels, for example, media noise, intersymbol interference (ISI)/inter-track interference (ITI), reader sensitivity (in case of multi-reader), resulting in unequal error rates or unequal ISI channels. A generic scenario is considered for the multi-read system whereby tracks with different areal densities experience unequal ISI and ITI levels, hence, different targets are used. In this work, the codeword of LDPC code is divided and transmitted in the unequal ISI channels. The aim of this scheme is to avoid transmitting the whole codeword in a high error rate channel. It resembles the diversity technique in wireless communication, which transmit the information over multiple-channel by multiple-antenna. In this work, we use the unequal ISI channels.
 
 ## Non-binary protograph-based LDPC codes for 2-D ISI magnetic recording channels
 
@@ -269,7 +215,7 @@
 - **Published**: 24-28 Apri
 - **Authors**: P. Chen, K. Cai, L. Kong +2
 - **PDF**: https://ieeexplore.ieee.org/document/8007591
-- **Abstract**: Two dimensional (2-D) inter-symbol-interference (ISI), consisting of ISI in the down track direction and inter-track interference (ITI) along the cross-track direction, is a major factor that severely degrades the performance of ultra-high density magnetic recording systems. In this work, we propose a modified protograph extrinsic information transfer (EXIT) analysis, based on which we design nove...
+- **Abstract**: Two dimensional (2-D) inter-symbol-interference (ISI), consisting of ISI in the down track direction and inter-track interference (ITI) along the cross-track direction, is a major factor that severely degrades the performance of ultra-high density magnetic recording systems. In this work, we propose a modified protograph extrinsic information transfer (EXIT) analysis, based on which we design novel NP-LDPC codes for 2-D ISI channels. II.
 
 ## Secure key management for 5G physical layer security
 
@@ -278,7 +224,7 @@
 - **Published**: 24-25 Apri
 - **Authors**: Asim Mazin, Kemal Davaslioglu, Richard D. Gitlin
 - **PDF**: https://ieeexplore.ieee.org/document/7930246
-- **Abstract**: Next generation 5G wireless networks pose several important security challenges. One fundamental challenge is key management between the two communicating parties. The goal is to establish a common secret key through an unsecured wireless medium. In this paper, we introduce a new physical layer paradigm for secure key exchange between the legitimate communication parties in the presence of a passi...
+- **Abstract**: Next generation 5G wireless networks pose several important security challenges. One fundamental challenge is key management between the two communicating parties. The goal is to establish a common secret key through an unsecured wireless medium. In this paper, we introduce a new physical layer paradigm for secure key exchange between the legitimate communication parties in the presence of a passive eavesdropper. The proposed method ensures secrecy via pre-equalization and guarantees reliable communications by the use of Low Density Parity Check (LDPC) codes. One of the main findings of this paper is to demonstrate through simulations that the diversity order of the eavesdropper will be zero unless the main and eavesdropping channels are almost correlated, while the probability of key mismatch between the legitimate transmitter and receiver will be low. Simulation results demonstrate that the proposed approach achieves very low secret key mismatch between the legitimate users, while ensuring very high error probability at the eavesdropper.
 
 ## Non zero syndrome parallel concatenated gallager codes
 
@@ -287,7 +233,7 @@
 - **Published**: 20-21 Apri
 - **Authors**: G. P. Aswathy, Niyas K. Haneefa
 - **PDF**: https://ieeexplore.ieee.org/document/8074180
-- **Abstract**: Parallel Concatenated Gallager Code (PCGC) is a class of concatenated error correcting codes designed to reduce the encoding and decoding complexity of long block length Low Density Parity Check (LDPC) codes. In this paper, we present a novel class of PCGC in which one constituent code satisfies zero syndrome criteria and the other one satisfies non-zero syndrome criteria. Simulation results show ...
+- **Abstract**: Parallel Concatenated Gallager Code (PCGC) is a class of concatenated error correcting codes designed to reduce the encoding and decoding complexity of long block length Low Density Parity Check (LDPC) codes. In this paper, we present a novel class of PCGC in which one constituent code satisfies zero syndrome criteria and the other one satisfies non-zero syndrome criteria. Simulation results show that proposed non-zero syndrome PCGC outperforms existing non-zero syndrome PCGC in terms of its bit error rate (BER) performance in Binary Symmetric Channel (BSC). We also show that proposed concatenation method gives better performance than dedicated LDPC of same frame length and code rate over BSC.
 
 ## Performance analysis of IEEE 802.11ac/ax WLAN technologies under the presence of CFO
 
@@ -296,7 +242,7 @@
 - **Published**: 19-20 Apri
 - **Authors**: Jiri Milos, Ladislav Polak, Martin Slanina
 - **PDF**: https://ieeexplore.ieee.org/document/7937579
-- **Abstract**: In the recent twenty years, numerous IEEE 802.11 technologies have been developed for Wireless Local Area Network (WLAN) connectivity. The common point of these technologies is that the latest IEEE 802.11 version has always several advanced features compared to its predecessor. IEEE 802.11ax is one of the upcoming technologies, primarily developed for the Industrial, Security and Medical (ISM) ban...
+- **Abstract**: In the recent twenty years, numerous IEEE 802.11 technologies have been developed for Wireless Local Area Network (WLAN) connectivity. The common point of these technologies is that the latest IEEE 802.11 version has always several advanced features compared to its predecessor. IEEE 802.11ax is one of the upcoming technologies, primarily developed for the Industrial, Security and Medical (ISM) band. IEEE 802.11ax is planned to be released in 2019 and extend the features of IEEE 802.11ac. This paper presents a simulation-based performance analysis of the IEEE 802.11ac/ax technologies on the physical layer (PHY) level. The transmitter and receiver models of both technologies have been implemented and tested in MATLAB. Furthermore, this work explores IEEE 802.11ac/ax performance degradation that may be caused by carrier frequency offset (CFO). Results show lower resistance of IEEE 802.11ax against CFO.
 
 ## Determination of partial weight enumerators of BCH codes by Hash methods
 
@@ -305,7 +251,7 @@
 - **Published**: 19-20 Apri
 - **Authors**: My Seddiq El Kasmi Alaoui, Saïd Nouh, Abdelaziz Marzak
 - **PDF**: https://ieeexplore.ieee.org/document/7934666
-- **Abstract**: The PWE (Partial Weight Enumerator) algorithm permits to obtain a partial weights enumerator for linear codes. This algorithm is based on the Multiple Impulse Method combined with a Monte Carlo Method. The main disadvantage of this algorithm is the height run time complexity when the set of selected codewords as sample is large. However, when this set is reduced it becomes not representative and t...
+- **Abstract**: The PWE (Partial Weight Enumerator) algorithm permits to obtain a partial weights enumerator for linear codes. This algorithm is based on the Multiple Impulse Method combined with a Monte Carlo Method. The main disadvantage of this algorithm is the height run time complexity when the set of selected codewords as sample is large. However, when this set is reduced it becomes not representative and the quality of approximation decrease. In this paper, we will present an improved version PWEH of the PWE algorithm based on Hash techniques in order to remedy this disadvantage. The comparison between PWE and PWEH shows that the run time of this latest is reduced at more than 5100%. PWEH is validated and it is used to find an approximation of the partial weight enumerators of BCH (255,199) code where the weight distributions is still unknown.
 
 ## DaRe: Data Recovery through Application Layer Coding for LoRaWAN
 
@@ -314,13 +260,4 @@
 - **Published**: 18-21 Apri
 - **Authors**: Paul J. Marcelis, Vijay S. Rao, R. Venkatesha Prasad
 - **PDF**: https://ieeexplore.ieee.org/document/7946866
-- **Abstract**: Internet of Things (IoT) solutions are increasingly being deployed for smart applications. To provide good communication for the increasing number of smart applications, there is a need for low cost and long range Low Power Wide Area Network (LPWAN) technologies. LoRaWAN is an energy efficient and inexpensive LPWAN solution that is rapidly being adopted all around the world. However, LoRaWAN does ...
-
-## Design and implementation of a Wideband Radio using SDR for avionic applications
-
-- **ID**: ieee:8011904
-- **Type**: conference
-- **Published**: 18-20 Apri
-- **Authors**: Eric Zhang, Joe Zambrano, Abdessamad Amrhar +2
-- **PDF**: https://ieeexplore.ieee.org/document/8011904
-- **Abstract**: This paper presents the design and implementation of a Wideband Radio (WBR) in a Software Defined Radio (SDR) multi-system avionic architecture able to send and receive channel data in real time, via Air-to-Ground (A/G) link or satellite link, from/to an Aircraft (A/C) and a Ground Station (GS). The implemented WBR is characterized by sharing resources with other avionic systems, having a single p...
+- **Abstract**: Internet of Things (IoT) solutions are increasingly being deployed for smart applications. To provide good communication for the increasing number of smart applications, there is a need for low cost and long range Low Power Wide Area Network (LPWAN) technologies. LoRaWAN is an energy efficient and inexpensive LPWAN solution that is rapidly being adopted all around the world. However, LoRaWAN does not guarantee reliable communication in its basic configuration. Transmitted frames can be lost due to the channel effects and mobility of the end-devices. In this study, we perform extensive measurements on a new LoRaWAN network to characterise spatial and temporal properties of the LoRaWAN channel. The empirical outage probability for the farthest measured distance from the closest gateway of 7.5km in our deployment is as low as 0.004, but the frame loss measured at this distance was up to 70%. Furthermore, we show that burstiness in frame loss can be expected for both mobile and stationary scenarios. Frame loss results in data loss, since in the basic configuration frames are only transmitted once. To reduce data loss in LoRaWAN, we design a novel coding scheme for data recovery called DaRe, which extends frames with redundant information that is calculated from the data from previous frames. DaRe combines techniques from convolutional codes and fountain codes. We develop an implementation for DaRe and show that 99% of the data can be recovered with a code rate of 1/2 for up to 40% frame loss. Compared to repetition coding DaRe provides 21% more data recovery, and can save up to 42% energy consumption on transmission for 10 byte data units. DaRe also provides better resilience to bursty frame loss. This study provides useful results to both LoRaWAN network operators as well as developers of LoRaWAN applications. Network operators can use the characterisation results to identify possible weaknesses in the network, and application developers are offered a tool to prevent possible data loss.
