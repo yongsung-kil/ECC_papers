@@ -1,0 +1,20 @@
+# arXiv — 2018-04
+
+
+## Joint Quantizer Optimization based on Neural Quantizer for Sum-Product Decoder
+
+- **ID**: arxiv:1804.06002v1
+- **Type**: preprint
+- **Published**: 2018-04-17
+- **Authors**: Tadashi Wadayama, Satoshi Takabe
+- **PDF**: https://arxiv.org/pdf/1804.06002v1
+- **Abstract**: A low-precision analog-to-digital converter (ADC) is required to implement a frontend device of wideband digital communication systems in order to reduce its power consumption. The goal of this paper is to present a novel joint quantizer optimization method for minimizing lower-precision quantizers matched to the sum-product algorithms. The principal idea is to introduce a quantizer that includes a feed-forward neural network and the soft staircase function. Since the soft staircase function is differentiable and has non-zero gradient values everywhere, we can exploit backpropagation and a stochastic gradient descent method to train the feed-forward neural network in the quantizer. The expected loss regarding the channel input and the decoder output is minimized in a supervised training phase. The experimental results indicate that the joint quantizer optimization method successfully provides an 8-level quantizer for a low-density parity-check (LDPC) code that achieves only a 0.1-dB performance loss compared to the unquantized system.
+
+## Numerical and analytical bounds on threshold error rates for hypergraph-product codes
+
+- **ID**: arxiv:1804.01950v2
+- **Type**: preprint
+- **Published**: 2018-04-05
+- **Authors**: Alexey A. Kovalev, Sanjay Prabhakar, Ilya Dumer +1
+- **PDF**: https://arxiv.org/pdf/1804.01950v2
+- **Abstract**: We study analytically and numerically decoding properties of finite rate hypergraph-product quantum LDPC codes obtained from random (3,4)-regular Gallager codes, with a simple model of independent X and Z errors. Several non-trival lower and upper bounds for the decodable region are constructed analytically by analyzing the properties of the homological difference, equal minus the logarithm of the maximum-likelihood decoding probability for a given syndrome. Numerical results include an upper bound for the decodable region from specific heat calculations in associated Ising models, and a minimum weight decoding threshold of approximately 7%.

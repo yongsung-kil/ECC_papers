@@ -1,0 +1,74 @@
+# arXiv — 2020-10
+
+
+## On the Fault Tolerant Distributed Data Caching using LDPC Codes in Cellular Networks
+
+- **ID**: arxiv:2010.14781v3
+- **Type**: preprint
+- **Published**: 2020-10-28
+- **Authors**: Elif Haytaoglu, Erdi Kaya, Suayb S. Arslan
+- **PDF**: https://arxiv.org/pdf/2010.14781v3
+- **Abstract**: The base station-mobile device communication traffic has dramatically increased recently due to mobile data, which in turn heavily overloaded the underlying infrastructure. To decrease Base Station (BS) interaction, intra-cell communication between local devices, known as Device-to-Device, is utilized for distributed data caching. Nevertheless, due to the continuous departure of existing nodes and the arrival of newcomers, the missing cached data may lead to permanent data loss. In this study, we propose and analyze a class of LDPC codes for distributed data caching in cellular networks. Contrary to traditional distributed storage, a novel repair algorithm for LDPC codes is proposed which is designed to exploit the minimal direct BS communication. To assess the versatility of LDPC codes and establish performance comparisons to classic coding techniques, novel theoretical and experimental evaluations are derived. Essentially, the theoretical/numerical results for repair bandwidth cost in presence of BS are presented in a distributed caching setting. Accordingly, when the gap between the cost of downloading a symbol from BS and from other local network nodes is not dramatically high, we demonstrate that LDPC codes can be considered as a viable fault-tolerance alternative in cellular systems with caching capabilities for both low and high code rates.
+
+## Multi-factor Physical Layer Security Authentication in Short Blocklength Communication
+
+- **ID**: arxiv:2010.14457v2
+- **Type**: preprint
+- **Published**: 2020-10-27
+- **Authors**: Miroslav Mitev, Mahdi Shekiba-Herfeh, Arsenia Chorti +1
+- **PDF**: https://arxiv.org/pdf/2010.14457v2
+- **Abstract**: Lightweight and low latency security schemes at the physical layer that have recently attracted a lot of attention include: (i) physical unclonable functions (PUFs), (ii) localization based authentication, and, (iii) secret key generation (SKG) from wireless fading coefficients. In this paper, we focus on short blocklengths and propose a fast, privacy preserving, multi-factor authentication protocol that uniquely combines PUFs, proximity estimation and SKG. We focus on delay constrained applications and demonstrate the performance of the SKG scheme in the short blocklength by providing a numerical comparison of three families of channel codes, including half rate low density parity check codes (LDPC), Bose Chaudhuri Hocquenghem (BCH), and, Polar Slepian Wolf codes for n=512, 1024. The SKG keys are incorporated in a zero-round-trip-time resumption protocol for fast re-authentication. All schemes of the proposed mutual authentication protocol are shown to be secure through formal proofs using Burrows, Abadi and Needham (BAN) and Mao and Boyd (MB) logic as well as the Tamarin-prover.
+
+## Subsystem codes with high thresholds by gauge fixing and reduced qubit overhead
+
+- **ID**: arxiv:2010.09626v2
+- **Type**: preprint
+- **Published**: 2020-10-19
+- **Authors**: Oscar Higgott, Nikolas P. Breuckmann
+- **PDF**: https://arxiv.org/pdf/2010.09626v2
+- **Abstract**: We introduce a technique that uses gauge fixing to significantly improve the quantum error correcting performance of subsystem codes. By changing the order in which check operators are measured, valuable additional information can be gained, and we introduce a new method for decoding which uses this information to improve performance. Applied to the subsystem toric code with three-qubit check operators, we increase the threshold under circuit-level depolarising noise from $0.67\%$ to $0.81\%$. The threshold increases further under a circuit-level noise model with small finite bias, up to $2.22\%$ for infinite bias. Furthermore, we construct families of finite-rate subsystem LDPC codes with three-qubit check operators and optimal-depth parity-check measurement schedules. To the best of our knowledge, these finite-rate subsystem codes outperform all known codes at circuit-level depolarising error rates as high as $0.2\%$, where they have a qubit overhead that is $4.3\times$ lower than the most efficient version of the surface code and $5.1\times$ lower than the subsystem toric code. Their threshold and pseudo-threshold exceeds $0.42\%$ for circuit-level depolarising noise, increasing to $2.4\%$ under infinite bias using gauge fixing.
+
+## Proximal-ADMM Decoder for Nonbinary LDPC Codes
+
+- **ID**: arxiv:2010.09534v1
+- **Type**: preprint
+- **Published**: 2020-10-19
+- **Authors**: Yongchao Wang, Jing Bai
+- **PDF**: https://arxiv.org/pdf/2010.09534v1
+- **Abstract**: In this paper, we develop an efficient decoder via the proximal alternating direction method of multipliers (proximal-ADMM) technique for nonbinary linear block codes in the Galois field. Its main contents are as follows: first, exploiting the decomposition technique based on the three-variables check equation, we formulate the maximum likelihood (ML) decoding problem approximately to a non-convex quadratic program; second, an efficient algorithm based on the proximal-ADMM technique is proposed to solve the formulated QP problem. Exploiting the QP problem's inherent structures, its variables can be updated in parallel; third, we prove that the proposed decoding algorithm can converge to some stationary point of the formulated QP problem. Moreover, we also show, for nonbinary low-density parity-check (LDPC) codes, its computational complexity in each proximal-ADMM iteration scales linearly with block length and the size of the considered Galois field. Simulation results demonstrate that the proposed proximal-ADMM decoder outperforms state-of-the-art nonbinary LDPC decoders in terms of either error correction performance or computational complexity.
+
+## Protograph-Based Low-Density Parity-Check Hadamard Codes
+
+- **ID**: arxiv:2010.08285v2
+- **Type**: preprint
+- **Published**: 2020-10-16
+- **Authors**: Peng W. Zhang, Francis C. M. Lau, Chiu-W. Sham
+- **PDF**: https://arxiv.org/pdf/2010.08285v2
+- **Abstract**: In this paper, we propose a new method to design low-density parity-check Hadamard (LDPC-Hadamard) codes, a type of ultimate-Shannon-limit approaching channel codes. The technique is based on applying Hadamard constraints to the check nodes in a generalized protograph-based LDPC code, followed by lifting the generalized protograph. We name the codes formed protograph-based LDPC Hadamard (PLDPC-Hadamard) codes. We also propose a modified Protograph Extrinsic Information Transfer (PEXIT) algorithm for analyzing and optimizing PLDPC-Hadamard code designs. The proposed algorithm further allows the analysis of PLDPC-Hadamard codes with degree-1 and/or punctured nodes. We find codes with decoding thresholds ranging from -1.53 dB to -1.42 dB. At a BER of 1e-5, the gaps of our codes to the ultimate-Shannon-limit range from 0.40 dB (for rate = 0.0494) to 0.16 dB (for rate = 0.003). Moreover, the error performance of our codes is comparable to that of the traditional LDPC-Hadamard codes. Finally, the BER performances of our codes after puncturing are simulated and compared.
+
+## Matched Quantized Min-Sum Decoding of Low-Density Parity-Check Codes
+
+- **ID**: arxiv:2010.07538v3
+- **Type**: preprint
+- **Published**: 2020-10-15
+- **Authors**: Emna Ben Yacoub
+- **PDF**: https://arxiv.org/pdf/2010.07538v3
+- **Abstract**: A quantized message passing decoding algorithm for low-density parity-check codes is presented. The algorithm relies on the min approximation at the check nodes, and on modelling the variable node inbound messages as observations of an extrinsic discrete memoryless channel. The performance of the algorithm is analyzed and compared to quantized min-sum decoding by means of density evolution, and almost closes the gap with the performance of the sum-product algorithm. A stability analysis is derived, which highlights the role played by degree-$3$ variable nodes in the stability condition. Finite-length simulation results confirm large gains predicted by the asymptotic analysis.
+
+## Concentrated Stopping Set Design for Coded Merkle Tree: Improving Security Against Data Availability Attacks in Blockchain Systems
+
+- **ID**: arxiv:2010.07363v2
+- **Type**: preprint
+- **Published**: 2020-10-14
+- **Authors**: Debarnab Mitra, Lev Tauz, Lara Dolecek
+- **PDF**: https://arxiv.org/pdf/2010.07363v2
+- **Abstract**: In certain blockchain systems, light nodes are clients that download only a small portion of the block. Light nodes are vulnerable to data availability (DA) attacks where a malicious node hides an invalid portion of the block from the light nodes. Recently, a technique based on erasure codes called Coded Merkle Tree (CMT) was proposed by Yu et al. that enables light nodes to detect a DA attack with high probability. The CMT is constructed using LDPC codes for fast decoding but can fail to detect a DA attack if a malicious node hides a small stopping set of the code. To combat this, Yu et al. used well-studied techniques to design random LDPC codes with high minimum stopping set size. Although effective, these codes are not necessarily optimal for this application. In this paper, we demonstrate a more specialized LDPC code design to improve the security against DA attacks. We achieve this goal by providing a deterministic LDPC code construction that focuses on concentrating stopping sets to a small group of variable nodes rather than only eliminating stopping sets. We design these codes by modifying the Progressive Edge Growth algorithm into a technique called the entropy-constrained PEG (EC-PEG) algorithm. This new method demonstrates a higher probability of detecting DA attacks and allows for good codes at short lengths.
+
+## Learning to Decode: Reinforcement Learning for Decoding of Sparse Graph-Based Channel Codes
+
+- **ID**: arxiv:2010.05637v2
+- **Type**: preprint
+- **Published**: 2020-10-12
+- **Authors**: Salman Habib, Allison Beemer, Joerg Kliewer
+- **PDF**: https://arxiv.org/pdf/2010.05637v2
+- **Abstract**: We show in this work that reinforcement learning can be successfully applied to decoding short to moderate length sparse graph-based channel codes. Specifically, we focus on low-density parity check (LDPC) codes, which for example have been standardized in the context of 5G cellular communication systems due to their excellent error correcting performance. These codes are typically decoded via belief propagation iterative decoding on the corresponding bipartite (Tanner) graph of the code via flooding, i.e., all check and variable nodes in the Tanner graph are updated at once. In contrast, in this paper we utilize a sequential update policy which selects the optimum check node (CN) scheduling in order to improve decoding performance. In particular, we model the CN update process as a multi-armed bandit process with dependent arms and employ a Q-learning scheme for optimizing the CN scheduling policy. In order to reduce the learning complexity, we propose a novel graph-induced CN clustering approach to partition the state space in such a way that dependencies between clusters are minimized. Our results show that compared to other decoding approaches from the literature, the proposed reinforcement learning scheme not only significantly improves the decoding performance, but also reduces the decoding complexity dramatically once the scheduling policy is learned.

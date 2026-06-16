@@ -1,0 +1,38 @@
+# arXiv — 2021-04
+
+
+## Rate compatible reconciliation for continuous-variable quantum key distribution using Raptor-like LDPC codes
+
+- **ID**: arxiv:2104.11377v1
+- **Type**: preprint
+- **Published**: 2021-04-23
+- **Authors**: Chao Zhou, Xiangyu Wang, Zhiguo Zhang +3
+- **PDF**: https://arxiv.org/pdf/2104.11377v1
+- **Abstract**: In the practical continuous-variable quantum key distribution (CV-QKD) system, the postprocessing process, particularly the error correction part, significantly impacts the system performance. Multi-edge type low-density parity-check (MET-LDPC) codes are suitable for CV-QKD systems because of their Shannon-limit-approaching performance at a low signal-to-noise ratio (SNR). However, the process of designing a low-rate MET-LDPC code with good performance is extremely complicated. Thus, we introduce Raptor-like LDPC (RL-LDPC) codes into the CV-QKD system, exhibiting both the rate compatible property of the Raptor code and capacity-approaching performance of MET-LDPC codes. Moreover, this technique can significantly reduce the cost of constructing a new matrix. We design the RL-LDPC matrix with a code rate of 0.02 and easily and effectively adjust this rate from 0.016 to 0.034. Simulation results show that we can achieve more than 98% reconciliation efficiency in a range of code rate variation using only one RL-LDPC code that can support high-speed decoding with an SNR less than -16.45 dB. This code allows the system to maintain a high key extraction rate under various SNRs, paving the way for practical applications of CV-QKD systems with different transmission distances.
+
+## List Message Passing Decoding of Non-binary Low-Density Parity-Check Codes
+
+- **ID**: arxiv:2104.06328v1
+- **Type**: preprint
+- **Published**: 2021-04-13
+- **Authors**: Emna Ben Yacoub
+- **PDF**: https://arxiv.org/pdf/2104.06328v1
+- **Abstract**: A decoding algorithm for $q$-ary low-density parity-check codes over the $q$-ary symmetric channel is introduced. The exchanged messages are lists of symbols from $\Fq$. A density evolution analysis for maximum list sizes $1$ and $2$ is developed. Thresholds for selected regular low-density parity-check code ensembles are computed showing gains with respect to a similar algorithm in the literature. Finite-length simulation results confirm the asymptotic analysis.
+
+## Irregular-Mapped Protograph LDPC-Coded Modulation: A Bandwidth-Efficient Solution for $5$G Networks with Massive Data-Storage Requirement
+
+- **ID**: arxiv:2104.02856v2
+- **Type**: preprint
+- **Published**: 2021-04-07
+- **Authors**: Yi Fang, Yingcheng Bu, Pingping Chen +3
+- **PDF**: https://arxiv.org/pdf/2104.02856v2
+- **Abstract**: The huge amount of data produced in the fifth-generation (5G) networks not only brings new challenges to the reliability and efficiency of mobile devices but also drives rapid development of new storage techniques. With the benefits of fast access speed and high reliability, NAND flash memory has become a promising storage solution for the 5G networks. In this paper, we investigate a protograph-coded bit-interleaved coded modulation with iterative detection and decoding (BICM-ID) utilizing irregular mapping (IM) in the multi-level-cell (MLC) NAND flash-memory systems. First, we propose an enhanced protograph-based extrinsic information transfer (EPEXIT) algorithm to facilitate the analysis of protograph codes in the IM-BICM-ID systems. With the use of EPEXIT algorithm, a simple design method is conceived for the construction of a family of high-rate protograph codes, called irregular-mapped accumulate-repeat-accumulate (IMARA) codes, which possess both excellent decoding thresholds and linear-minimum-distance-growth property. Furthermore, motivated by the voltage-region iterative gain characteristics of IM-BICM-ID systems, a novel read-voltage optimization scheme is developed to acquire accurate read-voltage levels, thus minimizing the decoding thresholds of protograph codes. Theoretical analyses and error-rate simulations indicate that the proposed IMARA-aided IM-BICM-ID scheme and the proposed read-voltage optimization scheme remarkably improve the convergence and decoding performance of flash-memory systems. Thus, the proposed protograph-coded IM-BICM-ID flash-memory systems can be viewed as a reliable and efficient storage solution for the new-generation mobile networks with massive data-storage requirement.
+
+## Log-domain decoding of quantum LDPC codes over binary finite fields
+
+- **ID**: arxiv:2104.00304v3
+- **Type**: preprint
+- **Published**: 2021-04-01
+- **Authors**: Ching-Yi Lai, Kao-Yueh Kuo
+- **PDF**: https://arxiv.org/pdf/2104.00304v3
+- **Abstract**: A quantum stabilizer code over GF$(q)$ corresponds to a classical additive code over GF$(q^2)$ that is self-orthogonal with respect to a symplectic inner product. We study the decoding of quantum low-density parity-check (LDPC) codes over binary finite fields GF$(q=2^l)$ by the sum-product algorithm, also known as belief propagation (BP). Conventionally, a message in a nonbinary BP for quantum codes over GF$(2^l)$ represents a probability vector over GF$(2^{2l})$, inducing high decoding complexity. In this paper, we explore the property of the symplectic inner product and show that scalar messages suffice for BP decoding of nonbinary quantum codes, rather than vector messages necessary for the conventional BP. Consequently, we propose a BP decoding algorithm for quantum codes over GF$(2^l)$ by passing scalar messages so that it has low computation complexity. The algorithm is specified in log domain by using log-likelihood ratios (LLRs) of the channel statistics to have a low implementation cost. Moreover, techniques such as message normalization or offset can be naturally applied in this algorithm to mitigate the effects of short cycles to improve BP performance. This is important for nonbinary quantum codes since they may have more short cycles compared to binary quantum codes. Several computer simulations are provided to demonstrate these advantages. The scalar-based strategy can also be used to improve the BP decoding of classical linear codes over GF$(2^l)$ with many short cycles.

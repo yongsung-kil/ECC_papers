@@ -1,0 +1,20 @@
+# arXiv — 2008-06
+
+
+## Analysis of Verification-based Decoding on the q-ary Symmetric Channel for Large q
+
+- **ID**: arxiv:0806.3243v6
+- **Type**: preprint
+- **Published**: 2008-06-19
+- **Authors**: Fan Zhang, Henry D. Pfister
+- **PDF**: https://arxiv.org/pdf/0806.3243v6
+- **Abstract**: We discuss and analyze a list-message-passing decoder with verification for low-density parity-check (LDPC) codes on the q-ary symmetric channel (q-SC). Rather than passing messages consisting of symbol probabilities, this decoder passes lists of possible symbols and marks some lists as verified. The density evolution (DE) equations for this decoder are derived and used to compute decoding thresholds. If the maximum list size is unbounded, then we find that any capacity-achieving LDPC code for the binary erasure channel can be used to achieve capacity on the q-SC for large q. The decoding thresholds are also computed via DE for the case where each list is truncated to satisfy a maximum list size constraint. Simulation results are also presented to confirm the DE results. During the simulations, we observed differences between two verification-based decoding algorithms, introduced by Luby and Mitzenmacher, that were implicitly assumed to be identical. In this paper, we provide an analysis of the node-based algorithms from that paper and verify that it matches simulation results. The probability of false verification (FV) is also considered and techniques are discussed to mitigate the FV. Optimization of the degree distribution is also used to improve the threshold for a fixed maximum list size. Finally, the proposed algorithm is compared with a variety of other algorithms using both density evolution thresholds and simulation results.
+
+## Performance of LDPC Codes Under Faulty Iterative Decoding
+
+- **ID**: arxiv:0806.1215v3
+- **Type**: preprint
+- **Published**: 2008-06-06
+- **Authors**: Lav R. Varshney
+- **PDF**: https://arxiv.org/pdf/0806.1215v3
+- **Abstract**: Departing from traditional communication theory where decoding algorithms are assumed to perform without error, a system where noise perturbs both computational devices and communication channels is considered here. This paper studies limits in processing noisy signals with noisy circuits by investigating the effect of noise on standard iterative decoders for low-density parity-check codes. Concentration of decoding performance around its average is shown to hold when noise is introduced into message-passing and local computation. Density evolution equations for simple faulty iterative decoders are derived. In one model, computing nonlinear estimation thresholds shows that performance degrades smoothly as decoder noise increases, but arbitrarily small probability of error is not achievable. Probability of error may be driven to zero in another system model; the decoding threshold again decreases smoothly with decoder noise. As an application of the methods developed, an achievability result for reliable memory systems constructed from unreliable components is provided.

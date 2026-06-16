@@ -1,0 +1,29 @@
+# arXiv — 2006-01
+
+
+## Bounding Picard numbers of surfaces using p-adic cohomology
+
+- **ID**: arxiv:math/0601508v2
+- **Type**: preprint
+- **Published**: 2006-01-20
+- **Authors**: Timothy G. Abbott, Kiran S. Kedlaya, David Roe
+- **PDF**: https://arxiv.org/pdf/math/0601508v2
+- **Abstract**: Motivated by an application to LDPC (low density parity check) algebraic geometry codes described by Voloch and Zarzar, we describe a computational procedure for establishing an upper bound on the arithmetic or geometric Picard number of a smooth projective surface over a finite field, by computing the Frobenius action on p-adic cohomology to a small degree of p-adic accuracy. We have implemented this procedure in Magma; using this implementation, we exhibit several examples, such as smooth quartics over F_2 and F_3 with arithmetic Picard number 1, and a smooth quintic over F_2 with geometric Picard number 1. We also produce some examples of smooth quartics with geometric Picard number 2, which by a construction of van Luijk also have trivial geometric automorphism group.
+
+## Exploring high performance distributed file storage using LDPC codes
+
+- **ID**: arxiv:cs/0601078v1
+- **Type**: preprint
+- **Published**: 2006-01-17
+- **Authors**: Benjamin Gaidioz, Birger Koblitz, Nuno Santos
+- **PDF**: https://arxiv.org/pdf/cs/0601078v1
+- **Abstract**: We explore the feasibility of implementing a reliable, high performance, distributed storage system on a commodity computing cluster. Files are distributed across storage nodes using erasure coding with small Low-Density Parity-Check (LDPC) codes which provide high reliability while keeping the storage and performance overhead small. We present performance measurements done on a prototype system comprising 50 nodes which are self organised using a peer-to-peer overlay.
+
+## Instanton analysis of Low-Density-Parity-Check codes in the error-floor regime
+
+- **ID**: arxiv:cs/0601070v1
+- **Type**: preprint
+- **Published**: 2006-01-16
+- **Authors**: M. G. Stepanov, M. Chertkov
+- **PDF**: https://arxiv.org/pdf/cs/0601070v1
+- **Abstract**: In this paper we develop instanton method introduced in [1], [2], [3] to analyze quantitatively performance of Low-Density-Parity-Check (LDPC) codes decoded iteratively in the so-called error-floor regime. We discuss statistical properties of the numerical instanton-amoeba scheme focusing on detailed analysis and comparison of two regular LDPC codes: Tanner's (155, 64, 20) and Margulis' (672, 336, 16) codes. In the regime of moderate values of the signal-to-noise ratio we critically compare results of the instanton-amoeba evaluations against the standard Monte-Carlo calculations of the Frame-Error-Rate.

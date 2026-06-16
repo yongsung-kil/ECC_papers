@@ -1,0 +1,101 @@
+# arXiv — 2012-02
+
+
+## Approaching Capacity at High-Rates with Iterative Hard-Decision Decoding
+
+- **ID**: arxiv:1202.6095v4
+- **Type**: preprint
+- **Published**: 2012-02-28
+- **Authors**: Yung-Yih Jian, Henry D. Pfister, Krishna R. Narayanan
+- **PDF**: https://arxiv.org/pdf/1202.6095v4
+- **Abstract**: A variety of low-density parity-check (LDPC) ensembles have now been observed to approach capacity with message-passing decoding. However, all of them use soft (i.e., non-binary) messages and a posteriori probability (APP) decoding of their component codes. In this paper, we show that one can approach capacity at high rates using iterative hard-decision decoding (HDD) of generalized product codes. Specifically, a class of spatially-coupled GLDPC codes with BCH component codes is considered, and it is observed that, in the high-rate regime, they can approach capacity under the proposed iterative HDD. These codes can be seen as generalized product codes and are closely related to braided block codes. An iterative HDD algorithm is proposed that enables one to analyze the performance of these codes via density evolution (DE).
+
+## New constructions of CSS codes obtained by moving to higher alphabets
+
+- **ID**: arxiv:1202.3338v1
+- **Type**: preprint
+- **Published**: 2012-02-15
+- **Authors**: Iryna Andriyanova, Denise Maurice, Jean-Pierre Tillich
+- **PDF**: https://arxiv.org/pdf/1202.3338v1
+- **Abstract**: We generalize a construction of non-binary quantum LDPC codes over $\F_{2^m}$ due to \cite{KHIS11a} and apply it in particular to toric codes. We obtain in this way not only codes with better rates than toric codes but also improve dramatically the performance of standard iterative decoding. Moreover, the new codes obtained in this fashion inherit the distance properties of the underlying toric codes and have therefore a minimum distance which grows as the square root of the length of the code for fixed $m$.
+
+## Polymer Expansions for Cycle LDPC Codes
+
+- **ID**: arxiv:1202.2778v1
+- **Type**: preprint
+- **Published**: 2012-02-13
+- **Authors**: Nicolas Macris, Marc Vuffray
+- **PDF**: https://arxiv.org/pdf/1202.2778v1
+- **Abstract**: We prove that the Bethe expression for the conditional input-output entropy of cycle LDPC codes on binary symmetric channels above the MAP threshold is exact in the large block length limit. The analysis relies on methods from statistical physics. The finite size corrections to the Bethe expression are expressed through a polymer expansion which is controlled thanks to expander and counting arguments.
+
+## Beyond the Bethe Free Energy of LDPC Codes via Polymer Expansions
+
+- **ID**: arxiv:1202.2774v1
+- **Type**: preprint
+- **Published**: 2012-02-13
+- **Authors**: Nicolas Macris, Marc Vuffray
+- **PDF**: https://arxiv.org/pdf/1202.2774v1
+- **Abstract**: The loop series provides a formal way to write down corrections to the Bethe entropy (and/or free energy) of graphical models. We provide methods to rigorously control such expansions for low-density parity-check codes used over a highly noisy binary symmetric channel. We prove that in the asymptotic limit of large size, with high probability, the Bethe expression gives an exact formula for the entropy (per bit) of the input word conditioned on the output of the channel. Our methods also apply to more general models.
+
+## Selecting Two-Bit Bit Flipping Algorithms for Collective Error Correction
+
+- **ID**: arxiv:1202.1348v2
+- **Type**: preprint
+- **Published**: 2012-02-07
+- **Authors**: Dung Viet Nguyen, Bane Vasic, Michael W. Marcellin
+- **PDF**: https://arxiv.org/pdf/1202.1348v2
+- **Abstract**: A class of two-bit bit flipping algorithms for decoding low-density parity-check codes over the binary symmetric channel was proposed in [1]. Initial results showed that decoders which employ a group of these algorithms operating in parallel can offer low error floor decoding for high-speed applications. As the number of two-bit bit flipping algorithms is large, designing such a decoder is not a trivial task. In this paper, we describe a procedure to select collections of algorithms that work well together. This procedure relies on a recursive process which enumerates error configurations that are uncorrectable by a given algorithm. The error configurations uncorrectable by a given algorithm form its trapping set profile. Based on their trapping set profiles, algorithms are selected so that in parallel, they can correct a fixed number of errors with high probability.
+
+## Enhancing the Error Correction of Finite Alphabet Iterative Decoders via Adaptive Decimation
+
+- **ID**: arxiv:1202.1337v2
+- **Type**: preprint
+- **Published**: 2012-02-07
+- **Authors**: Shiva Kumar Planjery, Bane Vasic, David Declercq
+- **PDF**: https://arxiv.org/pdf/1202.1337v2
+- **Abstract**: Finite alphabet iterative decoders (FAIDs) for LDPC codes were recently shown to be capable of surpassing the Belief Propagation (BP) decoder in the error floor region on the Binary Symmetric channel (BSC). More recently, the technique of decimation which involves fixing the values of certain bits during decoding, was proposed for FAIDs in order to make them more amenable to analysis while maintaining their good performance. In this paper, we show how decimation can be used adaptively to further enhance the guaranteed error correction capability of FAIDs that are already good on a given code. The new adaptive decimation scheme proposed has marginally added complexity but can significantly improve the slope of the error floor performance of a particular FAID. We describe the adaptive decimation scheme particularly for 7-level FAIDs which propagate only 3-bit messages and provide numerical results for column-weight three codes. Analysis suggests that the failures of the new decoders are linked to stopping sets of the code.
+
+## Mutual-Information Optimized Quantization for LDPC Decoding of Accurately Modeled Flash Data
+
+- **ID**: arxiv:1202.1325v1
+- **Type**: preprint
+- **Published**: 2012-02-07
+- **Authors**: Jiadong Wang, Guiqiang Dong, Tong Zhang +1
+- **PDF**: https://arxiv.org/pdf/1202.1325v1
+- **Abstract**: High-capacity NAND flash memories use multi-level cells (MLCs) to store multiple bits per cell and achieve high storage densities. Higher densities cause increased raw bit error rates (BERs), which demand powerful error correcting codes. Low-density parity-check (LDPC) codes are a well-known class of capacity-approaching codes in AWGN channels. However, LDPC codes traditionally use soft information while the flash read channel provides only hard information. Low resolution soft information may be obtained by performing multiple reads per cell with distinct word-line voltages.   We select the values of these word-line voltages to maximize the mutual information between the input and output of the equivalent multiple-read channel under any specified noise model. Our results show that maximum mutual-information (MMI) quantization provides better soft information for LDPC decoding given the quantization level than the constant-pdf-ratio quantization approach. We also show that adjusting the LDPC code degree distribution for the quantized setting provides a significant performance improvement.
+
+## A Non-Disjoint Group Shuffled Decoding for LDPC Codes
+
+- **ID**: arxiv:1202.1060v1
+- **Type**: preprint
+- **Published**: 2012-02-06
+- **Authors**: Yen-Cheng Hsu, Tofar C. -Y. Chang, Yu T. Su +1
+- **PDF**: https://arxiv.org/pdf/1202.1060v1
+- **Abstract**: To reduce the implementation complexity of a belief propagation (BP) based low-density parity-check (LDPC) decoder, shuffled BP decoding schedules, which serialize the decoding process by dividing a complete parallel message-passing iteration into a sequence of sub-iterations, have been proposed. The so-called group horizontal shuffled BP algorithm partitions the check nodes of the code graph into groups to perform group-by-group message-passing decoding. This paper proposes a new grouping technique to accelerate the message-passing rate. Performance of the proposed algorithm is analyzed by a Gaussian approximation approach. Both analysis and numerical experiments verify that the new algorithm does yield a convergence rate faster than that of existing conventional or group shuffled BP decoder with the same computing complexity constraint.
+
+## Spatially-Coupled Binary MacKay-Neal Codes for Channels with Non-Binary Inputs and Affine Subspace Outputs
+
+- **ID**: arxiv:1202.0979v2
+- **Type**: preprint
+- **Published**: 2012-02-05
+- **Authors**: Kenta Kasai, Takayuki Nozaki, Kohichi Sakaniwa
+- **PDF**: https://arxiv.org/pdf/1202.0979v2
+- **Abstract**: We study LDPC codes for the channel with $2^m$-ary input $\underline{x}\in \mathbb{F}_2^m$ and output $\underline{y}=\underline{x}+\underline{z}\in \mathbb{F}_2^m$. The receiver knows a subspace $V\subset \mathbb{F}_2^m$ from which $\underline{z}=\underline{y}-\underline{x}$ is uniformly chosen. Or equivalently, the receiver receives an affine subspace $\underline{y}-V$ where $\underline{x}$ lies. We consider a joint iterative decoder involving the channel detector and the LDPC decoder. The decoding system considered in this paper can be viewed as a simplified model of the joint iterative decoder over non-binary modulated signal inputs e.g., $2^m$-QAM. We evaluate the performance of binary spatially-coupled MacKay-Neal codes by density evolution. The iterative decoding threshold is seriously degraded by increasing $m$. EXIT-like function curve calculations reveal that this degradation is caused by wiggles and can be mitigated by increasing the randomized window size. The resultant iterative decoding threshold values are very close to the Shannon limit.
+
+## Improved quantum hypergraph-product LDPC codes
+
+- **ID**: arxiv:1202.0928v3
+- **Type**: preprint
+- **Published**: 2012-02-05
+- **Authors**: Alexey A. Kovalev, Leonid P. Pryadko
+- **PDF**: https://arxiv.org/pdf/1202.0928v3
+- **Abstract**: We suggest several techniques to improve the toric codes and the finite-rate generalized toric codes (quantum hypergraph-product codes) recently introduced by Tillich and Zémor. For the usual toric codes, we introduce the rotated lattices specified by two integer-valued periodicity vectors. These codes include the checkerboard codes, and the family of minimal single-qubit-encoding toric codes with block length $n=t^2+(t+1)^2$ and distance $d=2t+1$, $t=1,2,...$. We also suggest several related algebraic constructions which nearly quadruple the rate of the existing hypergraph-product codes.
+
+## Low-Density Arrays of Circulant Matrices: Rank and Row-Redundancy Analysis, and Quasi-Cyclic LDPC Codes
+
+- **ID**: arxiv:1202.0702v1
+- **Type**: preprint
+- **Published**: 2012-02-03
+- **Authors**: Qin Huang, Keke Liu, Zulin Wang
+- **PDF**: https://arxiv.org/pdf/1202.0702v1
+- **Abstract**: This paper is concerned with general analysis on the rank and row-redundancy of an array of circulants whose null space defines a QC-LDPC code. Based on the Fourier transform and the properties of conjugacy classes and Hadamard products of matrices, we derive tight upper bounds on rank and row-redundancy for general array of circulants, which make it possible to consider row-redundancy in constructions of QC-LDPC codes to achieve better performance. We further investigate the rank of two types of construction of QC-LDPC codes: constructions based on Vandermonde Matrices and Latin Squares and give combinatorial expression of the exact rank in some specific cases, which demonstrates the tightness of the bound we derive. Moreover, several types of new construction of QC-LDPC codes with large row-redundancy are presented and analyzed.

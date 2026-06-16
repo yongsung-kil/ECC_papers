@@ -1,0 +1,38 @@
+# arXiv — 2010-02
+
+
+## Lowering the Error Floor of LDPC Codes Using Cyclic Liftings
+
+- **ID**: arxiv:1002.4311v1
+- **Type**: preprint
+- **Published**: 2010-02-23
+- **Authors**: Reza Asvadi, Amir H. Banihashemi, Mahmoud Ahmadian-Attari
+- **PDF**: https://arxiv.org/pdf/1002.4311v1
+- **Abstract**: Cyclic liftings are proposed to lower the error floor of low-density parity-check (LDPC) codes. The liftings are designed to eliminate dominant trapping sets of the base code by removing the short cycles which form the trapping sets. We derive a necessary and sufficient condition for the cyclic permutations assigned to the edges of a cycle $c$ of length $\ell(c)$ in the base graph such that the inverse image of $c$ in the lifted graph consists of only cycles of length strictly larger than $\ell(c)$. The proposed method is universal in the sense that it can be applied to any LDPC code over any channel and for any iterative decoding algorithm. It also preserves important properties of the base code such as degree distributions, encoder and decoder structure, and in some cases, the code rate. The proposed method is applied to both structured and random codes over the binary symmetric channel (BSC). The error floor improves consistently by increasing the lifting degree, and the results show significant improvements in the error floor compared to the base code, a random code of the same degree distribution and block length, and a random lifting of the same degree. Similar improvements are also observed when the codes designed for the BSC are applied to the additive white Gaussian noise (AWGN) channel.
+
+## Static Address Generation Easing: a Design Methodology for Parallel Interleaver Architectures
+
+- **ID**: arxiv:1002.3990v1
+- **Type**: preprint
+- **Published**: 2010-02-21
+- **Authors**: Cyrille Chavet, Philippe Coussy, Eric Martin +1
+- **PDF**: https://arxiv.org/pdf/1002.3990v1
+- **Abstract**: For high throughput applications, turbo-like iterative decoders are implemented with parallel architectures. However, to be efficient parallel architectures require to avoid collision accesses i.e. concurrent read/write accesses should not target the same memory block. This consideration applies to the two main classes of turbo-like codes which are Low Density Parity Check (LDPC) and Turbo-Codes. In this paper we propose a methodology which finds a collision-free mapping of the variables in the memory banks and which optimizes the resulting interleaving architecture. Finally, we show through a pedagogical example the interest of our approach compared to state-of-the-art techniques.
+
+## Properties and Construction of Polar Codes
+
+- **ID**: arxiv:1002.3521v1
+- **Type**: preprint
+- **Published**: 2010-02-18
+- **Authors**: Ryuhei Mori
+- **PDF**: https://arxiv.org/pdf/1002.3521v1
+- **Abstract**: Recently, Arıkan introduced the method of channel polarization on which one can construct efficient capacity-achieving codes, called polar codes, for any binary discrete memoryless channel. In the thesis, we show that decoding algorithm of polar codes, called successive cancellation decoding, can be regarded as belief propagation decoding, which has been used for decoding of low-density parity-check codes, on a tree graph. On the basis of the observation, we show an efficient construction method of polar codes using density evolution, which has been used for evaluation of the error probability of belief propagation decoding on a tree graph. We further show that channel polarization phenomenon and polar codes can be generalized to non-binary discrete memoryless channels. Asymptotic performances of non-binary polar codes, which use non-binary matrices called the Reed-Solomon matrices, are better than asymptotic performances of the best explicitly known binary polar code. We also find that the Reed-Solomon matrices are considered to be natural generalization of the original binary channel polarization introduced by Arıkan.
+
+## LP Decoding of Regular LDPC Codes in Memoryless Channels
+
+- **ID**: arxiv:1002.3117v3
+- **Type**: preprint
+- **Published**: 2010-02-16
+- **Authors**: Nissim Halabi, Guy Even
+- **PDF**: https://arxiv.org/pdf/1002.3117v3
+- **Abstract**: We study error bounds for linear programming decoding of regular LDPC codes. For memoryless binary-input output-symmetric channels, we prove bounds on the word error probability that are inverse doubly-exponential in the girth of the factor graph. For memoryless binary-input AWGN channel, we prove lower bounds on the threshold for regular LDPC codes whose factor graphs have logarithmic girth under LP-decoding. Specifically, we prove a lower bound of $σ=0.735$ (upper bound of $\frac{Eb}{N_0}=2.67$dB) on the threshold of $(3,6)$-regular LDPC codes whose factor graphs have logarithmic girth.   Our proof is an extension of a recent paper of Arora, Daskalakis, and Steurer [STOC 2009] who presented a novel probabilistic analysis of LP decoding over a binary symmetric channel. Their analysis is based on the primal LP representation and has an explicit connection to message passing algorithms. We extend this analysis to any MBIOS channel.

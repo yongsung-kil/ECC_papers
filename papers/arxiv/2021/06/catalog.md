@@ -1,0 +1,29 @@
+# arXiv — 2021-06
+
+
+## Generalizing Syndrome Decoding problem to the totally Non-negative Grassmannian
+
+- **ID**: arxiv:2106.15526v1
+- **Type**: preprint
+- **Published**: 2021-06-29
+- **Authors**: Kelechi Chuwkunonyerem Emerole
+- **PDF**: https://arxiv.org/pdf/2106.15526v1
+- **Abstract**: The syndrome decoding problem has been proposed as a computational hardness assumption for code based cryptosystem that are safe against quantum computing. The problem has been reduced to finding the codeword with the smallest non-zero columns that would satisfy a linear check equation. Variants of Information set decoding algorithms has been developed as cryptanalytic tools to solve the problem. In this paper, we study and generalize the solution to codes associated with the totally non-negative Grassmannian in the Grassmann metric. This is achieved by reducing it to an instance of finding a subset of the plucker coordinates with the smallest number of columns. Subsequently, the theory of the totally non negative Grassmann is extended to connect the concept of boundary measurement map to Tanner graph like code construction while deriving new analytical bounds on its parameters. The derived bounds shows that the complexity scales up on the size of the plucker coordinates. Finally, experimental results on decoding failure probability and complexity based on row operations are presented and compared to Low Density parity check codes in the Hamming metric.
+
+## Coded Faster-than-Nyquist Signaling for Short Packet Communications
+
+- **ID**: arxiv:2106.10574v1
+- **Type**: preprint
+- **Published**: 2021-06-19
+- **Authors**: Emre Cerci, Adem Cicek, Enver Cavus +2
+- **PDF**: https://arxiv.org/pdf/2106.10574v1
+- **Abstract**: Ultra-reliable low-latency communication (URLLC) requires short packets of data transmission. It is known that when the packet length becomes short, the achievable rate is subject to a penalty when compared to the channel capacity. In this paper, we propose to use faster-than-Nyquist (FTN) signaling to compensate for the achievable rate loss of short packet communications. We investigate the performance of a combination of a low complexity detector of FTN signaling used with nonbinary low-density parity-check (NB-LDPC) codes that is suitable for low-latency and short block length requirements of URLLC systems. Our investigation shows that such combination of low-complexity FTN signaling detection and NB-LDPC codes outperforms the use of close-to-optimal FTN signaling detectors with LDPC codes in terms of error rate performance and also has a considerably lower computational complexity.
+
+## Connectivity constrains quantum codes
+
+- **ID**: arxiv:2106.00765v4
+- **Type**: preprint
+- **Published**: 2021-06-01
+- **Authors**: Nouédyn Baspin, Anirudh Krishna
+- **PDF**: https://arxiv.org/pdf/2106.00765v4
+- **Abstract**: Quantum low-density parity-check (LDPC) codes are an important class of quantum error correcting codes. In such codes, each qubit only affects a constant number of syndrome bits, and each syndrome bit only relies on some constant number of qubits. Constructing quantum LDPC codes is challenging. It is an open problem to understand if there exist good quantum LDPC codes, i.e. with constant rate and relative distance. Furthermore, techniques to perform fault-tolerant gates are poorly understood. We present a unified way to address these problems. Our main results are a) a bound on the distance, b) a bound on the code dimension and c) limitations on certain fault-tolerant gates that can be applied to quantum LDPC codes. All three of these bounds are cast as a function of the graph separator of the connectivity graph representation of the quantum code. We find that unless the connectivity graph contains an expander, the code is severely limited. This implies a necessary, but not sufficient, condition to construct good codes. This is the first bound that studies the limitations of quantum LDPC codes that does not rely on locality. As an application, we present novel bounds on quantum LDPC codes associated with local graphs in $D$-dimensional hyperbolic space.

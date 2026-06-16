@@ -1,0 +1,56 @@
+# arXiv — 2016-12
+
+
+## Roads towards fault-tolerant universal quantum computation
+
+- **ID**: arxiv:1612.07330v2
+- **Type**: preprint
+- **Published**: 2016-12-21
+- **Authors**: Earl T. Campbell, Barbara M. Terhal, Christophe Vuillot
+- **PDF**: https://arxiv.org/pdf/1612.07330v2
+- **Abstract**: Current experiments are taking the first steps toward noise-resilient logical qubits. Crucially, a quantum computer must not merely store information, but also process it. A fault-tolerant computational procedure ensures that errors do not multiply and spread. This review compares the leading proposals for promoting a quantum memory to a quantum processor. We compare magic state distillation, color code techniques and other alternative ideas, paying attention to relative resource demands. We discuss the several no-go results which hold for low-dimensional topological codes and outline the potential rewards of using high-dimensional quantum (LDPC) codes in modular architectures.
+
+## Transmission and Storage Rates for Sequential Massive Random Access
+
+- **ID**: arxiv:1612.07163v2
+- **Type**: preprint
+- **Published**: 2016-12-21
+- **Authors**: Elsa Dupraz, Thomas Maugey, Aline Roumy +1
+- **PDF**: https://arxiv.org/pdf/1612.07163v2
+- **Abstract**: This paper introduces a new source coding paradigm called Sequential Massive Random Access (SMRA). In SMRA, a set of correlated sources is encoded once for all and stored on a server, and clients want to successively access to only a subset of the sources. Since the number of simultaneous clients can be huge, the server is only allowed to extract a bitstream from the stored data: no re-encoding can be performed before the transmission of the specific client's request. In this paper, we formally define the SMRA framework and introduce both storage and transmission rates to characterize the performance of SMRA. We derive achievable transmission and storage rates for lossless source coding of i.i.d. and non i.i.d. sources, and transmission and storage rates-distortion regions for Gaussian sources. We also show two practical implementations of SMRA systems based on rate-compatible LDPC codes. Both theoretical and experimental results demonstrate that SMRA systems can reach the same transmission rates as in traditional point to point source coding schemes, while having a reasonable overhead in terms of storage rate. These results constitute a breakthrough for many recent data transmission applications in which different parts of the data are requested by the clients.
+
+## Least reliable messages based early termination method for LT soft decoder
+
+- **ID**: arxiv:1612.05461v1
+- **Type**: preprint
+- **Published**: 2016-12-16
+- **Authors**: Cenk Albayrak, Cemaleddin Simsek, Kadir Turk
+- **PDF**: https://arxiv.org/pdf/1612.05461v1
+- **Abstract**: In this paper, we propose a new early termination method (ETM) for Luby transform (LT) belief propagation (BP) decoder. The proposed ETM, which we call least reliable messages (LRM), observes only sign alterations of a small cluster in log-likelihood ratio (LLR) messages passing between nodes in BP decoder. Simulation results and complexity analyzes show that LRM significantly lower computational complexity of early termination section in decoder without any performance degradation and decreases the average decoding iteration amounts compared to conventional ETMs in literature. The method can be easily applied to code families which can be decoded by BP such as low density parity check (LDPC) codes, polar codes and Raptor codes.
+
+## Construction of Full-Diversity LDPC Lattices for Block-Fading Channels
+
+- **ID**: arxiv:1612.04039v1
+- **Type**: preprint
+- **Published**: 2016-12-13
+- **Authors**: Hassan Khodaiemehr, Mohammad-Reza Sadeghi, Daniel Panario
+- **PDF**: https://arxiv.org/pdf/1612.04039v1
+- **Abstract**: LDPC lattices were the first family of lattices which have an efficient decoding algorithm in high dimensions over an AWGN channel. Considering Construction D' of lattices with one binary LDPC code as underlying code gives the well known Construction A LDPC lattices or 1-level LDPC lattices. Block-fading channel (BF) is a useful model for various wireless communication channels in both indoor and outdoor environments. Frequency-hopping schemes and orthogonal frequency division multiplexing (OFDM) can conveniently be modelled as block-fading channels. Applying lattices in this type of channel entails dividing a lattice point into multiple blocks such that fading is constant within a block but changes, independently, across blocks. The design of lattices for BF channels offers a challenging problem, which differs greatly from its counterparts like AWGN channels. Recently, the original binary Construction A for lattices, due to Forney, have been generalized to a lattice construction from totally real and complex multiplication fields. This generalized Construction A of lattices provides signal space diversity intrinsically, which is the main requirement for the signal sets designed for fading channels. In this paper we construct full diversity LDPC lattices for block-fading channels using Construction A over totally real number fields. We propose a new iterative decoding method for these family of lattices which has complexity that grows linearly in the dimension of the lattice. In order to implement our decoding algorithm, we propose the definition of a parity check matrix and Tanner graph for full diversity Construction A lattices. We also prove that the constructed LDPC lattices together with the proposed decoding method admit diversity order n-1 over an n-block-fading channel.
+
+## Symmetric blind information reconciliation for quantum key distribution
+
+- **ID**: arxiv:1612.03673v2
+- **Type**: preprint
+- **Published**: 2016-12-12
+- **Authors**: E. O. Kiktenko, A. S. Trushechkin, C. C. W. Lim +2
+- **PDF**: https://arxiv.org/pdf/1612.03673v2
+- **Abstract**: Quantum key distribution (QKD) is a quantum-proof key-exchange scheme which is fast approaching the communication industry. An essential component in QKD is the information reconciliation step, which is used for correcting the quantum-channel noise errors. The recently suggested blind reconciliation technique, based on low-density parity-check (LDPC) codes, offers remarkable prospectives for efficient information reconciliation without an a priori error rate estimation. We suggest an improvement of the blind-information-reconciliation protocol promoting a significant increase in the efficiency of the procedure and reducing its interactivity. The proposed technique is based on introducing symmetry in operations of parties, and the consideration of results of unsuccessful belief-propagation decodings.
+
+## Graph based linear error correcting codes
+
+- **ID**: arxiv:1612.03279v1
+- **Type**: preprint
+- **Published**: 2016-12-10
+- **Authors**: Monika Polak, Eustrat Zhupa
+- **PDF**: https://arxiv.org/pdf/1612.03279v1
+- **Abstract**: In this article we present a construction of error correcting codes, that have representation as very sparse matrices and belong to the class of Low Density Parity Check Codes. LDPC codes are in the classical Hamming metric. They are very close to well known Shannon bound. The ability to use graphs for code construction was first discussed by Tanner in 1981 and has been used in a number of very effective implementations. We describe how to construct such codes by using special a family of graphs introduced by Ustimenko and Woldar. Graphs that we used are bipartite, bi-regular, very sparse and do not have short cycles C 4 . Due to the very low density of such graphs, the obtained codes are fast decodable. We describe how to choose parameters to obtain a desired code rate. We also show results of computer simulations of BER (bit error rate) of the obtained codes in order to compare them with other known LDPC codes.

@@ -1,0 +1,74 @@
+# arXiv — 2026-06
+
+
+## Quantum Logic Codes: Complete Transversal Logical Clifford Instruction Sets for High-Rate Stabilizer Quantum Error Correcting Codes
+
+- **ID**: arxiv:2606.13521v1
+- **Type**: preprint
+- **Published**: 2026-06-11
+- **Authors**: Adam Holmes
+- **PDF**: https://arxiv.org/pdf/2606.13521v1
+- **Abstract**: We study the structure and transversal logical capabilities of stabilizer quantum error correcting codes. Among our results, we identify universal lower bounds on circuit depth to generate a full logical Clifford algebra, and develop novel constructions of logical transversal gates including a new depth-one transversal phase $\mathrm{\overline{S}}$ gate in the rotated surface code and a depth-one intra-block $\mathrm{\overline{CZ}}$ gate in the 2D-toric code that generalizes to all odd distances and all lengths $L\ge3$, respectively. Finally, we construct a high-rate non-LDPC CSS code family with parameters $[[n,\sqrt{n},Θ({n^β})]]$ where $β\approx 0.2823$ in one demonstrated case, that provably possesses a constant-depth complete 2-local transversal logical Clifford basis instruction set architecture (ISA) composed of all individually targeted $\mathrm{\overline{S}}$, $\mathrm{\overline{SHS}} = \sqrt{X}$, and $\mathrm{\overline{CZ}}$ gates. This ISA is depth-one for certain subfamilies that we design and generally constant-depth under certain conditions. The code family is built from a small code with parameters $[[n_0, 2, d_0]]$, and is tunable in the standard way: it tiles out to form utility-scale logical qubit counts, and it scales up through concatenation to achieve higher distances and error suppression. We show that this construction preserves the depth-one complete transversal logical Clifford basis ISA when composed with these commuting construction actions, inheriting structure from the core codes so that at scale the complete logical Clifford basis ISA remains depth-one up to depth-two addressable operations between tiled cores. We call these Quantum Logic Codes.
+
+## Optimizing Encoder Circuits of Entanglement-Assisted Quantum LDPC Codes via Beam Search
+
+- **ID**: arxiv:2606.11468v1
+- **Type**: preprint
+- **Published**: 2026-06-09
+- **Authors**: Aditya Sodhani, Pavan Kumar, Shayan Srinivasa Garani +1
+- **PDF**: https://arxiv.org/pdf/2606.11468v1
+- **Abstract**: Entanglement-assisted (EA) quantum QC-LDPC codes offer strong error-correction capabilities with structured parity-check matrices, but their practical use depends on efficient encoder circuits and the availability of pre-shared Bell pairs (ebits). In all encoder implementations based on the stabilizer formalism, the dominant contribution to this complexity comes from the use of controlled gates. In this paper, we adopt the Sharma-Kumar-Garani (SKG) encoder construction. We formulate the encoder optimization as a search over GF(2) row operations that decompose the binary matrix derived from its CNOT sub-sequence. We solve this problem using a beam search algorithm guided by a Hamming-distance heuristic. For the tested EA quantum QC-LDPC code families, the proposed method achieves CNOT-count reductions of 7.3-34.0% relative to the SKG baseline encoder. The optimized circuits also yield lower CNOT counts than Patel-Markov-Hayes synthesis on all tested instances and are verified by stabilizer-tableau simulation. These results show that substantial encoder simplification is possible for structured EA QC-LDPC codes.
+
+## Lifted Gabidulin Construction for LDPC Representations of Finite Geometry Codes
+
+- **ID**: arxiv:2606.11454v1
+- **Type**: preprint
+- **Published**: 2026-06-09
+- **Authors**: Yifei Shen, Andreas Burg
+- **PDF**: https://arxiv.org/pdf/2606.11454v1
+- **Abstract**: Finite geometry (FG) codes combine the algebraic properties of classical block codes with the iterative belief propagation (BP) decoding ability of low-density parity-check~(LDPC) codes. However, exploiting both advantages in practice is hindered by the fact that the standard incidence matrix between $(μ+1)$-flats and points is dense and contains many short cycles for any flat dimension $μ\geq 1$. In this work, we propose to sparsify the decoding matrix based on pencil selection, formulated as a constant-dimension subspace packing problem and solved explicitly using lifted Gabidulin codes. For both affine and projective geometries, sparse parity-check matrices are constructed and verified for FG codes of lengths up to $1024$. Simulations on four FG codes show no visible error floor and around $0.5$~dB gain over corresponding 5G LDPC codes at a block error rate of $10^{-7}$.
+
+## Affine Filtering Measurements and Their Applications to Quantum Decoding
+
+- **ID**: arxiv:2606.07852v1
+- **Type**: preprint
+- **Published**: 2026-06-05
+- **Authors**: Avijit Mandal, Noah Shutty, Henry D. Pfister +1
+- **PDF**: https://arxiv.org/pdf/2606.07852v1
+- **Abstract**: Unambiguous state discrimination (USD) measurements are attractive because outcomes are either marked as conclusive (i.e., error free) or inconclusive (i.e., erased). We study affine filtering measurements, a structured variant of USD for decoding classical linear codes over pure-state classical-quantum channels, where a conclusive outcome identifies an affine subspace containing the transmitted codeword and an inconclusive outcome is treated as an erasure. For a group-covariant indexing of pure-state codewords, we show that the optimal design of affine filtering measurements is a semidefinite program that can be reduced to a linear program via character-based diagonalization. We use the resulting measurement to build a quantum decoding framework for local codes, and we demonstrate (via simulations on regular LDPC codes from Gallager ensembles using single parity check local constraints) that affine filtering based decoding can outperform symbol-wise USD and symbol-wise pretty good measurement based decoding methods on i.i.d. pure-state channels. In an independent and concurrent work, Buzet and Chailloux study similar fine-grained USD measurements for symmetric families of states. Their focus is on the code-agnostic setting whereas our focus is on code-aware constructions and decoding.
+
+## Breakeven demonstration of quantum low-density parity-check codes
+
+- **ID**: arxiv:2606.06455v1
+- **Type**: preprint
+- **Published**: 2026-06-04
+- **Authors**: Edwin Tham, Michael L. Goldman, Shantanu Debnath +8
+- **PDF**: https://arxiv.org/pdf/2606.06455v1
+- **Abstract**: High-rate quantum low-density parity-check (qLDPC) codes are a leading candidate for fault-tolerant quantum computing. They feature higher encoding rates than planar alternatives such as the surface code, but their implementation often entails significant hardware hurdles like the need for long-range couplers. We leverage the flexibility of a trapped-ion quantum computer to demonstrate nine quantum error-correcting codes with starkly different qubit connectivity requirements on a single device without any hardware reconfiguration. These experiments span three families of quantum error-correcting codes: qLDPC codes, topological codes, and concatenated codes. With a qLDPC code encoding 4 logical qubits into 18 physical qubits, we achieve a logical error rate up to $9\times$ better than a previous demonstration of a similar code on superconducting solid-state qubits. Moreover, our implementation exhibits breakeven performance, with some instances achieving qubit lifetimes comparable to or slightly exceeding that of our trapped-ion qubits. We use a novel implementation of the optical-metastable-ground (OMG) architecture for addressable mid-circuit measurement and reset, which enables us to perform these experiments without any ion transport or dedicated coolant ions, requirements that typically consume a large fraction of the runtime or ion count of trapped-ion quantum computers.
+
+## Toward a Generalized Defense Across Sparse, Continuous, and Structured Parameter Attacks
+
+- **ID**: arxiv:2606.04317v1
+- **Type**: preprint
+- **Published**: 2026-06-03
+- **Authors**: Bin Duan, Zeyu Bai, Guowei Yang
+- **PDF**: https://arxiv.org/pdf/2606.04317v1
+- **Abstract**: Deep neural networks are increasingly deployed across heterogeneous and partially untrusted environments, where models are distributed through cloud storage, CI/CD pipelines, containerized services, and edge execution platforms. This broad deployment landscape exposes model parameters to various integrity risks. Unlike input-space adversarial attacks, parameter attacks directly tamper with the model's internal parameters and persist across all subsequent inferences. Existing defenses either require retraining, incur significant accuracy degradation, or are limited to specific attack classes. However, in real-world deployment scenarios, the forms of parameter attacks are often unpredictable. To address this challenge, we present ParDef, a generalized defense for deep neural networks against diverse types of parameter attacks. ParDef integrates keyed channel reparameterization, which obscures sensitive parameter directions, QC-LDPC quantization, which embeds redundancy and supports error correction, and adaptive robust inference, which stabilizes predictions under uncertainty. Our evaluation on CIFAR-10, CIFAR-100, and Tiny-ImageNet using ResNet and VGG models demonstrates that ParDef consistently reduces attack success rates across different parameter attacks while maintaining high model performance and incurring only moderate deployment overhead. These results highlight that ParDef is a practical and generalized defense for DNN deployments.
+
+## Evolutionary Discovery of Bivariate Bicycle Codes with LLM-Guided Search
+
+- **ID**: arxiv:2606.02418v1
+- **Type**: preprint
+- **Published**: 2026-06-01
+- **Authors**: Juan Cruz-Benito, Andrew W. Cross, David Kremer +1
+- **PDF**: https://arxiv.org/pdf/2606.02418v1
+- **Abstract**: Quantum LDPC code discovery requires searching large algebraic design spaces while reliably certifying the parameters and equivalence classes of any candidates found. We introduce an LLM-guided evolutionary workflow in which language models mutate Python programs that generate bivariate-bicycle and perturbed bivariate-bicycle code ansätze. Across five campaigns, the system performed approximately 1{,}650 evolutionary iterations, screened about $2 \times 10^5$ candidate codes, and required ${\sim}140$ hours of computation and ${\sim}$US\$400 in LLM inference cost. Candidate codes are evaluated through a staged validation pipeline combining $\mathrm{GF}(2)$ rank computation, distance estimation and certification, mixed-integer linear programming, BLISS Tanner-graph deduplication, decomposability analysis, and local-Clifford equivalence checks. At block length $n \leq 360$, the workflow identifies 465 distinct candidate codes: 97 CSS bivariate-bicycle codes and 368 non-CSS perturbed variants. The CSS search recovers known high-performing codes and finds new finite-length representatives, including an indecomposable [[288,16,12]] code and higher-weight codes with up to $k = 50$ at distance $d = 8$. The non-CSS search produces perturbed codes matching the gross-code figure of merit at [[144,12,12]], along with additional high-distance candidates reported as certified values or upper bounds according to MILP status. Overall, these results show that LLM-guided program evolution can serve as a practical tool for structured quantum-code discovery when paired with independent evaluation.
+
+## Multidimensional Reconciliation in Continuous-Variable QKD: Review, Coding Schemes, and Open Source Simulation
+
+- **ID**: arxiv:2606.02323v2
+- **Type**: preprint
+- **Published**: 2026-06-01
+- **Authors**: Lucien Martial, Alexis Rosio, Eleni Diamanti +2
+- **PDF**: https://arxiv.org/pdf/2606.02323v2
+- **Abstract**: Continuous-variable quantum key distribution (CV-QKD) requires highly efficient reconciliation techniques to operate at low signal-to-noise ratios and long distances. Multidimensional reconciliation addresses this challenge by transforming the physical Gaussian quantum channel into a virtual binary-input additive white Gaussian noise (BIAWGN) channel, enabling the use of modern errorcorrecting codes. In this work, we review the principles of multidimensional reconciliation, with a particular focus on high-dimensional constructions beyond the algebraic dimensions 1, 2, 4, 8. We describe the construction of the virtual channel, discuss practical coding schemes for reverse reconciliation, and analyse their integration with linear error-correcting codes. We also present an opensource simulation framework, HDirac, implementing multidimensional reconciliation for arbitrary dimensions, and use it to evaluate state-of-the-art LDPC codes. The results highlight key trade-offs between dimension, reconciliation efficiency, and frame error rate, providing practical guidance for CV-QKD system design.

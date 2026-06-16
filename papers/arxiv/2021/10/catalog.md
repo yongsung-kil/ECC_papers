@@ -1,0 +1,29 @@
+# arXiv — 2021-10
+
+
+## Low-overhead fault-tolerant quantum computing using long-range connectivity
+
+- **ID**: arxiv:2110.10794v2
+- **Type**: preprint
+- **Published**: 2021-10-20
+- **Authors**: Lawrence Z. Cohen, Isaac H. Kim, Stephen D. Bartlett +1
+- **PDF**: https://arxiv.org/pdf/2110.10794v2
+- **Abstract**: Vast numbers of qubits will be needed for large-scale quantum computing due to the overheads associated with error correction. We present a scheme for low-overhead fault-tolerant quantum computation based on quantum low-density parity-check (LDPC) codes, where long-range interactions enable many logical qubits to be encoded with a modest number of physical qubits. In our approach, logic gates operate via logical Pauli measurements that preserve both the protection of the LDPC codes as well as the low overheads in terms of the required number of additional qubits. Compared with surface codes with the same code distance, we estimate order-of-magnitude improvements in the overheads for processing around one hundred logical qubits using this approach. Given the high thresholds demonstrated by LDPC codes, our estimates suggest that fault-tolerant quantum computation at this scale may be achievable with a few thousand physical qubits at comparable error rates to what is needed for current approaches.
+
+## Scheduling Improves the Performance of Belief Propagation for Noisy Group Testing
+
+- **ID**: arxiv:2110.10110v1
+- **Type**: preprint
+- **Published**: 2021-10-19
+- **Authors**: Esmaeil Karimi, Anoosheh Heidarzadeh, Krishna R. Narayanan +1
+- **PDF**: https://arxiv.org/pdf/2110.10110v1
+- **Abstract**: This paper considers the noisy group testing problem where among a large population of items some are defective. The goal is to identify all defective items by testing groups of items, with the minimum possible number of tests. The focus of this work is on the practical settings with a limited number of items rather than the asymptotic regime. In the current literature, belief propagation has been shown to be effective in recovering defective items from the test results. In this work, we adopt two variants of the belief propagation algorithm for the noisy group testing problem. These algorithms have been used successfully in the decoding of low-density parity-check codes. We perform an experimental study and using extensive simulations we show that these algorithms achieve higher success probability, lower false-negative, and false-positive rates compared to the traditional belief propagation algorithm. For instance, our results show that the proposed algorithms can reduce the false-negative rate by about $50\%$ (or more) when compared to the traditional BP algorithm, under the combinatorial model. Moreover, under the probabilistic model, this reduction in the false-negative rate increases to about $80\%$ for the tested cases.
+
+## Deployment of Polar Codes for Mission-Critical Machine-Type Communication Over Wireless Networks
+
+- **ID**: arxiv:2110.02938v1
+- **Type**: preprint
+- **Published**: 2021-10-06
+- **Authors**: Najib Ahmed Mohammed, Ali Mohammed Mansoor, Rodina Binti Ahmad +1
+- **PDF**: https://arxiv.org/pdf/2110.02938v1
+- **Abstract**: Mission critical Machine-type Communication, also referred to as Ultra-reliable Low Latency Communication is primarily characterized by communication that provides ultra-high reliability and very low latency to concurrently transmit short commands to a massive number of connected devices. While the reduction in PHY layer overhead and improvement in channel coding techniques are pivotal in reducing latency and improving reliability, the current wireless standards dedicated to support mcMTC rely heavily on adopting the bottom layers of general-purpose wireless standards and customizing only the upper layers. The mcMTC has a significant technical impact on the design of all layers of the communication protocol stack. In this paper, an innovative bottom-up approach has been proposed for mcMTC applications through PHY layer targeted at improving the transmission reliability by implementing ultra-reliable channel coding scheme in the PHY layer of IEEE 802.11a bearing in mind short packet transmission system. To achieve this aim, we analyzed and compared the channel coding performance of convolutional codes, LDPC codes, and polar codes in wireless network on the condition of short data packet transmission. The Viterbi decoding algorithm, logarithmic belief propagation algorithm, and cyclic redundancy check - successive cancellation list decoding algorithm were adopted to CC, LDPC codes, and polar codes, respectively. Consequently, a new PHY layer for mcMTC has been proposed. The reliability of the proposed approach has been validated by simulation in terms of Bit error rate vs. SNR. The simulation results demonstrate that the reliability of IEEE 802.11a standard has been significantly improved to be at PER less 10e-5 with the implementation of polar codes. The results also show that the general-purpose wireless networks are prominent in providing short packet mcMTC with the modification needed.
