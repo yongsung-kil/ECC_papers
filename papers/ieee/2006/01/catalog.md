@@ -1,0 +1,236 @@
+# IEEE Xplore — 2006-01
+
+
+## FEC in optical communications - A tutorial overview on the evolution of architectures and the future prospects of outband and inband FEC for optical communications
+
+- **ID**: ieee:4099521
+- **Type**: magazine
+- **Published**: Nov.-Dec. 
+- **Authors**: Afxendios Tychopoulos, Odysseas Koufopavlou, Ioannis Tomkos
+- **PDF**: https://ieeexplore.ieee.org/document/4099521
+- **Abstract**: The recent establishment of the 10/40 Gbps technology in DWDM optical links heralds a new era of bandwidth abundance, in response to an explosive growth of services provided through the Internet. Forward error correction (FEC) is one of the key-enabling elements in this long-awaited achievement. Borrowed from the wireless world, FEC was initially introduced in wavelength-division multiplex (WDM) o...
+
+## Low-density parity-check codes for 40-gb/s optical transmission systems
+
+- **ID**: ieee:1668096
+- **Type**: journal
+- **Published**: July-Aug. 
+- **Authors**: I.B. Djordjevic, S. Sankaranarayanan, S.K. Chilappagari +1
+- **PDF**: https://ieeexplore.ieee.org/document/1668096
+- **Abstract**: In this paper, we compare performance of three classes of forward error correction schemes for 40-Gb/s optical transmission systems. The first class is based on the concatenation of Reed-Solomon codes and this is employed in the state-of-the-art fiber-optics communication systems. The second class is the turbo product codes with Bose-Chaudhuri-Hocquenghen component codes. The application of these ...
+
+## Recent progress in forward error correction and its interplay with transmission impairments
+
+- **ID**: ieee:1668095
+- **Type**: journal
+- **Published**: July-Aug. 
+- **Authors**: T. Mizuochi
+- **PDF**: https://ieeexplore.ieee.org/document/1668095
+- **Abstract**: Recent progress in forward error correction (FEC) for optical communications is reviewed. The various types of FEC are classified as belonging to one of three generations. A third-generation FEC, based on a block turbo code, has been fully integrated in very large scale integration, and thanks to the use of 3-bit soft decision, a net coding gain of 10.1 dB was demonstrated experimentally. That has...
+
+## The quest for error correction in biology
+
+- **ID**: ieee:1578663
+- **Type**: magazine
+- **Published**: Jan.-Feb. 
+- **Authors**: M.K. Gupta
+- **PDF**: https://ieeexplore.ieee.org/document/1578663
+- **Abstract**: The goal of this article is to give a brief account of the recent developments in codes and biology. With the increasing understanding of biology and with the advancement of sequencing technology, the whole human genome is stretched out before us. There is a need to look again with these new information for the applications of coding and information theory to biology. This paper focuses on the exi...
+
+## Dynamics and performance analysis of analog iterative decoding for low-density parity-check (LDPC) codes
+
+- **ID**: ieee:1576950
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: S. Hemati, A.H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/1576950
+- **Abstract**: Conventional iterative decoding with flooding or parallel schedule can be formulated as a fixed-point problem solved iteratively by a successive substitution (SS) method. In this paper, we investigate the dynamics of a continuous-time (asynchronous) analog implementation of iterative decoding, and show that it can be approximated as the application of the well-known successive relaxation (SR) meth...
+
+## An innovative low-density parity-check code design with near-Shannon-limit performance and simple implementation
+
+- **ID**: ieee:1576941
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: M. Eroz, Feng-Wen Sun, Lin-Nan Lee
+- **PDF**: https://ieeexplore.ieee.org/document/1576941
+- **Abstract**: A novel parity-check matrix design for low-density parity-check (LDPC) codes is described. By eliminating the routing problem associated with LDPC codes, the design results in a small implementation area, and the codes have outstanding error-rate performance close to the Shannon limit for a wide range of code rates, from 1/4 to 9/10, and for various modulation schemes such as binary phase-shift ke...
+
+## Performance of low-density parity-check codes with linear minimum distance
+
+- **ID**: ieee:1564445
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: H. Pishro-Nik, F. Fekri
+- **PDF**: https://ieeexplore.ieee.org/document/1564445
+- **Abstract**: This correspondence studies the performance of the iterative decoding of low-density parity-check (LDPC) code ensembles that have linear typical minimum distance and stopping set size. We first obtain a lower bound on the achievable rates of these ensembles over memoryless binary-input output-symmetric channels. We improve this bound for the binary erasure channel. We also introduce a method to co...
+
+## Efficient encoding of quasi-cyclic low-density parity-check codes
+
+- **ID**: ieee:1576951
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: Zongwang Li, Lei Chen, Lingqi Zeng +2
+- **PDF**: https://ieeexplore.ieee.org/document/1576951
+- **Abstract**: Quasi-cyclic (QC) low-density parity-check (LDPC) codes form an important subclass of LDPC codes. These codes have encoding advantage over other types of LDPC codes. This paper addresses the issue of efficient encoding of QC-LDPC codes. Two methods are presented to find the generator matrices of QC-LDPC codes in systematic-circulant (SC) form from their parity-check matrices, given in circulant fo...
+
+## Multilevel coding in M-ary DPSK/differential QAM high-speed optical transmission with direct detection
+
+- **ID**: ieee:1589074
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: I.B. Djordjevic, B. Vasic
+- **PDF**: https://ieeexplore.ieee.org/document/1589074
+- **Abstract**: A bandwidth- and power-efficient modulation scheme using M-ary differential phase-shift keying (DPSK)/differential quadrature amplitude modulation (DQAM) and low-density parity-check (LDPC) codes as component codes in a multilevel coding (MLC) is proposed for optical transmission systems with direct detection. An MLC scheme with 2 b/s/Hz spectral efficiency based on block-circulant component codes...
+
+## New results on unequal error protection using LDPC codes
+
+- **ID**: ieee:1576564
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: N. Rahnavard, F. Fekri
+- **PDF**: https://ieeexplore.ieee.org/document/1576564
+- **Abstract**: In this letter, we propose a new scheme to construct low-density parity-check (LDPC) codes that are suitable for unequal error protection (UEP). We derive UEP density evolution (UDE) formulas for the proposed ensemble over the binary erasure channel (BEC). Using the UDE formulas, high performance UEP codes can be found. Simulation results depict an improvement in the bit error rate of more importa...
+
+## DVB-S2: The Second Generation Standard for Satellite Broad-Band Services
+
+- **ID**: ieee:1566630
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: A. Morello, V. Mignone
+- **PDF**: https://ieeexplore.ieee.org/document/1566630
+- **Abstract**: DVB-S2 is the second-generation specification for satellite broad-band applications, developed by the Digital Video Broadcasting (DVB) Project in 2003. The system is structured as a toolkit to allow the implementation of the following satellite applications: TV and sound broadcasting, interactivity (i.e., Internet access), and professional services, such as TV contribution links and digital satell...
+
+## Distance properties of expander codes
+
+- **ID**: ieee:1564428
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: A. Barg, G. Zemor
+- **PDF**: https://ieeexplore.ieee.org/document/1564428
+- **Abstract**: The minimum distance of some families of expander codes is studied, as well as some related families of codes defined on bipartite graphs. The weight spectrum and the minimum distance of a random ensemble of such codes are computed and it is shown that it sometimes meets the Gilbert-Varshamov (GV) bound. A lower bound on the minimum distances of constructive families of expander codes is derived. ...
+
+## An algorithm for counting short cycles in bipartite graphs
+
+- **ID**: ieee:1564444
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: T.R. Halford, K.M. Chugg
+- **PDF**: https://ieeexplore.ieee.org/document/1564444
+- **Abstract**: Let G=(U/spl cup/W, E) be a bipartite graph with disjoint vertex sets U and W, edge set E, and girth g. This correspondence presents an algorithm for counting the number of cycles of length g, g+2, and g+4 incident upon every vertex in U/spl cup/W. The proposed cycle counting algorithm consists of integer matrix operations and its complexity grows as O(gn/sup 3/) where n=max(|U|,|W|).
+
+## Constrained coding techniques for the suppression of intrachannel nonlinear effects in high-speed optical transmission
+
+- **ID**: ieee:1589073
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: I.B. Djordjevic, B. Vasic
+- **PDF**: https://ieeexplore.ieee.org/document/1589073
+- **Abstract**: A problem of suppression of intrachannel nonlinearities through the use of constrained coding is considered. Three different techniques are proposed and compared with respect to their efficiency, namely 1) constrained coding; 2) combined constrained and error control coding; and 3) deliberate error insertion. Significant Q-factor improvement up to 16 dB depending on code rate and number of spans i...
+
+## Coded modulation in the block-fading channel: coding theorems and code construction
+
+- **ID**: ieee:1564429
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: A. Guillen i Fabregas, G. Caire
+- **PDF**: https://ieeexplore.ieee.org/document/1564429
+- **Abstract**: We consider coded modulation schemes for the block-fading channel. In the setting where a codeword spans a finite number N of fading degrees of freedom, we show that coded modulations of rate R bit per complex dimension, over a finite signal set /spl chi//spl sube//spl Copf/ of size 2/sup M/, achieve the optimal rate-diversity tradeoff given by the Singleton bound /spl delta/(N,M,R)=1+/spl lfloor/...
+
+## A fast trellis-based rate-allocation algorithm for robust transmission of progressively coded images over noisy channels
+
+- **ID**: ieee:1576939
+- **Type**: journal
+- **Published**: Jan. 2006
+- **Authors**: Xiang Pan, A.H. Banihashemi, A. Cuhadar
+- **PDF**: https://ieeexplore.ieee.org/document/1576939
+- **Abstract**: We propose a fast trellis-based rate-allocation algorithm for robust transmission of progressively coded images over noisy channels. The algorithm, which is an improved version of a similar algorithm by Banister et al., is based on the application of the Viterbi algorithm to a search trellis. This trellis is a substantially trimmed version of the one used by Banister et al.. The proposed algorithm...
+
+## Cross-antenna decoding for the LDPC coded space-time system
+
+- **ID**: ieee:1593263
+- **Type**: conference
+- **Published**: 8-10 Jan. 
+- **Authors**: Jun Wang, Hui Deng, Pengyu He
+- **PDF**: https://ieeexplore.ieee.org/document/1593263
+- **Abstract**: N/A
+
+## Fountain codes for impulsive noise correction in low-voltage indoor power-line broadband communications
+
+- **ID**: ieee:1593069
+- **Type**: conference
+- **Published**: 8-10 Jan. 
+- **Authors**: P. Amirshahi, S.M. Navidpour, M. Kavehrad
+- **PDF**: https://ieeexplore.ieee.org/document/1593069
+- **Abstract**: N/A
+
+## Space-Time Communications (Archived)
+
+- **ID**: ieee:EDP033
+- **Type**: book
+- **Published**: 6/6/2006
+- **Authors**: Richard D. Wesel
+- **PDF**: https://ieeexplore.ieee.org/document/EDP033
+- **Abstract**: This course is part of our eLearning Archive, which includes older courses that may not be current or as user-friendly as courses designed more recently. In the context of a rich scattering environment, employing multiple antennas at the transmitter and receiver provides a capacity increase that is linear in the minimum of the number of transmit and receive antennas. This seminal result of Fosc...
+
+## Error robustness scheme for H.264 based on LDPC code
+
+- **ID**: ieee:1651363
+- **Type**: conference
+- **Published**: 4-6 Jan. 2
+- **Authors**: Yongfang Wang, Songyu Yu, Xiaokang Yang
+- **PDF**: https://ieeexplore.ieee.org/document/1651363
+- **Abstract**: With the tremendous increase in the capabilities of wireless multimedia devices and services, the demand to improve quality of such systems within the limited bandwidth resources motivates the interest in robust video transmission. A new unequal error protect (UEP) scheme is proposed based on LDPC code and data partitioning, which can protect much more important bits and correct major error during...
+
+## Programmable LDPC decoder based on the bubble-sort algorithm
+
+- **ID**: ieee:1581454
+- **Type**: conference
+- **Published**: 3-7 Jan. 2
+- **Authors**: R. Singhal, Gwan Choi, R.N. Mahapatra
+- **PDF**: https://ieeexplore.ieee.org/document/1581454
+- **Abstract**: Low density parity check (LDPC) codes are one of the most powerful error correcting codes known. Recent research have pointed out their potential for a low cost, low latency hardware implementation. Due to this property, a lot of research has been done to find their suitability in different communication media. These codes have been shown to achieve near Shannon-limit performance in wireless AWGN ...
+
+## High-throughput decoder for low-density parity-check code
+
+- **ID**: ieee:1594662
+- **Type**: conference
+- **Published**: 24-27 Jan.
+- **Authors**: T. Ishikawa, K. Shimizu, T. Ikenaga +1
+- **PDF**: https://ieeexplore.ieee.org/document/1594662
+- **Abstract**: We have designed and implemented the LDPC decoder chip with memory-reduction method to achieve high-throughput and practical chip size. The decoder decodes (3,6)-2304 bit regular LDPC codes using modified min-sum algorithm. The decoder achieves a throughput of 530Mb/s at an operating frequency of 147MHz. The chip has been fabricated in a 0.18mum, 6 metal-layer CMOS technology. The chip size is 36m...
+
+## A high-throughput low-power fully parallel 1024-bit 1/2 -rate low density parity check code decoder in 3D integrated circuits
+
+- **ID**: ieee:1594652
+- **Type**: conference
+- **Published**: 24-27 Jan.
+- **Authors**: L. Zhou, C. Wakayama, N. Jangkrajarng +2
+- **PDF**: https://ieeexplore.ieee.org/document/1594652
+- **Abstract**: A 1024-bit, 1/2 -rate fully parallel low density parity check (LDPC) code decoder has been designed and implemented using a 3D 0.18/spl mu/m fully depleted silicon-on-insulator (FDSOI) CMOS technology based on wafer bonding. The taped-out 3D decoder with about 8M transistors was simulated to have a high throughput of 2Gb/s and a low power consumption of only 430mW using 6.4/spl mu/m by 6.3/spl mu/...
+
+## Unapproved IEEE Draft Amendment Of: IEEE Standard for Information Technology Telecommunications and Information Exchange Between Systems Local and Metropolitan Area Networks Specific Requirements Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications: Amendment: Physical Layer and Management Parameters for 10 Gb/S Operation, Type 10GBASE-T (IEEE Draft Amendment to IEEE Std 802.3-2005) Superseded by P802.3An/D4.0
+
+- **ID**: ieee:4039895
+- **Type**: standard
+- **Published**: 2006
+- **Authors**: 
+- **PDF**: https://ieeexplore.ieee.org/document/4039895
+- **Abstract**: N/A
+
+## Approved IEEE Draft Amendment of: IEEE Standard for Information Technology Telecommunications and Information Exchange Between Systems Local and Metropolitan Area Networks Specific Requirements Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications: Amendment: Physical Layer and Management Parameters for 10 Gb/S Operation, Type 10GBASE-T
+
+- **ID**: ieee:4039892
+- **Type**: standard
+- **Published**: 2006
+- **Authors**: 
+- **PDF**: https://ieeexplore.ieee.org/document/4039892
+- **Abstract**: N/A
+
+## Unapproved IEEE Draft Amendment of: IEEE Standard for Information Technology Telecommunications and Information Exchange Between Systems Local and Metropolitan Area Networks Specific Requirements Part 3: Carrier Sense Multiple Access With Collision Detection (CSMA/CD) Access Method and Physical Layer Specifications: Amendment: Physical Layer and Management Parameters for 10 Gb/S Operation, Type 10GBASE-T (IEEE Draft Amendment to IEEE Std 802.3-2005) Superseded by P802.3An/D3.1
+
+- **ID**: ieee:4039898
+- **Type**: standard
+- **Published**: 2006
+- **Authors**: 
+- **PDF**: https://ieeexplore.ieee.org/document/4039898
+- **Abstract**: N/A
