@@ -18,7 +18,9 @@ API를 호출하지 않는다. 대신:
 import argparse
 import json
 import re
+import shutil
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from src.db import get_conn, init_db, _now
@@ -156,10 +158,15 @@ def _pub_year(published: str | None) -> int:
     return int(m.group(0)) if m else 0
 
 
-def make_batches(limit: int, per: int, out_dir: str) -> dict:
-    """미선별 논문을 에이전트별 파일(out_dir/agent_NN.json)로 분할 — **최신 연도부터**.
+KEEP_RUNS = 10   # _work/ 하위에 보존할 최근 실행 폴더 수(나머지 자동 삭제). DB가 영구 기록.
+
+
+def make_batches(limit: int, per: int, base_dir: str) -> dict:
+    """미선별 논문을 실행 폴더(base_dir/{타임스탬프}/agent_NN.json)로 분할 — **최신 연도부터**.
 
     병렬 선별용. 메인은 초록을 읽지 않고 분할만 하며, 각 에이전트가 자기 파일만 읽는다.
+    판정 결과(judgments.json)도 같은 실행 폴더에 모으며, DB가 영구 기록이므로 최근
+    KEEP_RUNS개 실행만 남기고 오래된 폴더는 자동 삭제한다.
     """
     conn = get_conn()
     init_db(conn)
@@ -176,22 +183,29 @@ def make_batches(limit: int, per: int, out_dir: str) -> dict:
     ).fetchall()
     conn.close()
 
-    out = PROJECT_ROOT / out_dir
-    out.mkdir(parents=True, exist_ok=True)
-    for old in out.glob("agent_*.json"):
-        old.unlink()
+    base = PROJECT_ROOT / base_dir
+    base.mkdir(parents=True, exist_ok=True)
+    # 오래된 실행 폴더 정리 (새 폴더 추가 후에도 ≤ KEEP_RUNS 유지)
+    runs = sorted(d for d in base.iterdir() if d.is_dir())
+    while len(runs) >= KEEP_RUNS:
+        shutil.rmtree(runs.pop(0), ignore_errors=True)
+
+    run_dir = base / datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     n_files = 0
     for idx, start in enumerate(range(0, len(rows), per)):
         sl = rows[start:start + per]
-        (out / f"agent_{idx:02d}.json").write_text(
+        (run_dir / f"agent_{idx:02d}.json").write_text(
             json.dumps([dict(r) for r in sl], ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         n_files += 1
 
-    print(f"미선별 {len(rows)}편 → {n_files}개 파일: {out_dir}/agent_NN.json (에이전트 {n_files}개)")
-    return {"papers": len(rows), "files": n_files}
+    rel = run_dir.relative_to(PROJECT_ROOT).as_posix()
+    print(f"미선별 {len(rows)}편 → {n_files}개 파일: {rel}/agent_NN.json (에이전트 {n_files}개)")
+    print(f"RUN_DIR={rel}")
+    return {"papers": len(rows), "files": n_files, "run_dir": rel}
 
 
 def main():
@@ -209,10 +223,11 @@ def main():
 
     sub.add_parser("stats", help="선별 현황")
 
-    p_batch = sub.add_parser("batch", help="미선별 논문을 에이전트별 파일로 분할(병렬 선별용)")
+    p_batch = sub.add_parser("batch", help="미선별 논문을 실행 폴더로 분할(병렬 선별용)")
     p_batch.add_argument("-n", type=int, default=100, help="한 청크 편수(기본 100)")
     p_batch.add_argument("--per", type=int, default=10, help="에이전트당 편수(기본 10)")
-    p_batch.add_argument("--dir", default="_batch", help="출력 폴더(기본 _batch)")
+    p_batch.add_argument("--dir", default="_work",
+                         help="출력 베이스 폴더(기본 _work, 하위에 타임스탬프 실행폴더 생성)")
 
     args = parser.parse_args()
 
@@ -225,7 +240,7 @@ def main():
     elif args.cmd == "stats":
         show_stats()
     elif args.cmd == "batch":
-        make_batches(limit=args.n, per=args.per, out_dir=args.dir)
+        make_batches(limit=args.n, per=args.per, base_dir=args.dir)
     else:
         parser.print_help()
 

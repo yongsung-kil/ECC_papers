@@ -9,7 +9,7 @@
 
 export const meta = {
   name: 'select-ldpc',
-  description: 'LDPC 논문을 NAND 적용 가능성으로 병렬 선별 (in/out + 기준제안 + 경계사례)',
+  description: 'LDPC 논문을 NAND 적용 가능성으로 병렬 선별 (in/out + 기준제안)',
   phases: [{ title: 'Judge', detail: '에이전트별로 담당 논문 in/out 판정' }],
 }
 
@@ -27,7 +27,7 @@ const CRITERIA_FILE = (ARGS && ARGS.criteriaFile) || 'criteria/selection_criteri
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['judgments', 'criteria_suggestions', 'borderline'],
+  required: ['judgments', 'criteria_suggestions'],
   properties: {
     judgments: {
       type: 'array',
@@ -43,21 +43,12 @@ const SCHEMA = {
       },
     },
     criteria_suggestions: { type: 'array', items: { type: 'string' } },
-    borderline: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['id', 'note'],
-        properties: { id: { type: 'string' }, note: { type: 'string' } },
-      },
-    },
   },
 }
 
 if (!N_AGENTS) {
   log('판정할 배치가 없습니다 (nAgents=0).')
-  return { judgments: [], criteria_suggestions: [], borderline: [] }
+  return { judgments: [], criteria_suggestions: [] }
 }
 
 function agentPrompt(idx) {
@@ -67,12 +58,11 @@ function agentPrompt(idx) {
     '',
     '1) `' + CRITERIA_FILE + '` 를 읽어 선별 기준(포함/제외 카테고리·판단절차)을 숙지한다.',
     '2) `' + file + '` 를 읽는다 — 담당 논문 JSON 배열(id, title, abstract 등).',
-    '3) 각 논문을 초록만 보고 판정한다.',
+    '3) 각 논문을 초록만 보고 판정한다. 애매하면 in으로 살리고 reason에 근거를 남긴다(Phase 3 재검토).',
     '',
     '반환(StructuredOutput):',
     '- judgments: 담당 논문 전부 [{id, decision:"in"|"out", reason: 한 줄}]',
     '- criteria_suggestions: 기준(in/out·판단절차)을 바꿀 만한 게 보일 때만 문자열 배열. 없으면 [].',
-    '- borderline: 판정이 애매했던 논문만 [{id, note}]. 애매하면 in으로 살리고 여기 기록. 없으면 [].',
   ].join('\n')
 }
 
@@ -85,14 +75,11 @@ const results = await parallel(
 
 const judgments = []
 const criteria_suggestions = []
-const borderline = []
 for (const r of results) {
   if (!r) continue
   judgments.push(...(r.judgments || []))
   criteria_suggestions.push(...(r.criteria_suggestions || []))
-  borderline.push(...(r.borderline || []))
 }
 
-log('판정 ' + judgments.length + '편 · 기준제안 ' + criteria_suggestions.length +
-    ' · 경계 ' + borderline.length)
-return { judgments, criteria_suggestions, borderline }
+log('판정 ' + judgments.length + '편 · 기준제안 ' + criteria_suggestions.length)
+return { judgments, criteria_suggestions }

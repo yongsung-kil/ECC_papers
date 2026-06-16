@@ -23,6 +23,7 @@
 - 소스 코딩 (압축·양자화, 예: BEQ) — 채널코딩 ECC가 아님
 - 무선/통신 응용 특이적 — LDPC가 부수 언급, 떼어낼 기법 없음
 - 순수 이론 bound — 디코더/HW/구성으로 안 이어짐
+- 소스-채널 결합(JSCC)·fountain/erasure·시맨틱 통신 — LDPC가 베이스라인, 떼어낼 ECC 기법 없음
 
 > 양자·무선 논문이라도 **디코더 알고리즘·HW가 명확히 이식 가능**하면 포함(C/D).
 
@@ -38,11 +39,3 @@
 ```json
 [{"id": "...", "decision": "in|out", "reason": "한 줄 근거"}]
 ```
-
-## 경계 사례 (판단하며 계속 추가)
-
-- **무선/광통신/PON 응용이라도** 디코더 HW·LLR 양자화·코드설계 기법이 명확히 떼어내 이식 가능하면 → in (응용은 껍데기, 기법이 본질). 예: PON 저비트폭 디코더(11159213), SCMA PLDPC 코드설계(11096949), MIMO LLR Gaussianity 분석(11464434).
-- **양자 LDPC(qLDPC)·QKD는 제외 카테고리지만**, 본문이 고전 LDPC로 역이식 가능한 디코더 알고리즘(min-sum/OSD/BP 변형·soft-syndrome)을 제시하면 → in (이식성 > 양자 제외 원칙). 예: BF-OSD(2605.25777), MBBP-LD(2605.14170), QKD용 QC-LDPC FPGA 디코더(11500286). 순수 양자코드 구성/거리 이론은 out 유지.
-- **비-NAND 스토리지(HDD/DNA/ReRAM)라도** 스토리지 ECC 일반(B)·코드설계(E)면 → in, 단 Phase3에서 NAND 적합성 재검토 플래그. 예: HDD 변조+LDPC(11301807), DNA BCH+LDPC(11316539).
-- **순수이론 bound라도** girth/error-floor 설계공간 특성화(E)에 무게가 있으면 → in 경계 (nonconstructive여도 살림). 예: SC-LDPC 설계공간(2605.18323).
-- **소스-채널 결합(JSCC)·시맨틱 통신·fountain/erasure 코드**는 채널 ECC 디코더로 떼어낼 기법이 없으면 → out (LDPC가 베이스라인·부수 언급에 그침).
