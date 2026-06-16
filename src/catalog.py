@@ -10,6 +10,7 @@ import csv
 import json
 import logging
 import re
+import shutil
 from pathlib import Path
 
 from src.db import get_conn
@@ -17,6 +18,15 @@ from src.db import get_conn
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def rebuild_catalog():
+    """기존 papers/{arxiv,ieee}를 비우고 DB로부터 전체 재생성 → 항상 DB와 정확히 일치."""
+    for source in ("arxiv", "ieee"):
+        d = PROJECT_ROOT / "papers" / source
+        if d.exists():
+            shutil.rmtree(d)
+    export_catalog()
 
 
 def export_catalog():
@@ -122,5 +132,5 @@ def _extract_year_month(published: str | None) -> str:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s [%(levelname)s] %(message)s")
-    export_catalog()
-    print("카탈로그 재생성 완료")
+    rebuild_catalog()  # 기존 삭제 후 재생성
+    print("카탈로그 재생성 완료 (기존 삭제 후 DB로 재생성)")
