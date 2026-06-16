@@ -5,14 +5,13 @@ API를 호출하지 않는다. 대신:
   2. 세션의 Claude가 각 논문의 NAND 플래시 관련성을 읽고 판단한 뒤
   3. 판단 결과(JSON)를 `--apply` 로 DB(filter_results)에 기록한다.
 
-판단 JSON 형식 (리스트):
+판단 JSON 형식 (리스트) — 점수 없이 포함/제외 이분법:
   [
-    {"id": "arxiv:2401.12345", "score": 0.8, "decision": "in",
+    {"id": "arxiv:2401.12345", "decision": "in",
      "reason": "NAND 플래시 LDPC 디코더 지연시간 개선 직접 관련"},
     ...
   ]
-  - score:    0.0~1.0 (NAND 관련성/유용성)
-  - decision: "in"(통과) | "out"(제외)
+  - decision: "in"(포함) | "out"(제외)
   - reason:   판단 근거 한 줄
 """
 
@@ -139,14 +138,14 @@ def show_stats():
     print("=== 선별 현황 ===")
     for r in conn.execute("SELECT status, COUNT(*) n FROM papers GROUP BY status"):
         print(f"  {r['status']}: {r['n']}")
-    print("=== 통과(filtered_in) 상위 점수 ===")
+    print("=== 최근 포함(filtered_in) 샘플 ===")
     for r in conn.execute(
-        "SELECT f.paper_id, f.relevance_score, p.title "
+        "SELECT f.paper_id, f.reason, p.title "
         "FROM filter_results f JOIN papers p ON p.id = f.paper_id "
         "WHERE p.status = 'filtered_in' "
-        "ORDER BY f.relevance_score DESC LIMIT 15"
+        "ORDER BY f.filtered_at DESC LIMIT 15"
     ):
-        print(f"  {r['relevance_score']:.2f}  {r['paper_id']}  {r['title'][:55]}")
+        print(f"  {r['paper_id']}  {r['title'][:50]}  — {r['reason'] or ''}")
     conn.close()
 
 
