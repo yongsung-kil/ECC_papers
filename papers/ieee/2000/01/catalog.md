@@ -387,3 +387,93 @@
 - **Authors**: Hongzin Song, R. M. Todd, J. R. Cruz
 - **PDF**: https://ieeexplore.ieee.org/document/908351
 - **Abstract**: We propose a system for magnetic recording, using a low density parity check (LDPC) code as the error-correcting-code, in conjunction with a rate 16/17 quasi-maximum-transition-run channel code and a modified E/sup 2/PR4-equalized channel. Iterative decoding between the partial response channel and the LDPC code is performed. Simulations show that this system can achieve a 5.9 dB gain over uncoded EPR4. The algorithms used to design this LDPC code are also discussed.
+
+## On Gallager's low-density parity-check codes
+
+- **ID**: ieee:866500
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: G. Battail
+- **PDF**: https://ieeexplore.ieee.org/document/866500
+- **Abstract**: We show that low-density parity-check codes are random-like (i.e. their weight distribution resembles that obtained in the average density by random coding), and comment on this result.
+
+## Low density parity check codes for magnetic recording channels
+
+- **ID**: ieee:872298
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: Hongxin Song, R. M. Todd, J. R. Cruz
+- **PDF**: https://ieeexplore.ieee.org/document/872298
+- **Abstract**: Summary form only given. The complete presentation was not made available for publication as part of the conference proceedings.
+
+## Using low density parity check codes in the McEliece cryptosystem
+
+- **ID**: ieee:866513
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: C. Monico, J. Rosenthal, A. Shokrollahi
+- **PDF**: https://ieeexplore.ieee.org/document/866513
+- **Abstract**: We examine the implications of using a low density parity check code (LDPCC) in place of the usual Goppa code in McEliece's cryptosystem. Using a LDPCC allows for larger block lengths and the possibility of a combined error correction/encryption protocol.
+
+## Analytical approach to low-density convolutional codes
+
+- **ID**: ieee:866499
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: K. Engdahl, M. Lentmaier, D. V. Truhachev +1
+- **PDF**: https://ieeexplore.ieee.org/document/866499
+- **Abstract**: A statistical analysis of low-density convolutional (LDC) codes is performed. This analysis is based on the consideration of a special statistical ensemble of Markov scramblers and the solution to a system of recurrent equations describing this ensemble. The results of the analysis are lower bounds for the free distance of the codes and upper bounds for the maximum likelihood decoding error probability. For the case where the size of the scrambler tends to infinity some asymptotic bounds for the free distance and the error probability are derived. Simulation results for iterative decoding of LDC codes are also presented.
+
+## Precoder design for concatenating convolutional codes with generalized partial response channels
+
+- **ID**: ieee:891956
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: A. Ghrayeb, W. E. Ryan
+- **PDF**: https://ieeexplore.ieee.org/document/891956
+- **Abstract**: A number of papers have recently been published on the concatenation of an outer code with a partial response (PR) channel, where the outer code is a turbo code, a convolutional code, or a low density parity check code. This paper deals with the second case assuming EPR4 and modified extended EPR4 (MEEPR4) partial response targets. The goal in this work is the joint optimization of interleaver and precoder for a fixed outer convolutional code and PR target. We introduce mathematical and algorithmic tools for accomplishing this goal and present simulation results which support our approach. Among the positive results is the ability to lower the well-known error rate floor of these concatenated schemes for arbitrary partial response channels.
+
+## Iterative turbo decoder analysis based on Gaussian density evolution
+
+- **ID**: ieee:904940
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: D. Divsalar, S. Dolinar, F. Pollara
+- **PDF**: https://ieeexplore.ieee.org/document/904940
+- **Abstract**: We model the density of extrinsic information in iterative turbo decoders by Gaussian density functions. This model is verified by experimental measurements. We consider evolution of these density functions through the iterative turbo decoder as a nonlinear dynamical system with feedback. Iterative decoding of turbo codes and of serially concatenated codes are analyzed based on this method. We define a "noise figure" for the iterative decoder, such that the turbo decoder will converge to the correct codeword if the noise figure is bounded below 0 dB. Many mysteries of turbo codes can be explained based on this analysis. For example we can explain why certain codes converge better with iterative decoding than more powerful codes which are only suitable for maximum likelihood decoding. The roles of systematic bits and of recursive convolutional codes as constituents of turbo codes are explained based on this analysis.
+
+## Interference mitigation in frequency-hopped spread-spectrum systems
+
+- **ID**: ieee:878081
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: A. Worthen, W. Stark
+- **PDF**: https://ieeexplore.ieee.org/document/878081
+- **Abstract**: In this paper we explore the error probability of different coding schemes in a frequency-hopped spread-spectrum communication systems subject to partial-band interference and a system subject to Rayleigh fading. The interplay between block length of the code and channel memory is quantified. We show that there is an optimal memory length that maximizes performance. At low signal-to-noise ratios (or close to capacity) large memory is better while at large signal-to-noise ratio smaller memory is optimum.
+
+## Turbo decoding of a low-density generator matrix code for a high-density magnetic recording channel
+
+- **ID**: ieee:891960
+- **Type**: conference
+- **Published**: 2000
+- **Authors**: T. Nishiya, S. Mita, T. Nara
+- **PDF**: https://ieeexplore.ieee.org/document/891960
+- **Abstract**: In this paper, we propose a turbo decoding method for a low-density generator matrix code. It is based on the Bahl-Cocke-Jelinek-Raviv (BCJR) algorithm and the belief propagation (BP) algorithm. Userbits with high error probability are selected for the BP algorithm by using the soft-output of the BCJR algorithm. Since the amount of calculation in the BP algorithm increases exponentially with the number of the userbits, the amount of calculation is reduced drastically by the selection of the userbits with higher error probability. We showed that the use of the proposed algorithm and 16/17 MTR code on an MEEPR4 channel results in a performance better than that obtained without turbo decoding.
+
+## Decoding low density parity check codes with finite quantization bits
+
+- **ID**: ieee:824757
+- **Type**: journal
+- **Published**: 2000
+- **Authors**: Li Ping, W. K. Leung
+- **PDF**: https://ieeexplore.ieee.org/document/824757
+- **Abstract**: This letter is concerned with the implementation issue of the sum-product algorithm (SPA) for decoding the low density parity check codes. It is shown that the direct implementation of the original form of SPA is sensitive to the quantization effect. We propose a parity likelihood ratio technique to overcome the problem. It is shown that for comparable performance the new method can be implemented with much less quantization bits, which can lead to considerably lower decoding cost.
+
+## Improved upper bounds on the ensemble performance of ML decoded low density parity check codes
+
+- **ID**: ieee:831034
+- **Type**: journal
+- **Published**: 2000
+- **Authors**: I. Sason, S. Shamai
+- **PDF**: https://ieeexplore.ieee.org/document/831034
+- **Abstract**: In this letter, we study improved upper bounds on the performance of low density parity check codes over binary-input additive white Gaussian noise channels, assuming that the codes are maximum-likelihood decoded. The results demonstrate the phenomenal performance of the low density parity check codes.

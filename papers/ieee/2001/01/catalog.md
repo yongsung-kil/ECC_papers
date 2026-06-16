@@ -1287,3 +1287,93 @@
 - **Authors**: B. Steingrimsson, Jaekyun Moon, T. Oenning
 - **PDF**: https://ieeexplore.ieee.org/document/917599
 - **Abstract**: A signal space detector (SSD) based on a single hyperplane is proposed which offers nearly the same performance as the fixed delay tree search with decision feedback (FDTS/DF) for the digital versatile disk (DVD) channel. The FDTS/DF detector with a reasonable decision delay performs almost as well as the optimal maximum likelihood sequence detector (MLSD) due to the FDTS/DF plus modulation code that includes the d=2 minimum runlength constraint. The single-hyperplane approximation of the FDTS/DF detector is made possible by considering only the critical signal points in the three-dimensional signal space. When the jitter noise is significant, the slope of the hyperplane decision boundary can readily be adjusted to improve the performance beyond that of the standard FDTS/DF detector. We also provide analysis and simulation results that verify the performance advantage of the SSD over partial response (PR) based threshold and Viterbi detectors. The distance between the received signal in signal space and the single hyperplane can be interpreted as soft information. The soft SSD can be used along with iterative error correction codes, such as low density parity check codes (LDPC), resulting in large performance gains.
+
+## Bandwidth efficient modulation based on algebraic low density parity check codes
+
+- **ID**: ieee:936028
+- **Type**: conference
+- **Published**: 2001
+- **Authors**: D. Sridhara, T. E. Fuja
+- **PDF**: https://ieeexplore.ieee.org/document/936028
+- **Abstract**: The use of algebraically derived (as opposed to randomly constructed) low density parity check codes in bandwidth efficient modulation schemes is considered.
+
+## Design and performance evaluation of some high-rate irregular low-density parity-check codes
+
+- **ID**: ieee:965566
+- **Type**: conference
+- **Published**: 2001
+- **Authors**: M. Chiani, A. Ventura
+- **PDF**: https://ieeexplore.ieee.org/document/965566
+- **Abstract**: The irregular low-density parity-check codes (LDPCC) have been proposed by Richardson, Shokrollahi and Urbanke (see IEEE Trans. on Inf. Theory), in many cases outperforming the best known turbo-codes. These results have been obtained by allowing the degree of nodes (variable or check) of a LDPCC to vary according to some distribution. We give new distributions to design high rate irregular LDPCC, more precisely rates 7/8, 8/9 and 15/16, motivated by applications to space data communication. Then, we investigate the performance of these new codes over AWGN channels, for different codeword lengths. The error rates obtained are always less than 1 dB from the channel capacity, and in most cases better than the results obtained by turbo-codes with the same parameters. Finally, we investigate, by means of an original method, the minimum distance of irregular LDPCC. The results show that irregular LDPCC have quite low minimum distance, giving rise, similarly to turbo-codes, to the "error floor" phenomenon.
+
+## Thresholds for iterative equalization of partial response channels using density evolution
+
+- **ID**: ieee:935936
+- **Type**: conference
+- **Published**: 2001
+- **Authors**: Jing Li, K. R. Narayanan, C. N. Georghiades +1
+- **PDF**: https://ieeexplore.ieee.org/document/935936
+- **Abstract**: A unified framework is presented to calculate the thresholds of different outer codes, including serial turbo, low density parity check codes, single-parity check turbo product codes, on partial response channels using density evolution with Gaussian approximation.
+
+## Cycle-slip detection using soft-output information
+
+- **ID**: ieee:936642
+- **Type**: conference
+- **Published**: 2001
+- **Authors**: Xiaowei Jin, A. Kavcic
+- **PDF**: https://ieeexplore.ieee.org/document/936642
+- **Abstract**: To realize their full coding gain potential, iterative decoders need to operate in low signal-to-noise ratio (SNR) regions where timing recovery devices experience cycle-slips. This paper develops a binary Bayesian cycle-slip detector by using soft-output information. A practical decision rule is derived utilizing a series of approximations. Approximate analytic expressions for the probabilities of cycle-slip detection and false alarm are obtained. They guide us in choosing detector parameters that will meet a desired performance specification. The applicability of this method is shown on artificially generated waveforms.
+
+## On the performance of turbo product codes over partial response channels
+
+- **ID**: ieee:951012
+- **Type**: journal
+- **Published**: 2001
+- **Authors**: Jing Li, E. Kurtas, K. R. Narayanan +1
+- **PDF**: https://ieeexplore.ieee.org/document/951012
+- **Abstract**: This paper evaluates the performance of single-parity check turbo product codes (TPC/SPC) over partial response channels. A rate-0.94 and a rate-0.89 TPC/SPC code are considered for use with PR4/EPR4 channels with proper precoding and with turbo equalization. Gains of 4.5 to 5 dB are obtained at BER of 10/sup -5/, revealing performance comparable to that of low density parity check codes. Apart from its linear encoding/decoding complexity and highly parallelizable decoding algorithm, TPC/SPC codes demonstrate favorable error statistics which are in harmony with the outer Reed-Solomon error correction code (RS-ECC), indicating it to be a promising candidate for future recording systems.
+
+## Coded modulation schemes with turbo and list detection for high-order partial response channels
+
+- **ID**: ieee:917608
+- **Type**: journal
+- **Published**: 2001
+- **Authors**: A. V. Kuznetsov
+- **PDF**: https://ieeexplore.ieee.org/document/917608
+- **Abstract**: Structured Set Partition (SSP) of PR channel output words was proved to be a useful tool to increase linear densities when combined with multilevel concatenated coding. In this paper, we describe a method for constructing SSP's with good spectra of minimum Euclidean distances using multiple embedded linear subspaces and their cosets. Examples of some simple SSP precoders are provided. Bit-error-rate (BER) performances of various partial responses and multilevel modulation schemes are compared using bit-by-bit simulations. Partial responses are defined by the classical and modified target polynomials, while multilevel modulation schemes include (1) an SSP, (2) a set of conventional block codes with different error correcting capabilities, and (3) a variety of iterative decoders such as the List Trellis Decoder (LTD), the BCJR algorithm, and soft decoders for low-density parity check codes. Simulation results show that the ME/sup 2/PR4 channel with two iterations of LTD using only two paths in the list gives gains of 3.3 dB and 3.8 dB at BER 10/sup -6/ compared to the 16/17 (0,6/6) coded E/sup 2/PR4 channel for linear densities 2.5 and 3.0, respectively. The LTD scheme does not use soft decisions or additional distance-enhancing constraints, like d=1, maximum-transition-run (MTR), or quasi-MTR codes. An additional coding gain of 0.5-1.0 dB can be achieved by combining the BCJR algorithm (instead of LTD) with the soft decoding of low density parity check codes.
+
+## On iterative decoding in some existing systems
+
+- **ID**: ieee:924872
+- **Type**: journal
+- **Published**: 2001
+- **Authors**: J. Bajcsy, Chan-Vee Chong, D. A. Garr +2
+- **PDF**: https://ieeexplore.ieee.org/document/924872
+- **Abstract**: Iterative decoding is used to achieve backward compatible performance improvement in several existing systems. Concatenated coding and iterative decoding are first set up using composite mappings, so that various applications in digital communication and recording can be described in a concise and uniform manner. An ambiguity zone detection (AZD) based iterative decoder, operating on generalized erasures, is described as an alternative for concatenated systems where turbo decoding cannot be performed. The described iterative decoding techniques are then applied to selected wireless communication and digital recording systems. Simulation results and utilization of decoding gains are discussed.
+
+## Iterative turbo decoder analysis based on density evolution
+
+- **ID**: ieee:924873
+- **Type**: journal
+- **Published**: 2001
+- **Authors**: D. Divsalar, S. Dolinar, F. Pollara
+- **PDF**: https://ieeexplore.ieee.org/document/924873
+- **Abstract**: We track the density of extrinsic information in iterative turbo decoders by actual density evolution, and also approximate it by symmetric Gaussian density functions. The approximate model is verified by experimental measurements. We view the evolution of these density functions through an iterative decoder as a nonlinear dynamical system with feedback. Iterative decoding of turbo codes and of serially concatenated codes is analyzed by examining whether a signal-to-noise ratio (SNR) for the extrinsic information keeps growing with iterations. We define a "noise figure" for the iterative decoder, such that the turbo decoder will converge to the correct codeword if the noise figure is bounded by a number below zero dB. By decomposing the code's noise figure into individual curves of output SNR versus input SNR corresponding to the individual constituent codes, we gain many new insights into the performance of the iterative decoder for different constituents. Many mysteries of turbo codes are explained based on this analysis. For example, we show why certain codes converge better with iterative decoding than more powerful codes which are only suitable for maximum likelihood decoding. The roles of systematic bits and of recursive convolutional codes as constituents of turbo codes are crystallized. The analysis is generalized to serial concatenations of mixtures of complementary outer and inner constituent codes. Design examples are given to optimize mixture codes to achieve low iterative decoding thresholds on the signal-to-noise ratio of the channel.
+
+## Noise predictive turbo systems
+
+- **ID**: ieee:917610
+- **Type**: journal
+- **Published**: 2001
+- **Authors**: Yunxiang Wu, J. R. Cruz
+- **PDF**: https://ieeexplore.ieee.org/document/917610
+- **Abstract**: Iterative decoding has been widely studied for memoryless white Gaussian noise channels. For nonideal channels, e.g., correlated noise channels, iterative decoding combined with iterative noise estimation may improve the performance of the detector. The basic idea is to exploit the decoding results of the previous iteration to estimate the correlated noise so that better decoding results ran be obtained. Furthermore, these results may lead to better estimation and even better decoding results. There are many ways to exploit the decoding results of the previous iteration. In this paper, two noise prediction schemes, namely noise predictive turbo systems with soft feedback (NPTS/SF) and noise predictive turbo systems with hard feedback (NPTS/HF) are proposed, and their performance for a serially concatenated convolutional turbo system are investigated. Simulation results show that the noise can be iteratively whitened. For the systems studied, NPTS/SF exhibits less error propagation than NPTS/HF at very high recording density. Both NPTS schemes may provide lower error floors.
+
+## Bit error rate performance of iterative decoding in a perpendicular magnetic recording channel
+
+- **ID**: ieee:917602
+- **Type**: journal
+- **Published**: 2001
+- **Authors**: Y. Okamoto, T. Kanaoka, T. K. Osawa +3
+- **PDF**: https://ieeexplore.ieee.org/document/917602
+- **Abstract**: The BER performance of iterative decoding systems and PRML systems in a perpendicular magnetic recording channel is experimentally investigated. A performance evaluation system consisting of a spinstand, a recording waveform generator, a digital storage oscilloscope and a personal computer was used. PR1ML, PR2ML, EPR3ML, E/sup 2/PR3ML and ME/sup 2/PR4ML systems are discussed as a PRML channel. The 8/9 and 16/17 iterative decoding systems consists of the encoder, with RSC encoder serially concatenated with preceded PR channels and the iterative decoder with APP modules using Max-log-MAP algorithm. The results show that EPR3ML and E/sup 2/PR3ML provide good BER performance in a perpendicular magnetic recording channel and that the iterative decoding system is also an efficient way to improve the BER performance in the channel.

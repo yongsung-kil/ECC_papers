@@ -117,3 +117,12 @@
 - **Authors**: K. Kantawala, D. L. Tao
 - **PDF**: https://ieeexplore.ieee.org/document/609877
 - **Abstract**: In this brief, we propose two new concurrent error-detection (CED) schemes for a class of sorting networks, e.g., odd-even transposition, bitonic, and perfect shuffle sorting networks. A probabilistic method is developed to analyze the fault coverage, and the hardware overhead is evaluated. We first propose a CED scheme by which all errors caused by single faults in a concurrent checking sorting network can be detected. This scheme is the first one available to use significantly less hardware overhead than duplication without compromising throughput. From this scheme, we develop another fault detection scheme which sharply reduces the hardware overhead (using an additional 10%/spl sim/30% hardware) but still achieves virtually 1001 fault coverage.
+
+## Good error-correcting codes based on very sparse matrices
+
+- **ID**: ieee:613028
+- **Type**: conference
+- **Published**: 1997
+- **Authors**: D. J. C. MacKay
+- **PDF**: https://ieeexplore.ieee.org/document/613028
+- **Abstract**: We report theoretical and empirical properties of Gallager's (1963) low density parity check codes on Gaussian channels. It can be proved that, given an optimal decoder, these codes asymptotically approach the Shannon limit. With a practical 'belief propagation' decoder, performance substantially better than that of standard convolutional and concatenated codes can be achieved; indeed the performance is almost as close to the Shannon limit as that of turbo codes.

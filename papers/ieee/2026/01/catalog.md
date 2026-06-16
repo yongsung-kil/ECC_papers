@@ -1297,6 +1297,141 @@
 - **PDF**: https://ieeexplore.ieee.org/document/11494398
 - **Abstract**: N/A
 
+## A 1KB oFEC-like Code Construction and its Decoder Architecture for NAND Applications
+
+- **ID**: ieee:11527506
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: Y. -T. Chuang, E. -Y. Tu, C. -W. Huang +3
+- **PDF**: https://ieeexplore.ieee.org/document/11527506
+- **Abstract**: This paper presents a new 1KB open Forward Error Correction (oFEC)-like encoding and decoding architecture based on extended BCH (576, 545) codes specifically designed for NAND flash memory. The architecture adopts a hard decoding approach to reduce implementation cost and latency. Furthermore, the proposed smashed structure preserves the oFEC-style property while requiring substantially less memory, thereby achieving high error correction performance. Implemented in the TSMC 40nm process, the extended BCH decoder of the proposed architecture achieves a throughput of 25.71 Gbps at an operating frequency of 357 MHz, with a core area of 0.027 mm2 and energy efficiency of 0.16 pJ/bit.
+
+## Diagonal Turbo Product Coding for Combating PON Upstream Burst Errors
+
+- **ID**: ieee:11524305
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: L. Bai, L. Zhang, X. Pang +2
+- **PDF**: https://ieeexplore.ieee.org/document/11524305
+- **Abstract**: We present a novel diagonal turbo product coding (TPC) scheme for combating burst errors in optical communications, which optimizes post-FEC performance and achieves an additional 0.95 dB coding gain compared to the conventional TPC scheme.
+
+## Reinforcement Learning for Enhanced Advanced QEC Architecture Decoding
+
+- **ID**: ieee:11420491
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: Y. Zhou, L. Kong, Y. Peng +1
+- **PDF**: https://ieeexplore.ieee.org/document/11420491
+- **Abstract**: The advent of promising quantum error correction (QEC) codes with efficient resource utilization and highperformance fault-tolerant quantum memories signifies a critical step towards realizing practical quantum computation. While surface codes have been a dominant approach, their limitations have spurred the development of more advanced QEC architectures. These advanced codes often present increased complexity, demanding innovative decoding methodologies. This work investigates the application of reinforcement learning (RL) techniques, including hybrid and multi-agent approaches, to enhance the decoding of various advanced QEC architectures. By leveraging the ability of RL to learn optimal strategies from noisy syndrome measurements, we explore the potential for achieving improved logical error rates and scalability compared to traditional decoding methods. Our approach examines the adaptation of reinforcement learning to exploit the structural properties of these modern QEC models. We also explore the benefits of combining different RL algorithms to address the multifaceted nature of the decoding problem, considering factors such as code degeneracy and real-world noise characteristics. With our proposed method, we are able to demonstrate that an autonomously trained agent can derive decoding schemes for the complex decoding requirement of advanced QEC architectures.
+
+## Framework for a Hybrid McEliece–HQC Cryptosystem for Compact Public Keys and Efficient Decapsulation
+
+- **ID**: ieee:11493373
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: M. Barthwal, A. Mishra
+- **PDF**: https://ieeexplore.ieee.org/document/11493373
+- **Abstract**: Post-quantum cryptography has come to light in the digital world as it is essential for securing digital systems against quantum attacks. Recent trends show code-based cryptosystems like McEliece and HQC among the best options as they demonstrate promising security. However, these schemes still fall short on certain parameters. HQC brings slower decoding due to lack of effective algebraic algorithms whereas McEliece demands very large public keys limiting its practicality in memory-constrained environments. Prior attempts to reduce key size included QC-MDPC McEliece or BIKE. These attempts included altering the underlying code family, but this led to the sacrifice of either security or efficiency. However, little to no attention has been given to simultaneously rethinking the error model used in code-based systems, which could open up new trade-offs in security and performance.This paper proposes a hybrid McEliece–HQC cryptosystem that integrates the structural compactness of quasi-cyclic HQC with the robust decoding of classic McEliece. It establishes a theoretical foundation for a hybrid McEliece–HQC cryptosystem that combines quasi-cyclic compactness with Goppa decoding efficiency, laying the groundwork for future implementation and validation.
+
+## Conditional Neural Decoding for Multi-SNR Scenarios: A Lightweight Framework with Paritycheck Consistency Regularization
+
+- **ID**: ieee:11504773
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: T. Shan
+- **PDF**: https://ieeexplore.ieee.org/document/11504773
+- **Abstract**: We propose a lightweight conditional neural decoder for short linear block codes that remains reliable over a wide SNR range using a single model. For Hamming (7,4) over BPSK-AWGN, the decoder takes soft channel observations as input and injects Eb/N0 as a condition via feature-wise linear modulation (FiLM) to achieve robust multi-SNR inference without training separate decoders. To explicitly exploit code structure, we introduce a parity-check consistency regularizer that penalizes violations of parity constraints and steers predictions toward the valid codeword space. Experiments over $Eb/N0 \in[-1, 6] \text{dB}$ show clear BER gains over hard-decision syndrome decoding and near-ML performance at medium-tohigh SNR. Under the same SNR range and channel conditions, comparisons with representative state-of-the-art neural decoders (neural BP and transformer-based decoders) further demonstrate a favorable performance - complexity trade-off of the proposed FiLM-augmented and regularization-enhanced framework.
+
+## Low Power Fast Radix-2 Compare-Select-Add Based Adaptive Viterbi Decoder
+
+- **ID**: ieee:11489455
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: K. R. S, H. K. B, K. S +2
+- **PDF**: https://ieeexplore.ieee.org/document/11489455
+- **Abstract**: The Viterbi algorithm is widely used for decoding convolutional codes due to its optimum error correction capability. The conventional Viterbi decoders although effective, face challenges in terms of power, which makes them unsuitable for low power applications. The add-compare-select (ACS) unit is the most power consuming module in a Viterbi decoder. In literature, decoder architectures that reduce the power consumption by using approximate computing, adaptive techniques, and memory handling are reported. In this work an attempt has been made to design a low power architecture that uses fast radix-2 computation with compare-select-add (CSA) technique combined with an adaptive decoding scheme. The reconfigurable processing element based modified Viterbi decoder proposed in literature, is used as the baseline architecture. The ACS unit is replaced with a CSA unit and is then integrated with a fast radix- 2 computation. Additionally, the architecture also integrates an adaptive path selection mechanism based on a threshold parameter and a maximum survivor path limit. Finally, the branch metric unit (BMU), the CSA, and the adaptive blocks are parallelized. From the synthesis results, it is observed that the proposed architecture achieves an overall power reduction of nearly 40% compared to the baseline modified Viterbi decoder. The proposed design thus provides an effective and scalable solution for low power Viterbi decoding in modern communication systems where energy efficiency and real-time decoding are critical requirements.
+
+## RSC: Robust Self-Correcting Watermark Model Based on Channel Control
+
+- **ID**: ieee:11461646
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: Z. Fang, Y. Shao, W. Shi +1
+- **PDF**: https://ieeexplore.ieee.org/document/11461646
+- **Abstract**: Watermarking technology, as a solution for copyright protection and content traceability in AI-generated content, has garnered significant attention. However, current image-text watermarking techniques primarily focus on the robustness of models in complex scenarios, often overlooking the effectiveness and accuracy of watermarks in lossy transmission scenarios. To address this issue, we propose a novel self-correcting text watermarking model. By integrating communication information control technology with standard normal truncation sampling, the method enables self-correction capabilities for text watermarks in generated images under lossy transmission, significantly improving the high-precision transmission performance of model watermarks in various complex scenarios. The method not only enhances watermark robustness against external attacks but also ensures watermark fidelity in lossy transmission. Experimental results demonstrate that the proposed method achieves high true positive rates and bit accuracy across multiple scenarios.
+
+## Radio Frequency Spectrum Optimizing for Multicast Data Transming in 4G and 5G Multi-Zoned Networks
+
+- **ID**: ieee:11553599
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: E. Melikhov, E. Stroganova
+- **PDF**: https://ieeexplore.ieee.org/document/11553599
+- **Abstract**: This report is devoted to developing a hybrid multimedia content delivery radio frequency spectrum optimization and network architecture for future mobile communication networks. Evolution of multicast transmission standards from eMBMS technologies to 5G NR-MBS and physical layer optimization methods are discussed. Implementation of a multi-zoned system based on TowerOverlay topology with FeMBMS is presented, allowing for joint use of broadcasting and cellular infrastructures. It is demonstrated that using the HTHP approach and intelligent traffic management can significantly enhance spectral efficiency without significant changes to subscriber devices.
+
+## Autocorrelation-based Fiducial Markers for Traceability
+
+- **ID**: ieee:11491946
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: I. Bencheikh, M. Dunitz, M. D’Autume +4
+- **PDF**: https://ieeexplore.ieee.org/document/11491946
+- **Abstract**: Classical approaches to the rectification of a single image of a product, without stereo correspondences, require spatial landmarks. These landmarks, constructed from high-contrast elementary shapes that can be detected with simple algorithms, are highly conspicuous. To rectify complex deformations, one can use chessboard patterns of markers with elements that break quadrilateral symmetry, such as the three eyes of a QR code. However, these marker boards are even more conspicuous than a single marker. In traceability applications, only one site of marking is used, limiting the complexity of the surface on which it can be read, and exposing the mark to deidentification attacks for diversion of the product to a grey market. We introduce a method for constructing stealth and robust fiducial markers that can be displayed across a surface, limiting exposure to marker tampering for product deidentification. These markers, which we refer to as self-rectifying textures, can be used to rectify complex deformations by solving an inverse problem rather than relying on pixel correspondences of conspicuous landmarks. These stealth textures place fiducial markers in the autocorrelation of the image. In this way, crops of the deformed texture can be rectified using only these spatially invariant statistical properties. Affine transformations of an image correspond to linear transformations of the autocorrelation, without phase component. Exploiting this fact, self-rectifying textures enable the local estimation of the differential of a planar deformation by identifying landmarks in the autocorrelation image, such as peaks, whose locations in the fronto-parallel view of the texture are known. The translation component can be recovered independently via phase correlation. A rectifying map, modulo translations, can also be fit directly to local observations of the differential of the deformation, without access to the rectified texture or need for phase correlation. Self-rectifying textures can be used for communication, watermarking, authentication, surface identification, calibration, and geometry processing.
+
+## An NTN Uplink Radio Interface Based on Constant-Envelope Multicarrier Modulations and NOMA
+
+- **ID**: ieee:11520091
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: C. Sacchi, G. M. Mendolia, G. Buttazzoni
+- **PDF**: https://ieeexplore.ieee.org/document/11520091
+- **Abstract**: The evolution of the radio interface design in 6G NonTerrestrial Networks (NTNs) is moving toward the adoption of new waveforms and non-standard multiple access methodologies. Recent studies, conducted within the framework of the Next Generation EU RESTART ITA-NTN project, have demonstrated that a modular SDR-based PHY-layer design can be profitably leveraged to provide a wide range of programmable waveforms. Among these, constant envelope (CE) multicarrier modulations (CE-OFDM and CE-SCOFDM) may play a key role in future NTN transmissions due to their immunity to nonlinear distortion and their enhanced diversity against frequency-selective multipath propagation. CE-MC waveforms are implemented by imposing a non-linear phase modulation on a normalized real-valued multicarrier signal. Such techniques enable orthogonal multiple access (OMA) in the downlink. On the contrary, OMA is not allowed in the uplink because the multiple carriers attributed to a user are nonlinearly “packed” by the phase modulator into a single carrier RF signal, which cannot be slotted into the numerical Discrete Fourier Transform (DFT) domain, as happens for OFDMA and SC-FDMA. To leverage the advantages of CE-MC modulations in the NTN uplink, we propose using Power-Domain Non-Orthogonal Multiple Access (PD-NOMA) as a multi-user transmission scheme with Serial-Interference Cancellation (SIC) at the receiver side. As our investigation is preliminary, a basic two-user configuration has been considered. An NTN uplink transmission scenario, based on small LEO satellites operating in the S-band, has been simulated. A first series of simulation results discusses the impact of various degrees of freedom in CEMC waveforms on NOMA performance, while keeping the power allocation ratio as a variable. Building on these results, a subsequent series of simulations concerns a realistic NOMA scenario, where the power gap between two users located at the borders of the satellite footprint is evaluated based on the propagation conditions. The achieved simulation results provide a preliminary, however reliable, evaluation of the proposed multi-user CE-MC-based NOMA radio interface, also offering some hints for the future implementation of the proposed transmission system in more complex multi-user NTN uplink scenarios.
+
+## From Connectivity Assurance to Experience Assurance: Paradigm Evolution and Technology Outlook for Aerospace Audio-visual Transmission
+
+- **ID**: ieee:11452267
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: J. Wen, L. Wang, J. Fu +1
+- **PDF**: https://ieeexplore.ieee.org/document/11452267
+- **Abstract**: This paper reviews the evolution of aerospace audio-visual transmission technologies, tracing the transition from first-generation connectivity assurance enabled by physical-layer optimization, to second-generation quality assurance achieved through cross-layer adaptation. We propose a third-generation paradigm, experience assurance, which leverages semantic communication and deterministic networking to transmit meaning rather than mere bitstreams. This approach incorporates Time-Sensitive Networking (TSN) to ensure spatio-temporal determinism, effectively addressing bandwidth constraints and reliability challenges in aerospace environments. We analyze the evolutionary trajectories and enabling technologies of these paradigms while identifying current bottlenecks, such as limitations in on-board intelligence and standards integration. Finally, we highlight future trends, including the integration of communication, sensing and computing, and generative artificial intelligence (AI) reconstruction.
+
+## General Review of BER and PAPR Reduction Techniques in 5G Wireless Communication Systems
+
+- **ID**: ieee:11508508
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: H. M. Lafta, O. Q. J. Al-Thahab
+- **PDF**: https://ieeexplore.ieee.org/document/11508508
+- **Abstract**: Within the last few years, the 5G wireless communication modern iteration communication technology. 5G wireless communication. The 5G communication standard certified by 3GPP (3rd generation partnership project) was developed to accommodate the vision of 5G and to meet the demands of massive connectivity, ultra-low latency, and enhanced spectral efficiency. The Multiple Input Multiple Output (MIMO) wireless communication technology. Communications technology Orthogonal Frequency Division Multiplexing (OFDM) and variants (e.g. Filtered OFDM and Filtered Banks) have and Universal Filtered, Multicarrier (UFMC) wireless communications The receiver OFDM systems rely on precise channel estimation and MIMO-OFDM systems. In wireless communication, the LMMSE Linear Minimum Mean Square Error is the standard technique, and the other models of channel estimators such as LS, or MMSE, perform poorly, particularly in the presence of one or multiple Additive White Gaussian Noise Channel AWGN channels or other sparse channel estimators. The results are evident, and simulation results prove that 5G communications performance and advancements in channel estimation remove the limit on 5G communication performance in terms of Bit Error Rat BER-Signel to Noise SNR.
+
+## Toward Intelligent Fault-Tolerant Quantum Computing: A Review of Google’s Willow Processor and AI Integration
+
+- **ID**: ieee:11507170
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: T. Ghosh, Shankaramma, R. C. Susanna
+- **PDF**: https://ieeexplore.ieee.org/document/11507170
+- **Abstract**: With quantum computing’s potential to solve classically insurmountable problems, quantum computation has emerged as a transformative paradigm across various fields such as cryptography, materials science, and artificial intelligence. The pursuit of scalable and fault-tolerant quantum computation is at the heart of this evolution. The examination examines the evolution of quantum computing architectures, such as superconducting qubits and quantum error correction (QEC) codes until the recent advancement in Google’s Willow processor. This review highlights this progression. We examine the development of Noisy Intermediate-Scale Quantum (NISQ) devices and the first instances of below-threshold QEC, where an increase in qubit count leads to exponentially lower error rates. By using Willow’s 105-qubit architecture, it is possible to perform real-time error correction on a 77 logical qubit grid and complete random circuit sampling in under five minutes, which would otherwise be an insurmountable task. We examine the way Willow’s method is compared to other quantum platforms and discuss its potential impact on early fault-tolerant quantum computing (EFTQC), scalability, and the future of intelligent quantum systems. In conclusion, the paper highlights some of the open issues and opportunities in quantum hardware, artificial intelligence (AI), and fault-tolerant computation.
+
+## Performance Evaluation of Fischer−Huber Bitloading Algorithm for LiFi Over PLC
+
+- **ID**: ieee:11511578
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: A. Pouralizadeh, D. Goodson, V. Jungnickel +2
+- **PDF**: https://ieeexplore.ieee.org/document/11511578
+- **Abstract**: Integrating optical wireless communication (OWC) with powerline enables a cost-effective solution to extend wired industrial networks to the wireless domain. In this paper, we experimentally compare the performance of both uniform and adaptive bitloading for an 1 m optical wireless link with and without powerline communication (PLC) as fixed backbone. In particular, we evaluate the margin-adaptive bitloading algorithm from Fischer and Huber for light-fidelity (LiFi) over PLC. Unlike rate-adaptive algorithms that maximize the throughput, Fischer and Huber algorithm maximizes the signal to noise ratio (SNR) margin (i.e., minimize error probability) for a fixed target rate, making it ideal for industrial applications where reliability is critical. Using a realistic indoor power grid and a line-of-sight (LoS) LiFi link, we analyze the cascaded channel frequency response (CFR), SNR, bit and power allocation and evaluate the resulting bit error rate (BER) and throughput. Experimental results demonstrate that the Fischer and Huber algorithm effectively mitigates the impact of deep spectral notches introduced by the power grid, enabling reliable and robust transmission at data rates of up to 468 Mbit/s.
+
+## Experimental Analysis of Mini-Slot-Based Latency Reduction in 5G NR
+
+- **ID**: ieee:11523815
+- **Type**: conference
+- **Published**: 2026
+- **Authors**: M. K. Kurdiya, I. Saini, N. Sood
+- **PDF**: https://ieeexplore.ieee.org/document/11523815
+- **Abstract**: Although the 5G radio access network is utilised for mission-critical applications with low latency requirements, delay caused by resource allocation, scheduling, retransmission, and protocol processing limits the low latency achievement. This paper introduces a technique for optimising the low latency further on the basis of a simulation-based experiment for comparative analysis further between enhanced mobile broadband (eMBB) and Ultra-Reliable Low Latency Communication (URLLC) use cases. In particular, URLLC further suggested using a modified frame structure. The test was performed for both ingress gNB to User Equipment (UE) and egress UE to gNB. The analysis was conducted with a simulation using OpenAirInterface platform. Result shows that- 5G NR eMBB as a comparison baseline with modified mini-slot frame structure achieves improved latency resulting in significant improvement around 61.74%. The proposed approach indicates low latency benefit for real-time latency-sensitive applications like gaming and vehicle-to-vehicle communication, where data traffic is moderate, but the low latency requirement is critical.Decoding parameter optimisation is more instead of coding parameters, offering further study.
+
 ## Employ Reconfigurable Logic and Parallel Pipelined Techniques, Design VLSI Architectures for 5G Baseband Processing
 
 - **ID**: ieee:11507773

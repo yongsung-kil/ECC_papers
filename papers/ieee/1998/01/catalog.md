@@ -243,3 +243,39 @@
 - **Authors**: Feng-Wen Sun, H. Leib
 - **PDF**: https://ieeexplore.ieee.org/document/681323
 - **Abstract**: We consider the construction and analysis of linear block codes for M-ary phase-shift keying that can be decoded without carrier phase synchronization. Under these circumstances, the function that has a significant impact on performance is the noncoherent distance, analogous to the Euclidean distance for the coherent case. The major difficulty in constructing and analyzing such codes lies in the fact that the noncoherent distance is not a true metric. For this reason, prior work mainly relies on numerical approaches to search for good codes and to determine the corresponding minimum noncoherent distance. We first present a theorem that links the noncoherent distance with the Euclidean and Lee (1958) distances. This theorem allows us to construct good codes and determine their minimum noncoherent distances analytically. Based on this theorem, we classify the codes whose duals consist of a cyclic group. These codes are of minimum redundancy. We further investigate codes with the flavor of Hamming and shortened Hamming codes. Many of these new codes provide significantly larger coding gains than previously known codes. Linear codes derived from code-division multiple-access (CDMA) sequences are considered as well. These codes in general provide rather large coding gains. Finally, an algorithm is introduced that can be appended to any suboptimal decoding technique to enhance the performance.
+
+## Periodic time-varying convolutional codes with low-density parity-check matrices
+
+- **ID**: ieee:708910
+- **Type**: conference
+- **Published**: 1998
+- **Authors**: A. Jimenez, K. S. Zigangirov
+- **PDF**: https://ieeexplore.ieee.org/document/708910
+- **Abstract**: We present a class of convolutional codes defined by a low-density parity-check matrix, and an iterative algorithm for the decoding of these codes. The performance of this decoding is close to the performance of turbo-decoding.
+
+## Decoding low-density generator matrix codes with the aid of comma-free source codes
+
+- **ID**: ieee:706442
+- **Type**: conference
+- **Published**: 1998
+- **Authors**: J. W. Bond, S. Hui, H. Schmidt
+- **PDF**: https://ieeexplore.ieee.org/document/706442
+- **Abstract**: Low-density generator matrix with iterative belief propagation decoding comma-free source codes are natural choices for noisy channel encoding and source coding, respectively. In earlier work, we found that avoiding 6 cycles had little impact on the performance of a code established by performing a fixed number of decoding algorithm iterations. In this work, we carried out a more detailed investigation of the decoding algorithm and found that the comma-free codes call be effectively used as an outer error-detection-correction-code for a low-density generator matrix inner code.
+
+## Low density MDS codes and factors of complete graphs
+
+- **ID**: ieee:708599
+- **Type**: conference
+- **Published**: 1998
+- **Authors**: Lihao Xu, V. Bohossian, J. Bruck +1
+- **PDF**: https://ieeexplore.ieee.org/document/708599
+- **Abstract**: We reveal an equivalence relation between the construction of a new class of low density MDS array codes, that we call the B-code, and a combinatorial problem known as perfect one-factorization of complete graphs. We use known perfect one-factors of complete graphs to create constructions and decoding algorithms for both the B-code and its dual code. The B-code and its dual are optimal in the sense that (i) they are MDS, (ii) they have an optimal encoding property, i.e., the number of the parity bits that are affected by the change of a single information bit is minimal and (iii) they have optimal length. The existence of perfect one-factorizations for every complete graph with an even number of nodes is a 35 year long conjecture in graph theory. The construction of B-codes of arbitrary odd length provides an affirmative answer to the conjecture.
+
+## Low-density parity check codes over GF(q)
+
+- **ID**: ieee:681360
+- **Type**: journal
+- **Published**: 1998
+- **Authors**: M. C. Davey, D. MacKay
+- **PDF**: https://ieeexplore.ieee.org/document/681360
+- **Abstract**: Gallager's (1962) low-density binary parity check codes have been shown to have near-Shannon limit performance when decoded using a probabilistic decoding algorithm. We report the empirical results of error-correction using the analogous codes over GF(q) for q>2, with binary symmetric channels and binary Gaussian channels. We find a significant improvement over the performance of the binary codes, including a rate 1/4 code with bit error probability <10/sup -5/ at E/sub b//N/sub 0/=0.2 dB.

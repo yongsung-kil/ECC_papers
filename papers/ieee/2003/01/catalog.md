@@ -2385,3 +2385,282 @@
 - **Authors**: W. Tan, J. R. Cruz
 - **PDF**: https://ieeexplore.ieee.org/document/1233149
 - **Abstract**: A type of quasi-cyclic binary low-density parity-check (LDPC) codes based on array codes, which have low encoding complexity and good performance, are considered for use in magnetic recording channels. Their error correction capability, for both electronic and media noise, and more importantly, for erasures, is investigated using simulations. Compared with random binary and q-ary LDPC codes, these codes offer a good tradeoff between performance and complexity.
+
+## A construction for irregular low density parity check convolutional codes
+
+- **ID**: ieee:1228018
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Arvind Sridharan, Deepak Sridhara, D. J. Costello +1
+- **PDF**: https://ieeexplore.ieee.org/document/1228018
+- **Abstract**: A technique for constructing irregular low density parity check convolutional codes is described. The constructed codes exhibit lower convergence thresholds with belief propagation decoding than their regular counterparts.
+
+## A FPGA and ASIC implementation of rate 1/2, 8088-b irregular low density parity check decoder
+
+- **ID**: ieee:1258213
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Yanni Chen, D. Hocevar
+- **PDF**: https://ieeexplore.ieee.org/document/1258213
+- **Abstract**: This paper presents an implementation of irregular low density parity check decoder using both FPGA and ASIC. The considered low density parity check code has code rate 1/2, codeword length of 8088 bits and parallel factor of 24. The partly parallel structure, memory management, message alignment and addressing generation schemes needed to realize the underlying graph connectivity will be discussed. With the target FPGA device Xilinx XC2V8000 and maximum number of 25 iterations, the information decoding throughput could achieve up to 40 Mbps. By using the same configuration and Texas Instruments' GS-40 0.11 /spl mu/m ASIC process technology, decoder data rate of 188 Mbps could be achieved for this decoder.
+
+## New high rate low density parity check codes for multi-track recording
+
+- **ID**: ieee:1230523
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: M. Z. Ahmed, P. J. Davey, T. Donnelly +1
+- **PDF**: https://ieeexplore.ieee.org/document/1230523
+- **Abstract**: In this paper, we report a new high rate low density parity check codes for multi-track recording. A new decoding method has been found that improves the performance of codes with cycles of length 4.
+
+## Lowest-density MDS codes over extension alphabets
+
+- **ID**: ieee:1228072
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: E. Louidor, R. M. Roth
+- **PDF**: https://ieeexplore.ieee.org/document/1228072
+- **Abstract**: In this paper, we identify a range of parameters for which the codes Z/sub p/(p,r) are provably maximum distance separable (MDS). This paper presents a definition of the codes Z/sub p/(p,r) and then summarize our results using F/sub q/ to denote the finite field with q elements.
+
+## A new coded optical code division multiple access (OCDMA) systems
+
+- **ID**: ieee:1217355
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: A. S. Samra, H. A. Harb
+- **PDF**: https://ieeexplore.ieee.org/document/1217355
+- **Abstract**: The performance of optical code division multiple access with pulse position modulation system (OCDMA-PPM) considering the effects of using recent kinds of coding schemes is analyzed and discussed. It is seen that coding offers considerable coding gain, but with reasonable encoding/decoding complexity and is very effective in increasing the numbers of simultaneous users at certain bit error probability. In this paper we obtain upper bounds to average maximum likelihood (ML) bit error probability of optical CDMA-PPM with some coding schemes such as serial concatenated block code (SCBC), double serial concatenated block code (DSCBC), the much interesting code (turbo code) and the most recent promising structured code (zigzag code) which have very low complexity softin/softout decoding rules, also have lower error floors than comparable turbo codes and double concatenated codes.
+
+## Lossless data compression with error correcting codes
+
+- **ID**: ieee:1228036
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: G. Caire, S. Shamai, S. Verdu
+- **PDF**: https://ieeexplore.ieee.org/document/1228036
+- **Abstract**: Existing zero-error variable-length data compression algorithms suffer from sensitivity to transmission errors and error propagation across packets when used in packet-based data transmission through noisy channels. We propose a new approach to lossless data compression based on error correcting codes and the block-sorting transform. The proposed data compression scheme is compared with the universal algorithm for a four-state Markov chain in comparison with LZ (gzip) and a conventional BWT-based compressor (bzip). Although the comparison is quite encouraging, the main motivation and advantages of our scheme over the conventional separation-based approach accrue in the joint source/channel setting.
+
+## Next generation FEC for optical transmission systems
+
+- **ID**: ieee:1248387
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: T. Mizuochi, K. Kubo, H. Yoshida +4
+- **PDF**: https://ieeexplore.ieee.org/document/1248387
+- **Abstract**: Technical challenges of forward error correction (FEC) are reviewed. Block turbo code having a net coding gain of higher than 10 dB will mature with the development of 3-bit soft decision LSI.
+
+## Combining low rate codes with multilevel signaling
+
+- **ID**: ieee:1228250
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: D. J. Costello, A. Banerjee
+- **PDF**: https://ieeexplore.ieee.org/document/1228250
+- **Abstract**: In this paper we discuss the application of multilevel signaling techniques to the design of codes with spectral efficiencies between 0.75 and 1 bitldimension. We consider low rate turbo codes, along with l6QAM signal sets in a bit-interleaved coded modulation format, to achieve spectral efficiencies below 1 bitldimension. We then investigate the gains achievable with this approach compared to conventional binary signaling techniques.
+
+## Design and iterative decoding of networks of many small codes
+
+- **ID**: ieee:1228361
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: S. Dolinar
+- **PDF**: https://ieeexplore.ieee.org/document/1228361
+- **Abstract**: N/A
+
+## A nonbinary extension of RA Codes: weighted nonbinary repeat accumulate codes
+
+- **ID**: ieee:1259273
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Kyeongcheol Yang
+- **PDF**: https://ieeexplore.ieee.org/document/1259273
+- **Abstract**: In this paper, we introduce an ensemble of random codes called weighted nonbinary repeat accumulate (WNRA) codes. The encoder consists of a nonbinary repeater, a weighter, a pseudorandom symbol interleaver and an accumulator over the finite field GF(q). These codes can be decoded in a simple way by applying the sum-product algorithm to their factor graphs over GF(q). The degree distributions and noise thresholds for the codes are also derived. Simulation results show that WNRA codes with proper weighting are superior to binary RA codes on AWGN channels. Furthermore, WNRA codes over GF(2/sup m/) can be used as full-rate space-time codes with full diversity in a multiantenna system where m is the number of transmit antennas.
+
+## A simplified coding and interleaving method for multi-band UWB systems: a performance comparison
+
+- **ID**: ieee:1292765
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Xiaoming Peng, Wong Sai Ho, A. S. Madhukumar +1
+- **PDF**: https://ieeexplore.ieee.org/document/1292765
+- **Abstract**: Ultra wideband (UWB) has been identified as a possible key technology in the realization of the future "wireless world". Of particular interest is multi-band UWB system, which divides the available spectrum into multiple bands, allowing for the efficient use of the existing spectrum. The multi-band UWB system has the flexibility to eliminate interference and coexistence problems with other wireless standard for WPAN and WLAN by simply removing the affected bands. Efficient coding strategy is one of design challenge for very high data rate UWB systems. In this paper, a simplified coding scheme has been proposed using Reed-Solomon code as outer-code and quadrature M-ary orthogonal keying (QMOK) as inner-code. Performance studies of a multi-band UWB system with the proposed simplified coding scheme have been conducted. The results show that the proposed simplified coding scheme achieves significant performance improvement without trading off with complexity. The coding performance is evaluated using both single-stream and multi-stream encode/decode chain for multi-band UWB systems. This paper also investigates the use of different interleaving structure to achieve frequency diversity for the proposed system.
+
+## Space-time bit-interleaved coded modulation for OFDM systems in wireless LAN applications
+
+- **ID**: ieee:1204088
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Inkyu Lee, A. M. Chan, C. . -E. W. Sundberg
+- **PDF**: https://ieeexplore.ieee.org/document/1204088
+- **Abstract**: Space-time coding techniques are methods to improve transmission efficiency in radio channels by using multiple transmit and/or receive antennas. Bit-interleaved coded modulation gives good diversity gains with higher order modulation schemes using well known binary convolutional codes. By using orthogonal frequency division multiplexing (OFDM), wideband transmission can be achieved over frequency selective fading radio channels. In this paper, we combine these three ideas into a family of flexible space-time coding methods where modulation order and coding rates as well as the number of transmit and receive antennas can be changed without drastic redesign of the space-time codes. Near optimum iterative decoders are evaluated in terms of simulation for slowly varying wireless LAN type channels. Significant performance gains over the 802.11a standard system are reported.
+
+## On cycle-based permutor designs for serially concatenated convolutional codes
+
+- **ID**: ieee:1228294
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: A. Huebner, D. Truhachev, K. S. Zigangirov
+- **PDF**: https://ieeexplore.ieee.org/document/1228294
+- **Abstract**: N/A
+
+## An improved pragmatic turbo encoding scheme for high spectral efficiency using constellation shaping
+
+- **ID**: ieee:1204482
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: D. Raphaeli, A. Gurevitz
+- **PDF**: https://ieeexplore.ieee.org/document/1204482
+- **Abstract**: We propose a new turbo encoding scheme for high spectral efficiency with performance close to the Gaussian channel capacity. The scheme combines nonuniform signaling on a Gaussian channel, and pragmatic turbo coded modulation for simple and flexible implementation. A table is used to map equiprobable input symbols into nonequiprobable points in the QAM constellation. It is shown that the new scheme provides shaping gains of 0.6 dB and 0.93 dB, at rates 2 and 3 bits/dim respectively compared to the equiprobable pragmatic turbo coded modulation, and reach about 1 dB from the Gaussian channel capacity.
+
+## On reduced-complexity iterative channel tracking in turbo coded OFDM
+
+- **ID**: ieee:1258401
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Xiangyang Zhuang, F. W. Vook
+- **PDF**: https://ieeexplore.ieee.org/document/1258401
+- **Abstract**: This paper proposes a receiver that combines iterative channel updates with iterative turbo decoding for high mobility OFDM systems. We particularly focus on reducing the number of the channel update iterations and the complexity of each iteration. A low-complexity time-frequency channel estimator is proposed that tracks the channel variation within one code window and predicts the channel for the next window. The channel estimator can use simple hard decisions or more computationally intensive "soft" decisions, in which case the estimator is derived from an expectation-maximization (EM) principle. Simulation results are provided under a varying number of channel updates that use hard or soft decisions. As an example, a very simple hard decision based receiver for a rate-1/2 turbo coded 16 QAM OFDM system performs within 1 dB of a pilot-based receiver at 500 Hz Doppler, after three channel iterations that are interlaced with eight max-log-MAP decoding iterations. The proposed techniques can significantly reduce pilot symbol overhead with minimal performance degradation.
+
+## Optimum data transmission and imaging method for high resolution imaging from Earth observation satellite
+
+- **ID**: ieee:1295188
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: R. Nagura
+- **PDF**: https://ieeexplore.ieee.org/document/1295188
+- **Abstract**: Recently, an enormous amount of progress has been made in remote sensing imaging, providing images in the ground pixel size resolution and spectral band width resolution. These imaging methods are very important and indispensable for the progress of remote sensing from space. With this progress, the data rates from satellites are extensively increasing. The typical value of the net data rate exceeds 1 Gbps, not including any synchronous code nor error correcting code. Therefore, the high performance data expression should be indispensable especially in the high resolution observation system. This paper reports the optimum transmission system using the data compression and the error correction code under the above circumstances. There are many kinds of data compression techniques, however we need accurate and high signal to noise ratio of compressed images for Earth observation. This paper mainly considers the JPEG2000 compression method. In the transmission of compressed data, the effects of bit error would be very important and sometimes fatally damages the image quality. Accordingly, error correction would be indispensable for high quality data transmission. The paper mainly discusses error correction using the Turbo code, and shows the effect of error disappearance in the receiving data of the compressed image. Finally, the paper proposes the time integration method and improvement of the signal to noise ratio of original images.
+
+## Software-based erasure codes for scalable distributed storage
+
+- **ID**: ieee:1194852
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: J. A. Cooley, J. L. Mineweaser, L. D. Servi +1
+- **PDF**: https://ieeexplore.ieee.org/document/1194852
+- **Abstract**: This paper presents a new class of erasure codes, Lincoln Erasure codes (LEC), applicable to large-scale distributed storage that includes thousands of disks attached to multiple networks. A high-performance software implementation that demonstrates the capability to meet these anticipated requirements is described. A framework for evaluation of candidate codes was developed to support in-depth analysis. When compared with erasure codes based on the work of Reed-Solomon and Luby (2000), tests indicate LEC has a higher throughput for encoding and decoding and lower probability of failure across a range of test conditions. Strategies are described for integration with storage-related hardware and software.
+
+## On the Gaussian approximation in the analysis of iterative MIMO processing
+
+- **ID**: ieee:1292096
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Y. Jiang, R. Koetter, A. C. Singer
+- **PDF**: https://ieeexplore.ieee.org/document/1292096
+- **Abstract**: In this paper, we study the density of extrinsic information at the output of the demodulator of an iterative MIMO processing system. In particular, if the a priori information is Gaussian distributed, the conditions under which the extrinsic information is also approximately Gaussian distributed are found.
+
+## Achievable information rate for outdoor free space optical communication with intensity modulation and direct detection
+
+- **ID**: ieee:1258717
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Jing Li, M. Uysal
+- **PDF**: https://ieeexplore.ieee.org/document/1258717
+- **Abstract**: This work investigates the achievable information rate with the state-of-the-art turbo coding and intensity modulation/direct detection for outdoor long-distance free-space optic (FSO) communications. The channel under weak atmospheric turbulence is modeled as a log-normal intensity fading channel where on-off keying makes it look asymmetric. While no effort is made to spectrally match the code to the asymmetry of the channel, the decoding strategy is optimally adjusted to match to the channel response. In addition to fixed rate turbo coding, a family of variable rate turbo codes are constructed and discussed. Shannon capacity is also briefly visited to denote the theoretic limit. It is shown that under low turbulence a single long turbo code is sufficient to get within 1 dB from the capacity, but when the turbulence gets strong, adaptive coding is necessary to close the gap. We expect these results to be useful for current and immediate future systems.
+
+## On the power spectrum density and parameter choice of multicarrier UWB communications
+
+- **ID**: ieee:1292185
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: J. Tang, K. K. Parhi
+- **PDF**: https://ieeexplore.ieee.org/document/1292185
+- **Abstract**: Recently, ultra wideband (UWB) communications have received increasing interest due to the high data rate achievable in a short distance. UWB communications can have strong interference mitigation capability. A multicarrier ultra wideband (MC-UWB) system has been introduced in (A.H. Tewfik, et al., (2002)) and (E. Saberinia, et al., (2002)). In the MC-UWB communication systems, multiple symbols are transmitted over different carriers simultaneously. The same symbol is retransmitted over different frequency bands by utilizing frequency hopping (FH) techniques. Frequency hopping and multicarrier technologies smooth the average power spectrum density of the system. In this paper, the expression of the power spectrum density of the MC-UWB system is derived. The radiated emission power for UWB communication systems is limited by the spectrum mask specified by wireless communication authorities, such as the federal communications commission (FCC) in United States. Different parameters in the MC-UWB system will have different effects on the power spectrum density and the maximal achievable data rate. The analysis of impact of parameters in the system on the power spectrum density will help the system designer select proper parameter set to fit in emission power regulation and the required data rate in practical UWB systems. Some examples of parameter selection are also given to illustrate the impact of different parameters in the system on the power spectrum density.
+
+## Adaptive rate MIMO system using space-time block mapping
+
+- **ID**: ieee:1207649
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Kyu Jong Hwang, Sok-Kyu Lee, KyungHi Chang
+- **PDF**: https://ieeexplore.ieee.org/document/1207649
+- **Abstract**: The MIMO system employing multiple antennas at both the transmitter and the receiver increases the spectral efficiency greatly. But the spectral efficiency of MIMO system depends on spatial channel characteristics. So some kind of adaptive transmission is required according to spatial channel conditions. In this paper, we propose adaptive rate MIMO system using space-time block mapping. The rate is controlled by effective number of spatial channels. The effective number of spatial channels is determined from spatial channel characteristics and is integer number from 1 to the minimum number of transmit and receive antennas. By switching the MIMO mode adaptively according to spatial channel conditions, throughput can be maximized.
+
+## A memory-efficient parameterisable FPGA implementation of the cdma2000 Turbo codec
+
+- **ID**: ieee:5699886
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: E. Brown, J. Irvine, B. Wilkie
+- **PDF**: https://ieeexplore.ieee.org/document/5699886
+- **Abstract**: Originally used in deep space telemetry Turbo codes can now be found in standards for 3G mobile and digital television. This paper describes a highly parameterisable codec design, based around the cdma2000 codec. The codec can be optimally configured for different memory and latency requirements. This is achieved by selecting different parameters depending on the requirements of the user. The Turbo codec was tested using the Nallatech Bit Error Rate Test (BERT) FPGA based hardware emulation system. The results obtained in these tests show how the codec performs when parameters such as the component decoder implementation are altered. Conventional tests such as increasing the number of decoder iterations were also performed. Results obtained are compared to others already published for the cdma2000 Turbo code standard.
+
+## On the achievable information rate of asymmetric optical fiber channels with amplifier spontaneous emission noise
+
+- **ID**: ieee:1290089
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Jing Li
+- **PDF**: https://ieeexplore.ieee.org/document/1290089
+- **Abstract**: This work is motivated by the need to understand the fundamental limit of channel capacities of optical fiber communication channels where amplified spontaneous emission (ASE) noise is dominant and to understand how much has been achieved by the state-of-the-art forward error correction (FEC) coding techniques. Two most commonly used channel models, the Chi-square channel and its Gaussian approximation, are examined. Both soft receiver with continuous output and hard receiver with 1-bit and 2-bit quantized output are investigated for several values of the system parameter M, which is the number of signal photons at the input of the ideal high gain optical amplifier that produces the noise. We show how bit quantization affects the channel capacity and how the capacity scales with different values of M. Finally, we report the performance of some of the best-known codes like turbo codes on optical fiber communication channels.
+
+## Dual segmented Kalman filters based symbol timing recovery for low-SNR partial response data storage channels
+
+- **ID**: ieee:1258996
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: Jingfeng Liu, Hongwei Song, B. V. K. V. Kumar
+- **PDF**: https://ieeexplore.ieee.org/document/1258996
+- **Abstract**: We present a new tracking algorithm to perform timing recovery for low-SNR partial response data storage channels. This approach, designated "dual segmented Kalman filters based symbol timing recovery (DSK-STR)", is based on the conventional phase-locked loop (PLL) based timing recovery scheme. However, DSK-STR uses two intertwined PLLs and the gains of these PLLs are updated at each symbol instant according to a modified Kalman filter algorithm. The performance of DSK-STR is investigated via Monte-Carlo simulations and it is seen that DSK-STR offers a 3.5 dB signal-to-noise ratio (SNR) gain over the conventional PLL-based timing recovery scheme for a target loss of lock rate of 1/spl times/10/sup -5/ in longitudinal magnetic recording channels.
+
+## A software and hardware evaluation of revolutionary turbo MIMO OFDM schemes for 5 GHz WLANs
+
+- **ID**: ieee:1208901
+- **Type**: conference
+- **Published**: 2003
+- **Authors**: T. Horseman, J. Webber, M. K. Abdul-Aziz +4
+- **PDF**: https://ieeexplore.ieee.org/document/1208901
+- **Abstract**: Globally, WLANs operating in the 5 GHz band have been standardized by the IEEE (North America), ETSI (Europe) and ARID (Japan). A harmonized physical layer is specified offering up to 54 Mbits/s using rate adaptive coded orthogonal frequency division multiplexing (COFDM). Multiple input multiple output (MIMO) antenna architectures coupled with soft input soft output (SISO) iterative decoding algorithms represent a revolutionary approach to the design of WLANs. At present, these techniques are the subject of intense theoretic research. In this contribution, the performance of a newly proposed iterative MIMO-OEDM architecture is explored using MIMO channel data captured in the 5 GHz band. Theoretically, this technology has the potential to significantly increase future WLAN data rates. However, little practical evaluation has been reported in the literature. To address this situation, this paper describes the construction of a broadband 5 GHz MIMO-OFDM test-bed. This advanced baseband/RF platform will be used in the future to evaluate emerging MIMO-OFDM WLAN architectures.
+
+## Decreasing distortion using low delay codes for bursty packet loss channels
+
+- **ID**: ieee:1223556
+- **Type**: journal
+- **Published**: 2003
+- **Authors**: E. Martinian, C. E. W. Sundberg
+- **PDF**: https://ieeexplore.ieee.org/document/1223556
+- **Abstract**: The strict delay constraints of real-time communication applications in packet networks limit the use of automatic repeat request (ARQ) (retransmission systems) and error correction codes with extensive interleaving and decoding over long intervals. Since packet losses can introduce significant impairments, we study the effectiveness of low delay channel coding techniques to increase transmission quality across links with bursty losses. Specifically, we consider the benefits of the newly discovered class of low delay convolutional codes known as maximally short codes. By analyzing a Gaussian source transmitted over a Gilbert-Elliott channel, we demonstrate that these codes can achieve significant gains in comparison to uncoded transmission schemes or traditional coded schemes employing Reed-Solomon block codes. To complement and validate the theoretical analysis we also present results from informal listening tests with a voice-over-IP application.
+
+## Low-rate turbo-Hadamard codes
+
+- **ID**: ieee:1255546
+- **Type**: journal
+- **Published**: 2003
+- **Authors**: Li Ping, W. K. Leung, K. Y. Wu
+- **PDF**: https://ieeexplore.ieee.org/document/1255546
+- **Abstract**: This paper is concerned with a class of low-rate codes constructed from Hadamard code arrays. A recursive encoding principle is employed to introduce an interleaving gain. Very simple trellis codes with only two or four states are sufficient for this purpose, and the decoding cost involved in the trellis part is typically negligible. Both simulation and analytical results are provided to demonstrate the advantages of the proposed scheme. The proposed scheme is of theoretical interest as it can achieve performance of BER=10/sup -5/ at E/sub b//N/sub 0//spl ap/-1.2dB (only about 0.4 dB away from the ultimate low-rate Shannon limit) with an information block size of 65534. To the authors' knowledge, this is the best result achieved to date with respect to the ultimate Shannon limit. With regard to practical issues, the decoding complexity of the proposed code is considerably lower than that of existing low-rate turbo-type codes with comparable performance.
+
+## Design and performance of space-time trellis codes for rapid Rayleigh fading channels
+
+- **ID**: ieee:6596564
+- **Type**: journal
+- **Published**: 2003
+- **Authors**: S. A. Zummo, S. A. Al-Semari
+- **PDF**: https://ieeexplore.ieee.org/document/6596564
+- **Abstract**: Space-Time (ST) codes are known to provide high transmission rates, diversity and coding gains. In this paper, a tight upper bound on the error probability of ST codes over rapid fading channels is presented. Moreover, ST codes suitable for rapid fading channels are presented. These codes are designed using the QPSK and 16-QAM signal constellations. The proposed codes are based on two different encoding schemes. The first scheme uses a single trellis encoder, whereas the second scheme uses the I-Q encoding technique. Code design is achieved via partitioning the signal space such that the design criteria are maximized. As a solution for the decoding problem of I-Q ST codes, the paper introduces a low-complexity decoding algorithm. Results show that the I-Q ST codes using the proposed decoding algorithm outperform singleencoder ST codes with equal complexity. The proposed codes are tested over fading channels with different interleaving conditions, where it is shown that the new codes are robust under such imperfect interleaving conditions.
+
+## Timing acquisition for low-SNR data storage channels
+
+- **ID**: ieee:1233142
+- **Type**: journal
+- **Published**: 2003
+- **Authors**: Jingfeng Liu, Hongwei Song, B. V. K. Vijaya Kumar
+- **PDF**: https://ieeexplore.ieee.org/document/1233142
+- **Abstract**: As magnetic data storage densities are pushed toward Tb/in/sup 2/ and beyond, advanced signal-detection algorithms are being suggested to cope with the expected lower signal-to-noise ratios (SNRs). However, at low SNR, loss of lock will frequently occur in the current timing-recovery system. This paper illustrates that inadequate timing acquisition is the major cause for loss of lock in hard disk drives. Motivated by the digital zero phase start (DZPS) technique, a digital zero frequency/phase start (DZF/PS) technique is proposed to quickly reduce the initial frequency and phase errors. Kalman filter-based acquisition can be used subsequently to fine-tune acquisition based on the buffered symbol-rate samples of a preamble readout signal. Numerical simulations show that DZF/PS can reduce preamble length significantly (when used in acquisition) compared with DZPS.
+
+## An innovative low-power high-performance programmable signal processor for digital communications
+
+- **ID**: ieee:5388943
+- **Type**: journal
+- **Published**: 2003
+- **Authors**: J. H. Moreno, V. Zyuban, U. Shvadron +13
+- **PDF**: https://ieeexplore.ieee.org/document/5388943
+- **Abstract**: We describe an innovative, low-power, high-performance, programmable signal processor (DSP) for digital communications. The architecture of this processor is characterized by its explicit design for low-power implementations, its innovative ability to jointly exploit instruction-level parallelism and data-level parallelism to achieve high performance, its suitability as a target for an optimizing high-level language compiler, and its explicit replacement of hardware resources by compile-time practices. We describe the methodology used in the development of the processor, highlighting the techniques deployed to enable application/architecture/compiler/implementation co-development, and the optimization approach and metric used for power-performance evaluation and tradeoff analysis. We summarize the salient features of the architecture, provide a brief description of the hardware organization, and discuss the compiler techniques used to exercise these features. We also summarize the simulation environment and associated software development tools. Coding examples from two representative kernels in the digital communications domain are also provided. The resulting methodology, architecture, and compiler represent an advance of the state of the art in the area of low-power, domain-specific microprocessors.
+
+## Information rates of binary-input intersymbol interference channels with signal-dependent media noise
+
+- **ID**: ieee:1179928
+- **Type**: journal
+- **Published**: 2003
+- **Authors**: Zheng Zhang, T. M. Duman, E. M. Kurtas
+- **PDF**: https://ieeexplore.ieee.org/document/1179928
+- **Abstract**: We introduce a simulation-based method to compute the information rates of intersymbol interference (ISI) channels with additive colored Gaussian noise and/or signal-dependent Gaussian noise when the inputs are binary and independent identically distributed. The method extends the idea advanced by Arnold and Loeliger (2001), which focuses on the ISI channels with additive white Gaussian noise (AWGN). With the new method, we can compute the information rates of the Lorentzian channel with media noise that represents a suitable model for practical magnetic recording channels. We illustrate the use of the technique via several examples and show that media noise is preferable to AWGN in terms of the achievable information rates, at low signal-to-noise ratios, in particular. We also present examples of turbo codes for Lorentzian channels with media noise and compare the performance with the achievable information rates. The results demonstrate, not surprisingly, that improved detectors are necessary to achieve the channel capacity for magnetic recording channels when the media noise is dominant.

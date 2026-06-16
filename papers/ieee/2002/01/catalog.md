@@ -1584,3 +1584,111 @@
 - **Authors**: J. Campello de Souza, B. H. Marcus, R. New +1
 - **PDF**: https://ieeexplore.ieee.org/document/992774
 - **Abstract**: We develop methods for analyzing and constructing combined modulation/error-correcting codes (ECC codes), in particular codes that employ some form of reversed concatenation and whose ECC decoding scheme requires easy access to soft information (e.g., turbo codes, low-density parity-check (LDPC) codes or parity codes). We expand on earlier work of Wijngaarden and Immink (1998, 2001), Immink (1999) and Fan (1999), in which certain bit positions are reserved for ECC parity, in the sense that the bit values in these positions can be changed without violating the constraint. Earlier work has focused more on block codes for specific modulation constraints. While our treatment is completely general, we focus on finite-state codes for maximum transition run (MTR) constraints. We (1) obtain some improved constructions for MTR codes based on short block lengths, (2) specify an asymptotic lower bound for MTR constraints, which is tight in very special cases, for the maximal code rate achievable for an MTR code with a given density of unconstrained positions, and (3) show how to compute the capacity of the set of sequences that satisfy a completely arbitrary constraint with a specified set of bit positions unconstrained.
+
+## A construction for low density parity check convolutional codes based on quasi-cyclic block codes
+
+- **ID**: ieee:1023753
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: A. Sridharan, D. J. Costello, R. M. Tanner
+- **PDF**: https://ieeexplore.ieee.org/document/1023753
+- **Abstract**: A set of convolutional codes with low density parity check matrices is derived from a class of quasi-cyclic low density parity check block codes. Their performance when decoded using the belief propagation algorithm is investigated.
+
+## Iterative decoding and equalization for 2-D recording channels
+
+- **ID**: ieee:1001131
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: N. Singla, J. A. O'Sullivan, R. S. Indeck +1
+- **PDF**: https://ieeexplore.ieee.org/document/1001131
+- **Abstract**: Summary form only given. As conventional magnetic recording challenges physical limits, we are motivated to consider 2-dimensional (2-D) data storage techniques. Further motivation is provided by the fact that data in 2-D recording may be arranged in bigger sectors than in 1-D and error correcting codes (ECC) such as low density parity check codes (LDPCC) get arbitrarily close to capacity for large enough block lengths. In this paper we consider the use of LDPCC as an ECC in conjunction with equalization methods, iterative and otherwise, for a 2-D recording medium with 2-D ISI. Equalization methods for 2-D recording are discussed as is iterative detection.
+
+## Layered space-time codes with iterative receiver and space-time soft-output decoding in a Rayleigh fading environment
+
+- **ID**: ieee:1046734
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: F. S. Ostuni, B. Abdool-Rassool, M. R. Nakhai +1
+- **PDF**: https://ieeexplore.ieee.org/document/1046734
+- **Abstract**: We propose a modified BLAST architecture which employs space-time trellis codes at each layer as constituent codes, and an iterative parallel interference canceller (PIC) at the receiver. The PIC performs both interference regeneration and cancellation; and furthermore, the scheme employs maximum-likelihood soft-output decoders, based on the Viterbi algorithm. These decoders calculate the a posteriori probabilities of the codewords in order to produce a soft output. Comparisons are drawn against the original BLAST architecture and simulation results are obtained. A significant gain is achieved in the case of Horizontal BLAST and a similar gain for the case of Diagonal BLAST, at a reduced computational complexity.
+
+## Optimal high-rate convolutional codes for partial response channels
+
+- **ID**: ieee:1188351
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: A. Graell i Amat, S. Benedetto, G. Montorsi
+- **PDF**: https://ieeexplore.ieee.org/document/1188351
+- **Abstract**: Optimized high-rate convolutional codes are considered as the outer encoder of a serially concatenated structure where the inner encoder is replaced by the magnetic recording channel. Simulation results of the iterative decoding algorithm for an equalized Lorentzian channel model and a more realistic model that includes data-dependent transition noise are presented. The effect of precoder on performance is also studied, and simulation results are supported by EXIT chart analysis. All results refer to a comparison of the optimized codes with previously proposed schemes employing punctured codes or non optimized unpunctured codes with tail-biting decoding. Both trellis termination and tail-biting termination of the high-rate codes are studied. To terminate the code trellis we use the method derived by Amat, Montorsi and Benedetto, which only requires /spl nu/ (the code memory) tail-biting bits. Simulation results confirm the ML analysis: owing to their better distance properties, the scheme based on the new codes outperform state-of-the-art magnetic recording schemes based on both punctured and non optimized high-rate codes. The cost of using an unpunctured code versus the punctured one in terms of increased decoding complexity is turned into an advantage by applying to the high-rate code the soft-input soft-output (SISO) algorithm working on its dual trellis.
+
+## Coding-assisted MIMO joint detection and decoding in turbo-coded OFDM
+
+- **ID**: ieee:1040294
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: Xiangyang Zhuang, F. W. Vook
+- **PDF**: https://ieeexplore.ieee.org/document/1040294
+- **Abstract**: A new coding-assisted MIMO (CA-MIMO) receive algorithm is proposed that can approach the performance of an optimal MIMO receiver, but with a significantly reduced complexity. The algorithm starts with linear MIMO processing to obtain the log-likelihood ratios (LLRs) of the channel bits. Then, at the end of an intermediate turbo decoding iteration, it refines a few channel bit LLRs based on the computed distance to only a select number of symbol candidates, thus achieving the savings. The selection is based on the LLRs of the coded bits at that iteration. In a simulated two-transmit two-receive MIMO-OFDM 16-QAM system with a rate-1/2 turbo code, the proposed algorithm can improve the FER performance by more than 3 dB in a COST-259-style bad urban environment, compared with that of the MMSE MIMO receiver, and is only 0.2 dB away from that of the optimal receiver with exponential complexity.
+
+## Runlength-limited (3,7) code for storage channels
+
+- **ID**: ieee:1000871
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: Jaejin Lee, Youpyo Hong
+- **PDF**: https://ieeexplore.ieee.org/document/1000871
+- **Abstract**: Summary form only given. We propose a new highly efficient RLL code with the minimum run-length constraint d=3 and the maximum run-length constraint k=7 with CMOS implementation result.
+
+## Analysis and design of interleaver mappings for iteratively decoded BICM
+
+- **ID**: ieee:997081
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: Jun Tan, G. L. Stuber
+- **PDF**: https://ieeexplore.ieee.org/document/997081
+- **Abstract**: Iterative decoding of bit-interleaved coded modulation (BICM) is analyzed. The interleaver of a BICM system is shown to provide not only time diversity gain as a channel interleaver, but also interleaving gain as a code interleaver. Our performance analysis of BICM assumes a uniform interleaver, and it is shown that the interleaving gain can be achieved at high SNR. The design rules on the symbol mapper are derived and a new symbol mapper design, called the maximum squared Euclidean weight (MSEW) symbol mapper, is presented for both 8-PSK and 16-QAM. Extensions to other signal constellations is straight forward. Simulation results confirm our analysis and show that BICM with MSEW symbol mapping achieves near Shannon limit performance.
+
+## Information geometry of statistical inference - an overview
+
+- **ID**: ieee:1115423
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: S. Amari
+- **PDF**: https://ieeexplore.ieee.org/document/1115423
+- **Abstract**: The present paper gives a short introduction to information geometry, by using a simple model of an exponential family which is a dually flat Riemannian space. The paper then overviews some of the applications of information geometry: 1) the higher-order asymptotic theory of estimation; 2) semiparametric estimation of the parameter of interest; 3) learning neural networks under the Riemannian structure; and 4) analysis of turbo codes, low density parity check codes and belief propagation algorithm.
+
+## Capacity of power constrained memoryless AWGN channels with fixed input constellations
+
+- **ID**: ieee:1188416
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: N. Varnica, Xiao Ma, A. Kavcic
+- **PDF**: https://ieeexplore.ieee.org/document/1188416
+- **Abstract**: We propose a numerical method to compute the capacity of a power constrained memoryless additive white Gaussian noise (AWGN) channel with finite and fixed input alphabets. The method is based on a two-part algorithm. The first part is a modified version of the Blahut-Arimoto algorithm and the second part is a simple maximization algorithm over a single parameter. The optimal input distribution we obtain can be utilized to construct probabilistic codes for this channel. These codes promise to bridge the shaping gap between the uniform-input information rate and the capacity of the channel.
+
+## Multi-user interference cancellation technique for coded OFDM-CDMA system
+
+- **ID**: ieee:1188130
+- **Type**: conference
+- **Published**: 2002
+- **Authors**: Taeyoon Park, Jaechul Lee, Youngshin Ahn +2
+- **PDF**: https://ieeexplore.ieee.org/document/1188130
+- **Abstract**: In a mobile communication channel, the multi-user interference is one of the major performance degradation factors, and restoring the signal-to-signal orthogonality among users is the challenging problem. As a solution to the problem, we proposed a method of combining OFDM and CDMA into a coded OFDM-CDMA system. The proposed system is equipped with a multi-user interference suppression capability based on chip-based interference cancellation and adaptive DFE equalization in series with a low-density parity checker. The performance of the proposed system is verified in a reverse-link multipath Rayleigh fading channel using computer simulation. The overall system performance has improved over a single-carrier CDMA in terms of BER vs SNR.
+
+## A measurement based feasibility study of space-frequency MIMO detection and decoding techniques for next generation wireless LANs
+
+- **ID**: ieee:1037068
+- **Type**: journal
+- **Published**: 2002
+- **Authors**: R. Piechocki, P. Fletcher, A. Nix +2
+- **PDF**: https://ieeexplore.ieee.org/document/1037068
+- **Abstract**: This article presents a performance evaluation of various multi-antenna concepts based on OFDM for wireless LANs. The studies are based on state-of-the-art measured channel data in the 5 GHz band. The investigated techniques include: spatial multiplexing (BLAST), space frequency trellis coded modulation, their concatenation, turbo bit interleaved coded modulation and turbo space frequency trellis coded modulation. The studies aim to assess the MIMO concepts for future high speed WLANs.
+
+## Predicting and adapting satellite channels with weather-induced impairments
+
+- **ID**: ieee:1039399
+- **Type**: journal
+- **Published**: 2002
+- **Authors**: J. P. Choi, V. W. S. Chan
+- **PDF**: https://ieeexplore.ieee.org/document/1039399
+- **Abstract**: Efficiency improvements using predictive and adaptive methods over satellite channels with weather-induced impairments are presented. Scintillation and rain attenuation are the two dominant factors for signal fading over satellite-Earth paths at operating frequencies over 10 GHz. We develop statistical and spectral analyses of these processes, and obtain simple linear predictors for received signal attenuation using autoregressive (AR) models. For adaptation, we propose changing signal transmission power, modulation symbol size, and/or code rate as the state of the channel changes. In particular, we introduce a continuous power control and discrete rate control strategy. Quantitative analyses of power consumption and channel capacity indicate that there can be a substantial gain in performance with such adaptive schemes.

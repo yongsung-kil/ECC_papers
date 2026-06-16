@@ -171,3 +171,48 @@
 - **Authors**: W. Turin
 - **PDF**: https://ieeexplore.ieee.org/document/768202
 - **Abstract**: We derive a formula for calculating the throughput efficiency of the go-back-N (GBN) protocol when error sources in the forward and backward channels are modeled by a hidden Markov model. The result is presented in the matrix form which makes it applicable to models with any number of states. We consider also the relationship between bit-level and block-level models and obtain the probability distribution of the time that a message spends in the system.
+
+## Constrained coding techniques for soft iterative decoders
+
+- **ID**: ieee:830157
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: J. L. Fan, J. M. Cioffi
+- **PDF**: https://ieeexplore.ieee.org/document/830157
+- **Abstract**: Soft iterative decoding of turbo codes and low-density parity check codes has been shown to offer significant improvements in performance. To apply soft iterative decoding to digital recorders, where binary modulation constraints are often used, modifications must be made to allow reliability information to be accessible by the decoder. A solution is proposed which uses a modified concatenation scheme, in which the positions of the modulation and error-correcting codes are reversed. In addition, a soft decoder based on the BCJR algorithm is introduced for the modulation constraint, and improved performance is obtained by iterating with this soft constraint decoder.
+
+## On bootstrap iterative Viterbi algorithm
+
+- **ID**: ieee:765492
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: Lei Wei
+- **PDF**: https://ieeexplore.ieee.org/document/765492
+- **Abstract**: A bootstrap iterative Viterbi algorithm (BIVA) is proposed based on a bootstrap structure. Two different modifications are then considered for both very short size blocks (say 100-250 bits) and the medium size blocks (1000-3000 bits). It shows that the iterative decoding can be achieved by using the conventional Viterbi algorithm, which does not require the noise variance estimation. The numerical results show the significant performance improvement over the standard Viterbi algorithm is possible. For a block length of 1500 bits and with a 32 state VA, the 2D BIVA can achieve a bit error rate of 2/spl times/10/sup -5/ at an E/sub b//E/sub 0/ of 2.3 dB away from the Shannon limit. For both information block lengths of 1944 and 11970 bits, in term of its performance respect to the Shannon limit and the Shannon sphere packing bound, the 2D-BIVA is about 0.2-0.3 dB worse than the best known rate 1/2 JPL turbo codes of similar information block sizes. With some simple modifications, most of current systems (where the Viterbi algorithms used) can benefit significantly from this iterative decoding procedure.
+
+## Fault-tolerant linear finite state machines
+
+- **ID**: ieee:813422
+- **Type**: conference
+- **Published**: 1999
+- **Authors**: C. N. Hadjicostis, G. C. Verghese
+- **PDF**: https://ieeexplore.ieee.org/document/813422
+- **Abstract**: In this paper we develop a framework for constructing fault-tolerant dynamic systems, focusing primarily on linear finite state machines (LFSMs). Modular redundancy, the traditional approach to fault tolerance, is expensive because of the overhead in replicating the hardware and its reliance on the assumption that the error-correcting (voting) mechanism is fault-free. Our approach is more general, makes efficient use of redundancy, and relaxes the strict requirements regarding the reliability of the error corrector. By combining linear coding techniques and dynamic system theory, we characterize the class of all appropriate redundant implementations. Furthermore, we construct reliable LFSM's assembled exclusively from unreliable components, including unreliable voters and parity checkers in the error correcting mechanism. Using constant redundancy per system, we obtain implementations of identical LFSM's that operate in parallel on distinct input sequences and achieve arbitrarily low probability of failure during any specified finite time interval.
+
+## On lowest density MDS codes
+
+- **ID**: ieee:746771
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: M. Blaum, R. M. Roth
+- **PDF**: https://ieeexplore.ieee.org/document/746771
+- **Abstract**: Let F/sub q/ denote the finite field GF(q) and let h be a positive integer. MDS (maximum distance separable) codes over the symbol alphabet F/sub q//sup b/ are considered that are linear over F/sub q/ and have sparse ("low-density") parity-check and generator matrices over F/sub q/ that are systematic over F/sub q//sup b/. Lower bounds are presented on the number of nonzero elements in any systematic parity-check or generator matrix of an F/sub q/-linear MDS code over F/sub q//sup b/, along with upper bounds on the length of any MDS code that attains those lower bounds. A construction is presented that achieves those bounds for certain redundancy values. The building block of the construction is a set of sparse nonsingular matrices over F/sub q/ whose pairwise differences are also nonsingular. Bounds and constructions are presented also for the case where the systematic condition on the parity-check and generator matrices is relaxed to be over F/sub q/, rather than over F/sub q//sup b/.
+
+## Low-density MDS codes and factors of complete graphs
+
+- **ID**: ieee:782102
+- **Type**: journal
+- **Published**: 1999
+- **Authors**: Lihao Xu, V. Bohossian, J. Bruck +1
+- **PDF**: https://ieeexplore.ieee.org/document/782102
+- **Abstract**: We present a class of array code of size n/spl times/l, where l=2n or 2n+1, called B-Code. The distances of the B-Code and its dual are 3 and l-1, respectively. The B-Code and its dual are optimal in the sense that i) they are maximum-distance separable (MDS), ii) they have an optimal encoding property, i.e., the number of the parity bits that are affected by change of a single information bit is minimal, and iii) they have optimal length. Using a new graph description of the codes, we prove an equivalence relation between the construction of the B-Code (or its dual) and a combinatorial problem known as perfect one-factorization of complete graphs, thus obtaining constructions of two families of the B-Code and its dual, one of which is new. Efficient decoding algorithms are also given, both for erasure correcting and for error correcting. The existence of perfect one-factorizations for every complete graph with an even number of nodes is a 35 years long conjecture in graph theory. The construction of B-Codes of arbitrary odd length will provide an affirmative answer to the conjecture.
