@@ -3,7 +3,7 @@
 
 ## Probabilistic Parity Shaping for Linear Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1902.10648v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## One and Two Bit Message Passing for SC-LDPC Codes with Higher-Order Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1902.10391v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Construction of QC-LDPC Codes with Low Error Floor by Efficient Systematic Search and Elimination of Trapping Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1902.07332v3
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Multi-Matrix Post-Processing for Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1902.05263v1
 - **Type**: preprint

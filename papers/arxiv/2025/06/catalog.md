@@ -3,7 +3,7 @@
 
 ## Improved energy barrier in higher-dimensional hypergraph product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.19219v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Abelian multi-cycle codes for single-shot error correction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.16910v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Quantum Error Correction Exploiting Degeneracy to Approach the Hashing Bound
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.15636v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Dynamic Layered Decoding Scheduling for LDPC Codes Aided by Check Node Error Probabilities
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.13507v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## On the High-Rate FDPC Codes: Construction, Encoding, and a Generalization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.11345v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## A Neural Network-aided Low Complexity Chase Decoder for URLLC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.10513v2
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Tour de gross: A modular quantum computer based on bivariate bicycle codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.03094v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Stratified Cohomological Quantum Codes via Colimits in Ch(R)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2509.06958v1
 - **Type**: preprint

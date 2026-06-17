@@ -3,7 +3,7 @@
 
 ## Column Weight Two and Three LDPC Codes with High Rates and Large Girths
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1403.6090v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Absorbing Set Analysis and Design of LDPC Codes from Transversal Designs over the AWGN Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1403.4405v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## The Effect of Saturation on Belief Propagation Decoding of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1403.3678v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Knowledge-Aided Reweighted Belief Propagation LDPC Decoding using Regular and Irregular Designs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1403.0847v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Locally-Optimized Reweighted Belief Propagation for Decoding LDPC Codes with Finite-Length
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1403.0836v1
 - **Type**: preprint

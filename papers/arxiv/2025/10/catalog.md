@@ -3,7 +3,7 @@
 
 ## Practical hybrid decoding scheme for parity-encoded spin systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.26189v4
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Systematic Non-Binary Extension of LDPC-CSS Codes Preserving Orthogonality
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.25583v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Real-time decoding of the gross code memory with FPGAs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.21600v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Overlapped-repetition Shor codes achieving fourfold asymptotic rate
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.21030v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Fast and fault-tolerant logical measurements: Auxiliary hypergraphs and transversal surgery
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.14895v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Rate-Adaptive Spatially Coupled MacKay-Neal Codes with Thresholds Close to Capacity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.14843v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Universal energy-space localization and stable quantum phases against time-dependent perturbations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.14160v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Quantum Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.14090v1
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Decoding Correlated Errors in Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.14060v2
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## MEASER: Malware embedding attacks on open-source LLMs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.10486v2
 - **Type**: preprint
@@ -113,7 +113,7 @@
 
 ## Degeneracy Cutting: A Local and Efficient Post-Processing for Belief Propagation Decoding of Quantum Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.08695v1
 - **Type**: preprint
@@ -124,7 +124,7 @@
 
 ## Single-Shot Universality in Quantum LDPC Codes via Code-Switching
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.08552v1
 - **Type**: preprint
@@ -135,7 +135,7 @@
 
 ## Hamiltonian Decoded Quantum Interferometry
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.07913v1
 - **Type**: preprint
@@ -146,7 +146,7 @@
 
 ## Diffusion Codes: Self-Correction from Small(er)-Set Expansion with Tunable Non-locality
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.07179v2
 - **Type**: preprint
@@ -157,7 +157,7 @@
 
 ## Constant-Overhead Addressable Gates via Single-Shot Code Switching
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.06760v1
 - **Type**: preprint
@@ -168,7 +168,7 @@
 
 ## Qudit low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.06495v2
 - **Type**: preprint
@@ -179,7 +179,7 @@
 
 ## Batched high-rate logical operations for quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.06159v1
 - **Type**: preprint
@@ -190,7 +190,7 @@
 
 ## Efficient Post-Selection for General Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.05795v4
 - **Type**: preprint
@@ -201,7 +201,7 @@
 
 ## Fast surgery for quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.04521v1
 - **Type**: preprint
@@ -212,7 +212,7 @@
 
 ## Toward Uncertainty-Aware and Generalizable Neural Decoding for Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.06257v1
 - **Type**: preprint
@@ -223,7 +223,7 @@
 
 ## Layered Normalized Min-Sum Decoding with Bit Flipping for FDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2510.01019v1
 - **Type**: preprint

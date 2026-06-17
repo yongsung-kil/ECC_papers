@@ -3,7 +3,7 @@
 
 ## Block-MDS QC-LDPC Codes for Information Reconciliation in Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2403.00192v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## The Physics of (good) LDPC Codes II. Product constructions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.16831v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Random Staircase Generator Matrix Codes: Performance Analysis and Construction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.16245v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Improving threshold for fault-tolerant color code quantum computing by flagged weight optimization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.13958v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Coding Theorems for Repetition and Superposition Codes over Binary-Input Output-Symmetric Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.13603v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Concatenate codes, save qubits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.09606v2
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Novel Long Distance Free Space Quantum Secure Direct Communication for Web 3.0 Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.09108v5
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Expansion of higher-dimensional cubical complexes with application to quantum locally testable codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.07476v3
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Coded Many-User Multiple Access via Approximate Message Passing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.05625v5
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## The closed-branch decoder for quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.01532v2
 - **Type**: preprint

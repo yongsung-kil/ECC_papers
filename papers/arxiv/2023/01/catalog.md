@@ -3,7 +3,7 @@
 
 ## CSS code surgery as a universal construction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2301.13738v6
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Polar Coded Merkle Tree: Mitigating Data Availability Attacks in Blockchain Systems Using Informed Polar Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2301.08295v1
 - **Type**: preprint

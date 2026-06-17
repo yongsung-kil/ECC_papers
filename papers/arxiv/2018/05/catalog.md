@@ -3,7 +3,7 @@
 
 ## A theory of single-shot error correction for adversarial noise
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1805.09271v6
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Robust Gradient Descent via Moment Encoding with LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1805.08327v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Flexible IR-HARQ Scheme for Polar-Coded Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1805.07078v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Improved Reconciliation With Polar Codes In Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1805.05046v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Hindering reaction attacks by using monomial codes in the McEliece cryptosystem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1805.04722v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Reliability-Based Windowed Decoding for Spatially-Coupled LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1805.02902v2
 - **Type**: preprint

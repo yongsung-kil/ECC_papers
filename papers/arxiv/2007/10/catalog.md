@@ -3,7 +3,7 @@
 
 ## Codes from Zero-divisors and Units in Group Rings
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0710.5893v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## LDPC-Based Iterative Algorithm for Compression of Correlated Sources at Rates Approaching the Slepian-Wolf Bound
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0710.5640v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Generalized reliability-based syndrome decoding for LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0710.5230v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Message passing for the coloring problem: Gallager meets Alon and Kahale
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0710.3928v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Error Correction Capability of Column-Weight-Three LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0710.3427v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Fast Reliability-based Algorithm of Finding Minimum-weight Codewords for LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0710.1589v1
 - **Type**: preprint

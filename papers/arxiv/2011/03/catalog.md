@@ -3,7 +3,7 @@
 
 ## Power Consumption of LDPC Decoders in Software Radio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1103.5128v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Scheduled-PEG construction of LDPC codes for Upper-Layer FEC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1103.2690v1
 - **Type**: preprint

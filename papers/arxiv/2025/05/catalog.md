@@ -3,7 +3,7 @@
 
 ## Romanesco codes: Bias-tailored qLDPC codes from fractal codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2506.00130v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## High Throughput QC-LDPC Decoder With Optimized Schedule Policy in Layered Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2505.19027v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Advancing Finite-Length Quantum Error Correction Using Generalized Bicycle Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2505.06157v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Algebraic Topology Principles behind Topological Quantum Error Correction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2505.06082v2
 - **Type**: preprint

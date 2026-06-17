@@ -3,7 +3,7 @@
 
 ## Finite-Connectivity Spin-Glass Phase Diagrams and Low Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0507458v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## The error-floor of LDPC codes in the Laplacian channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0507031v2
 - **Type**: preprint

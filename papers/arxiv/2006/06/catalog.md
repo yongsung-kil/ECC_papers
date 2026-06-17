@@ -3,7 +3,7 @@
 
 ## Statistical mechanics of error exponents for error-correcting codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0606696v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Quantum LDPC Codes for Modular Architectures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2209.14329v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Dynamic Write-Voltage Design and Read-Voltage Optimization for MLC NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2209.01424v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Software Tools for Decoding Quantum Low-Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2209.01180v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Lowering the Error Floor of LDPC Codes Using Cyclic Liftings
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1002.4311v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Static Address Generation Easing: a Design Methodology for Parallel Interleaver Architectures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1002.3990v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Properties and Construction of Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1002.3521v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## LP Decoding of Regular LDPC Codes in Memoryless Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1002.3117v3
 - **Type**: preprint

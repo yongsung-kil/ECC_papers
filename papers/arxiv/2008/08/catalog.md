@@ -3,7 +3,7 @@
 
 ## Provably efficient instanton search algorithm for LP decoding of LDPC codes over the BSC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0808.2515v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Lower Bounds on the Rate-Distortion Function of LDGM Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0808.2073v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## How could the replica method improve accuracy of performance assessment of channel coding?
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0808.0548v1
 - **Type**: preprint

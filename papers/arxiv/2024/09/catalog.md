@@ -3,7 +3,7 @@
 
 ## Fault-Tolerant Belief Propagation for Practical Quantum Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.18689v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Computational Ghost Imaging with Low-Density Parity-Check Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.15596v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## LDPC Codes in Cooperative Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.15559v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Flag Proxy Networks: Tackling the Architectural, Scheduling, and Decoding Obstacles of Quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.14283v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Information Reconciliation for Continuous-Variable Quantum Key Distribution with $β> 1$ Using Short Blocklength Error Correction Codes: Proposal and Concerns
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.13667v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Mechanical Wannier-Stark Ladder of Diamond Spin-Mechanical Lamb Wave Resonators
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.12149v2
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Non-local resources for error correction in quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.05818v2
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Effective Distance of Higher Dimensional HGPs and Weight-Reduced Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.02193v5
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## An almost-linear time decoding algorithm for quantum LDPC codes under circuit-level noise
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2409.01440v2
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Algebraic constructions of LDPC codes with no short cycles
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0807.3337v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## An Adaptive Entanglement Distillation Scheme Using Quantum Low Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0807.2122v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Entanglement-assisted Coding Theory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0807.2080v2
 - **Type**: preprint

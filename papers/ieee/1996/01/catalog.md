@@ -3,7 +3,7 @@
 
 ## Signal design for co-channel interference suppression with applications to wireless communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:501209
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## Highly fault-tolerant parallel computation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:548474
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## A new coding method to increase SNR on the magnetic recording channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:594390
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## A comparison of two methods for erasure generation in frequency-hop communications with partial-band interference and Rayleigh fading
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:568589
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## Expander codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:556667
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## The error probability of M-ary PSK block coded modulation schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:489088
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Switching codes for delta-I noise reduction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:537124
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Computing upper bounds to error probability of coded modulation schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:508297
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Trellis-coded constant-envelope modulations with linear receivers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:539770
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Block and trellis codes for the binary (1-D) partial response channel with simple maximum likelihood decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:545885
 - **Type**: journal

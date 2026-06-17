@@ -3,7 +3,7 @@
 
 ## Parameter-free $\ell_p$-Box Decoding of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1711.10767v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Efficient decoding of random errors for quantum expander codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1711.08351v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Low-Complexity Integer-Forcing Methods for Block Fading MIMO Multiple-Access Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1711.07977v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## A Joint Encryption-Encoding Scheme Using QC-LDPC Codes Based on Finite Geometry
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1711.04611v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## LDPC-Based Code Hopping for Gaussian Wiretap Channel With Limited Feedback
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1711.03910v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## High speed error correction for continuous-variable quantum key distribution with multi-edge type LDPC code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1711.01783v2
 - **Type**: preprint

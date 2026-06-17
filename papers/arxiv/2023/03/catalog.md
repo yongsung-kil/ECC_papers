@@ -3,7 +3,7 @@
 
 ## Hierarchical memories: Simulating quantum LDPC codes with local gates
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2303.04798v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Mapper Side Geometric Shaping for QAM Constellations in 5G MIMO Wireless Channel with Realistic LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2303.02605v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## On Probability Shaping for 5G MIMO Wireless Channel with Realistic LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2303.02598v3
 - **Type**: preprint

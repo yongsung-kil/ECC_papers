@@ -3,7 +3,7 @@
 
 ## Tree-Structure Expectation Propagation for LDPC Decoding in Erasure Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1009.4287v3
 - **Type**: preprint

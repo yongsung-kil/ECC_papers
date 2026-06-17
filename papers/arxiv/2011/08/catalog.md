@@ -3,7 +3,7 @@
 
 ## Efficient data compression from statistical physics of codes over finite fields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.6239v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Instantons causing iterative decoding to cycle
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.5547v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## A Design Methodology for Folded, Pipelined Architectures in VLSI Applications using Projective Space Lattices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.3970v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Simple Low-Rate Non-Binary LDPC Coding for Relay Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.3285v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Edge Transitive Ramanujan Graphs and Highly Symmetric LDPC Good Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.2960v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Optimal Rate for Irregular LDPC Codes in Binary Erasure Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.1572v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Universal Rateless Codes From Coupled LT Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1108.0535v1
 - **Type**: preprint

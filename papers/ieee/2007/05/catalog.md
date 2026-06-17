@@ -3,7 +3,7 @@
 
 ## Analysis and Design of Finite-Length LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4201074
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Constrained Information Combining: Theory and Applications for LDPC Coded Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4167754
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Iterative Decoding With Replicas
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4167737
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Convergence Speed and Throughput of Analog Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4200947
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## An Interleave-Division-Multiplexing MISO System With Partial CSI at Transmitter
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4201035
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Layered BP Decoding for Rate-Compatible Punctured LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4202100
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Structured IRA Codes: Performance Analysis and Construction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4200966
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Distributed joint source-channel coding of video using raptor codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4205066
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## The List-Sequential (LISS) Algorithm and Its Application
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4200952
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Analysis and Optimization of Interleave-Division Multiple-Access Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4202202
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Mutual-Information-Based Adaptive Bit-Loading Algorithms for LDPC-Coded OFDM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4202173
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Expression of Concern: Implementing DSP Algorithms with On-Chip Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4209025
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Data Persistence in Large-Scale Sensor Networks with Decentralized Fountain Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215776
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Oblivious Routing with Mobile Fusion Centers over a Sensor Network
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215763
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Unequal Error Protection Rateless Codes for Scalable Information Delivery in Mobile Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215854
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## PMD Compensation using LDPC Coding based Turbo Equalization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4452620
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Performance of Quantized Min-Sum Decoding Algorithms for Irregular LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4253249
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## VLSI Decoder Architecture for High Throughput, Variable Block-size and Multi-rate LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4253085
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## A High Throughput H-QC LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4252972
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Efficient Highly-Parallel Decoder Architecture for Quasi-Cyclic Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4253023
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Efficient Message Passing Architecture for High Throughput LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4252785
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Multi-Rate Layered Decoder Architecture for Block LDPC Codes of the IEEE 802.11n Wireless Standard
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4252971
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Towards a GBit/s Programmable Decoder for LDPC Convolutional Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4252974
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## FPGA Implementation of LDPC Decoders Based on Joint Row-column Decoding Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4252973
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Design and Realization of Analog Phi-Function for LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4252975
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Designing near Shannon limit LDPC codes using particle swarm optimization algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4448612
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## MP&A Mixed Decoding Algorithm for LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215518
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## An Adaptive FEC-based Packet Loss Recovery Scheme Using RZ Turbo Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215521
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## A Hierarchical Two-Tier Information Management Architecture for Mobile Ad-Hoc Grid Environments
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215441
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Carrier-Frequency Offset Estimation via the EM Algorithm for MIMO-OFDM Iterative Receivers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215502
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Performance analysis of turbo codes over Rician fading channels with impulsive noise
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4448614
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Design and Performance of LDPC Codes for OFDM Based Aeronautical Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215245
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Survey of Stochastic Computation on Factor Graphs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4215977
 - **Type**: conference

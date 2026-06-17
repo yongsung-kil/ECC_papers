@@ -3,7 +3,7 @@
 
 ## Joint Channel and Network Coding for Cooperative Diversity in a Shared-Relay Environment
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5494766
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Asymptotic Performance Analysis of Coded BLAST Architectures with Statistical Rate and Power Allocations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5510785
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## On the Dynamics of Analog Min-Sum Iterative Decoders: An Analytical Approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555878
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Nested Polar Codes for Wiretap and Relay Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5545658
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Trapping Sets of Fountain Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5545659
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Approximate Performance Analysis for Linear Codes in Superposition Schemes over Gaussian Broadcast Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555872
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Optimal Routing for Decode-Forward in Cooperative Wireless Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555886
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## LDPC-Coded OFDM for Heterogeneous Access Optical Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5491028
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## A new DC-free multimode code design with error correction capability for optical storage systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5606293
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Performance Bounds for Erasure, List, and Decision Feedback Schemes With Linear Block Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5508626
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## An Energy Efficient Layered Decoding Architecture for LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5229117
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Iterative Polar Quantization-Based Modulation to Achieve Channel Capacity in Ultrahigh-Speed Optical Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5482065
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Hybrid ARQ with Partial Retransmissions and LDPC codes and its Impact on TCP
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5595132
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Low redundancy overhead multibit error correction in memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5615316
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Iterative symbol-by-symbol decoding of LDPC codes and constellation mapping for multilevel modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5684713
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## From product codes to structured generalized LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5684632
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## A source-destination network coded cooperation for wireless ad-hoc networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5684774
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Full-rate full-diversity space-frequency block coding for digital TV broadcasting
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7096618
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## IRIS verification system with secure template storage
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7096661
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Non-uniform source modeling for distributed video coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7096654
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Distributed video coding with particle filtering for correlation tracking
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7096270
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Security applications of distributed arithmetic coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7096510
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Distributed source coding: Theory and applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7096269
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Bootstrapped Iterative Decoding Algorithms for Low Density Parity Check (LDPC) Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5634871
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Modified Log-BP decoding algorithm combined with PSO for Low-Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5579320
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Reliability-based iterative decoding of LDPC codes using segmented accumulation of likelihood ratio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5578935
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## A Construction Method of Niederreiter Public-Key Cryptosystem Based on Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5566239
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Design of structured LDPC codes with quasi-cyclic and rotation architecture
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5578934
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Reduced-complexity extended Min-sum check node processing for non-binary LDPC decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5548712
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## A fixed bits LDPC decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5559810
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Efficient uncompressed video communications using multicarrier, redundancy exploitation and low density error correction techniques
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5559780
 - **Type**: conference

@@ -3,7 +3,7 @@
 
 ## Compute--Forward Multiple Access (CFMA): Practical Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1712.10293v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Study of Iterative Detection and Decoding for Large-Scale MIMO Systems with 1-Bit ADCs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1712.08689v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Golden codes: quantum LDPC codes built from regular tessellations of hyperbolic 4-manifolds
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1712.08578v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Sparse Graphs for Belief Propagation Decoding of Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1712.08538v5
 - **Type**: preprint

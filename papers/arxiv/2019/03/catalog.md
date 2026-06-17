@@ -3,7 +3,7 @@
 
 ## High Throughput and Low Cost LDPC Reconciliation for Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1903.10107v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Modified belief propagation decoders for quantum low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1903.07404v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Deep Log-Likelihood Ratio Quantization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1903.04656v3
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Decoder-in-the-Loop: Genetic Optimization-based LDPC Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1903.03128v3
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Outage-Limit-Approaching Protograph LDPC Codes for Slow-Fading Wireless Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1903.01223v2
 - **Type**: preprint

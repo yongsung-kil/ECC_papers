@@ -3,7 +3,7 @@
 
 ## Density Evolution, Thresholds and the Stability Condition for Non-binary LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0511100v1
 - **Type**: preprint

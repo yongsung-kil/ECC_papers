@@ -3,7 +3,7 @@
 
 ## A simple universal routing strategy for reducing the connectivity requirements of quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2509.00850v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Louvre: Relaxing Hardware Requirements of Quantum LDPC Codes by Routing with Expanded Quantum Instruction Set
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.20858v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Polar subcodes for MIMO systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.20684v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Synthetic Image Detection via Spectral Gaps of QC-RBIM Nishimori Bethe-Hessian Operators
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.19698v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Efficient Probabilistic Parity Shaping for Irregular Repeat-Accumulate LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.19696v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Natural Image Classification via Quasi-Cyclic Graph Ensembles and Random-Bond Ising Models at the Nishimori Temperature
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.18717v3
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Fermion-to-Fermion Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.15323v4
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Brace for impact: ECDLP challenges for quantum cryptanalysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.14011v2
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## On optimal quantum LRCs from the Hermitian construction and $t$-designs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.13553v1
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## A Novel CNN Based Standalone Detector for Faster-than-Nyquist Signaling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.12964v1
 - **Type**: preprint
@@ -113,7 +113,7 @@
 
 ## Magic tricycles: Efficient magic state generation with finite block-length quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.10714v2
 - **Type**: preprint
@@ -124,7 +124,7 @@
 
 ## Fault tolerant Operations in Majorana-based Quantum Codes: Gates, Measurements and High Rate Constructions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.09928v2
 - **Type**: preprint
@@ -135,7 +135,7 @@
 
 ## Composable Quantum Fault-Tolerance
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.08246v2
 - **Type**: preprint
@@ -146,7 +146,7 @@
 
 ## Long Polar vs. LDPC Codes under Complexity-Constrained Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.05485v1
 - **Type**: preprint
@@ -157,7 +157,7 @@
 
 ## Power and Limitations of Linear Programming Decoder for Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.04769v1
 - **Type**: preprint
@@ -168,7 +168,7 @@
 
 ## In-Memory Non-Binary LDPC Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.03567v1
 - **Type**: preprint
@@ -179,7 +179,7 @@
 
 ## Distributed fault-tolerant quantum memories over a 2xL array of qubit modules
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2508.01879v1
 - **Type**: preprint

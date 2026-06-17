@@ -3,7 +3,7 @@
 
 ## Model-Based Detector for SSDs in the Presence of Inter-cell Interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1902.01212v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Capacity Optimality of AMP in Coded Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.09559v4
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Design and Decoding of Polar Codes for the Gaussian Multiple Access Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.07297v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Polarization-ring-switching for nonlinearity-tolerant geometrically-shaped four-dimensional formats maximizing generalized mutual information
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.06878v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Spatially Coupled LDPC Codes and the Multiple Access Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.05877v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Protograph-Based LDPC Code Design for Probabilistic Shaping with On-Off Keying
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.03285v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Coding Techniques for Future Wi-Fi
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.01348v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Convolutionally Coded SNR-Adaptive Transmission for Low-Latency Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1901.03641v1
 - **Type**: preprint

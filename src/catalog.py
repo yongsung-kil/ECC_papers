@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 _STATUS_LABEL = {
-    "new": "미선별",
-    "filtered_in": "in(포함)",
-    "filtered_out": "out(제외)",
-    "analyzed": "분석완료",
-    "archived": "보관",
-    "deleted": "삭제",
+    "new": "⬜ 미선별",
+    "filtered_in": "✅",
+    "filtered_out": "❌",
+    "analyzed": "🔬 분석완료",
+    "archived": "📦 보관",
+    "deleted": "🗑️ 삭제",
 }
 
 

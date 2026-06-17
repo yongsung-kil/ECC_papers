@@ -3,7 +3,7 @@
 
 ## A Branch-and-Cut Algorithm to Design LDPC Codes without Small Cycles in Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1709.09936v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## ML and Near-ML Decoding of LDPC Codes Over the BEC: Bounds and Decoding Algorithms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1709.01455v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Lower bounds on the lifting degree of single-edge and multiple-edge QC-LDPC codes by difference matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1709.00825v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Optimized Bit Mappings for Spatially Coupled LDPC Codes over Parallel Binary Erasure Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1309.7583v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## An Energy Efficient Decoding Scheme for Wireless Body Area Sensor Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1309.4374v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Unequal Error Protection by Partial Superposition Transmission Using LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1309.3864v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## AID: An Energy Efficient Decoding Scheme for LDPC Codes in Wireless Body Area Sensor Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1309.0752v1
 - **Type**: preprint

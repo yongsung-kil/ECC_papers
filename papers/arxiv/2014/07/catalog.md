@@ -3,7 +3,7 @@
 
 ## Proving Threshold Saturation for Nonbinary SC-LDPC Codes on the Binary Erasure Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1407.5783v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Quasi-Cyclic LDPC Codes based on Pre-Lifted Protographs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1407.5364v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Rate-Compatible LDPC Codes Based on Puncturing and Extension Techniques for Short Block Lengths
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1407.5136v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Increasing the Speed of Polar List Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1407.2921v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Code optimization, frozen glassy phase and improved decoding algorithms for low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1407.0779v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Lowering the error floor of Gallager codes: a statistical-mechanical view
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1407.0521v2
 - **Type**: preprint

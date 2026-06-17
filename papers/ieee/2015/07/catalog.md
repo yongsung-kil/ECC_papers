@@ -3,7 +3,7 @@
 
 ## Efficient Receiver Architecture for LDPC Coded BICM-ID System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7095513
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Byte-Reconfigurable LDPC Codec Design With Application to High-Performance ECC of NAND Flash Memory Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7119615
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Variable-Length Convolutional Coding for Short Blocklengths With Decision Feedback
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7101235
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Approaching the Rate-Distortion Limit With Spatial Coupling, Belief Propagation, and Decimation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7109906
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Random Linear Network Coding Based on Non-Orthogonal Multiple Access in Wireless Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7111241
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## A Randomized Algorithm for the Capacity of Finite-State Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7105917
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Capacity-Achieving Feedback Schemes for Gaussian Finite-State Markov Channels With Channel State Information
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7112479
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Differential Spatial Modulation for APSK in Time-Varying Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7095517
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Iterative Detection and Decoding for TDMR With 2-D Intersymbol Interference Using the Four-Rectangular-Grain Model
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7047859
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Video Error Correction Using Soft-Output and Hard-Output Maximum Likelihood Decoding Applied to an H.264 Baseline Profile
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6671959
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Column weights optimization for semi-regular nonbinary LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7296246
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## Superimposed effects of signature sequences and LDPC technique in faded CDMA multiuser systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7203957
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## A new reliability-based incremental redundancy hybrid ARQ scheme using LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7255170
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Enhancing secrecy of the Gaussian wiretap channel using rate compatible LDPC codes with error amplification
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7255148
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Construction of structured low density lattice codes based on finite fields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7405587
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Analysis of forward error correction and achievable rates for optical fiber systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7193358
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Multidimensional aspects of ultra high speed optical networking
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7193472
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## A simple and efficient multi-way relay network coding scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7194082
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Sliceable bandwidth variable transponder: The IDEALIST vision
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7194093
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Impacts of the packet scheduling on the performance of erasure codes: Methodology and application to GLDPC-Staircase codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7194119
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## A new channel coding network coding scheme for two-way relay
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7237263
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Spatially-coupled codes for optical communications: state-of-the-art and open problems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7340116
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Spatially coupled codes and optical fiber communications: An ideal match?
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7227080
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Compressed Sensing using sparse binary measurements: A rateless coding perspective
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7227005
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Multiuser detection in multibeam satellite systems: Theoretical analysis and practical schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7227093
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Stochastic amplify-and-forward schemes for multigroup multicast transmission in a distributed relay network
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7227097
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Efficient implementation of structured long block-length LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7245739
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## The design of a rateless channel coding scheme for deep-space communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7266524
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Mixed-signal implementation of differential decoding using binary message passing algorithms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7245718
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Iterative block DFE techniques based on LDPC for SC-FDE underwater acoustic communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7250313
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## An area-efficient architecture for stochastic LDPC decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7251868
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Effect of bit-level correlation in stochastic computing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7251915
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Adaptive reliability-based iteration min-sum decoding algorithm for majority-logic decodable LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7395208
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## An efficient structure for terminating spatially coupled LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7230548
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Reversible visible watermark embedded in encrypted domain
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7230520
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Early stopping criterion for message-passing decoding of LDLC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7224811
 - **Type**: conference

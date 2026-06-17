@@ -3,7 +3,7 @@
 
 ## Framework for Application Mapping over Packet-Switched Network of FPGAs: Case Studies
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1508.06823v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Iterative detection and decoding for SCMA systems with LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1508.00680v1
 - **Type**: preprint

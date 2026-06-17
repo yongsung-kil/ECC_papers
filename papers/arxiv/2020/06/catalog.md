@@ -3,7 +3,7 @@
 
 ## Optimization of NB QC-LDPC Block Codes and Their Performance Analysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2006.12147v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## An Entropy-based Proof of Threshold Saturation for Nonbinary SC-LDPC Ensembles on the BEC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2006.11740v1
 - **Type**: preprint

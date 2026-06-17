@@ -3,7 +3,7 @@
 
 ## Entanglement-assisted quantum low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1008.4747v4
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## LDPC Codes from Latin Squares Free of Small Trapping Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1008.4177v2
 - **Type**: preprint

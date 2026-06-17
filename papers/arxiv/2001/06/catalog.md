@@ -3,7 +3,7 @@
 
 ## Statistical Mechanics and Capacity-Approaching Error-Correcting Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0106570v1
 - **Type**: preprint

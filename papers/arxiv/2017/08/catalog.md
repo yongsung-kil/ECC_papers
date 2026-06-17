@@ -3,7 +3,7 @@
 
 ## Optimization-Based Decoding Algorithms for LDPC Convolutional Codes in Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1708.05618v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## MaxMinSum Steiner Systems for Access-Balancing in Distributed Storage
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1708.04986v2
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Quasi-cyclic LDPC codes with high girth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0906.3410v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## On the Minimum Distance of Non Binary LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0906.2061v1
 - **Type**: preprint

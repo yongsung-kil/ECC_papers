@@ -3,7 +3,7 @@
 
 ## Family of Finite Geometry Low-Density Parity-Check Codes for Quantum Key Expansion
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1303.1760v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Performance of Spatially-Coupled LDPC Codes and Threshold Saturation over BICM Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1303.0296v1
 - **Type**: preprint

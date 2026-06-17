@@ -3,7 +3,7 @@
 
 ## Algebraic dynamical systems from LDPC codes satisfy a strong negation of the weak Pinsker property
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2312.17387v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## The linear time encoding scheme fails to encode
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2312.16125v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Outer Channel of DNA-Based Data Storage: Capacity and Efficient Coding Schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2312.11854v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Fracton models from product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2312.08462v2
 - **Type**: preprint

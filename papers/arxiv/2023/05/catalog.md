@@ -3,7 +3,7 @@
 
 ## Improved belief propagation decoding algorithm based on decoupling representation of Pauli operators for quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2305.17505v4
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Non-Gaussian reconciliation for continuous-variable quantum key distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2305.01963v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Non-Binary LDPC Code Design for Energy-Time Entanglement Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2305.00956v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## General Distance Balancing for Quantum Locally Testable Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2305.00689v1
 - **Type**: preprint

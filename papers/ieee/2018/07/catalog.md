@@ -3,7 +3,7 @@
 
 ## Reliability-Based Windowed Decoding for Spatially Coupled LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8357804
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Variable-Node-Shift Based Architecture for Probabilistic Gradient Descent Bit Flipping on QC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8219416
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Recursive Block Markov Superposition Transmission of Short Codes: Construction, Analysis, and Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8267104
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Joint Sparse Graph for FBMC/OQAM Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8304665
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Information-Propagation-Based Scheduling for the Fast Convergence of Shuffled Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8345637
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Parameter-Free  $\ell_p$ -Box Decoding of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8352866
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Time-to-Space Division Multiplexing for Tb/s Mobile Cells
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8356241
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## 10 Pbit/s Transmission Using Space-Division-Multiplexing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8456760
 - **Type**: conference
@@ -91,7 +91,7 @@
 
 ## A Low-Complexity Method for Evaluating the Distance Spectrum of Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8516712
 - **Type**: conference
@@ -102,7 +102,7 @@
 
 ## The Design and Implementation of High-Speed Codec Based on FPGA
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8488239
 - **Type**: conference
@@ -113,7 +113,7 @@
 
 ## High Reliability NoC switch using Modified Hamming Code with Transient Faults
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8541202
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## Performance Comparison of Parallel Concatenated Gallager Codes with Different Types of Interleavers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8531011
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Simulated Annealing Method for Construction of High-Girth QC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8441303
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## DEVELOPMENT OF THE LDPC CODER-DECODER OF THE DVB-S2 STANDARD ON FPGA
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8456924
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Estimation of capabilities of cooperative CubeSat systems based on Alamouti transmission scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8456940
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Comparative evaluation of received signal parameters in SFN DVB-T2 service area
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8456937
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Performance Improvement of Optical Satellite Communications by Interleaved IEEE 802.11 LDPC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8436720
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Efficient Reconciliation Protocol with Polar Codes for Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8436787
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Implementation of Plug & Play Quantum Key Distribution Protocol
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8436633
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## AL-FEC Application on NGMN-Edge Computing Integrated Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8437004
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## FPGA Implementation Scheme of Mixed Logarithmic Domain FFT-BP Decoding Algorithm Based on Non-Binary LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8483120
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Weighted Symbol Flipping Decoding for Non-binary LDPC Codes Based on Iteration Stopping Criterion
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8483599
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Evaluation of LDPC Code and Polar Code Coding Scheme in 5G Technology – Massive Machine Type Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8534937
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## FPGA Implementation of High-Speed LDPC Codec for Wireless Laser Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8612730
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Ultra High-Capacity Transmission Using Space-Division-Multiplexing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8729935
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Research of LDPC Coding and Encoding for Satellite Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9045733
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Performance Evaluation and Improvement of PER and Throughput in Galvanic-Coupling Intra-Body Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8513354
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## An Implementation of Maximum Likelihood Decoder for Error-File Recovery on Cloud Storage System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8619946
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## IEEE 802.11ax: On Performance of Multi-Antenna Technologies with LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8465732
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## The Design of Low-Iteration Protograph Codes for Rayleigh Fading Channels with Spatial Diversity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8465765
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## A Novel Truncation Rule for the EMS Decoding of Non-binary LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8724394
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## LDPC Codes Derived from Quasi-cyclic Code Design Suitable for Optical Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8473793
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Probabilistically Shaped 8-PAM Suitable for Data Centers Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8473738
 - **Type**: conference

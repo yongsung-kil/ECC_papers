@@ -3,7 +3,7 @@
 
 ## Rate compatible reconciliation for continuous-variable quantum key distribution using Raptor-like LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2104.11377v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## List Message Passing Decoding of Non-binary Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2104.06328v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Irregular-Mapped Protograph LDPC-Coded Modulation: A Bandwidth-Efficient Solution for $5$G Networks with Massive Data-Storage Requirement
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2104.02856v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Log-domain decoding of quantum LDPC codes over binary finite fields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2104.00304v3
 - **Type**: preprint

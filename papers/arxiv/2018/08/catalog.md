@@ -3,7 +3,7 @@
 
 ## Semidefinite Relaxation Based Blind Equalization using Constant Modulus Criterion
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1808.07232v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Edge Coloring Technique to Remove Small Elementary Trapping Sets from Tanner Graph of QC-LDPC Codes with Column Weight 4
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1808.05258v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Non-iterative Joint Detection-Decoding Receiver for LDPC-Coded MIMO Systems Based on SDR
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1808.05477v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Assessing and countering reaction attacks against post-quantum public-key cryptosystems based on QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1808.01945v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Counting short cycles of (c,d)-regular bipartite graphs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1808.00352v2
 - **Type**: preprint

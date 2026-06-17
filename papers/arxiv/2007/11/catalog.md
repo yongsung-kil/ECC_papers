@@ -3,7 +3,7 @@
 
 ## Bounds on the Number of Iterations for Turbo-Like Ensembles over the Binary Erasure Channe
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0711.1056v1
 - **Type**: preprint

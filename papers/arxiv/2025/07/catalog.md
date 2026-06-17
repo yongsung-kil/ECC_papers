@@ -3,7 +3,7 @@
 
 ## Placing and routing quantum LDPC codes in multilayer superconducting hardware
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.23011v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Adaptive Learned Belief Propagation for Decoding Error-Correcting Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.19941v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Polar Coding and Linear Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.19695v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Directional Codes: a new family of quantum LDPC codes on hexagonal- and square-grid connectivity hardware
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.19430v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Action-List Reinforcement Learning Syndrome Decoding for Binary Linear Block Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.17893v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## CSS-$T$ codes over Binary Extension Fields and their Physical Foundations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.17611v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Efficient and Robust Semantic Image Communication via Stable Cascade
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.17416v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Hourglass Sorting: A novel parallel sorting algorithm and its implementation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.16326v1
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Transversal non-Clifford gates on qLDPC codes breaking the $\sqrt{N}$ distance barrier and quantum-inspired geometry with $\mathbb{Z}_2$ systolic freedom
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.15056v1
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Growing Sparse Quantum Codes from a Seed
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.13496v1
 - **Type**: preprint
@@ -113,7 +113,7 @@
 
 ## Expansion creates spin-glass order in finite-connectivity models: a rigorous and intuitive approach from the theory of LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.13342v1
 - **Type**: preprint
@@ -124,7 +124,7 @@
 
 ## A mapping of the Min-Sum decoder to reduction operations, and its implementation using CUDA kernels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.10424v1
 - **Type**: preprint
@@ -135,7 +135,7 @@
 
 ## High Girth Spatially-Coupled LDPC Codes with Hierarchical Structure
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.10185v1
 - **Type**: preprint
@@ -146,7 +146,7 @@
 
 ## Small Quantum Low Density Parity Check Codes for Near-Term Experiments
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.09690v3
 - **Type**: preprint
@@ -157,7 +157,7 @@
 
 ## Low-depth quantum error correction via three-qubit gates in Rydberg atom arrays
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.06096v2
 - **Type**: preprint
@@ -168,7 +168,7 @@
 
 ## Unified Framework for Quantum Code Embedding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.05361v3
 - **Type**: preprint
@@ -179,7 +179,7 @@
 
 ## Learning Variable Node Selection for Improved Multi-Round Belief Propagation Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.03461v1
 - **Type**: preprint
@@ -190,7 +190,7 @@
 
 ## Bias-tailored single-shot quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.02239v1
 - **Type**: preprint
@@ -201,7 +201,7 @@
 
 ## Construction of LDPC convolutional codes with large girth from Latin squares
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2507.00591v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Reduced-Complexity SCL Decoding of Multi-CRC-Aided Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1609.08813v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Performance Comparison of Short-Length Error-Correcting Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1609.07907v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## On locality of Generalized Reed-Muller codes over the broadcast erasure channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1609.03173v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## OpenCL/CUDA algorithms for parallel decoding of any irregular LDPC code using GPU
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1609.01567v2
 - **Type**: preprint

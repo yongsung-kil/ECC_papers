@@ -3,7 +3,7 @@
 
 ## Check-hybrid GLDPC Codes: Systematic Elimination of Trapping Sets and Guaranteed Error Correction Capability
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1604.05256v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Finite-length scaling based on belief propagation for spatially coupled LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1604.05111v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Low-density locality-sensitive hashing boosts metagenomic binning
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1604.02699v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Probabilistic bounds on the trapping redundancy of linear codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1604.00761v1
 - **Type**: preprint

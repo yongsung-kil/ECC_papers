@@ -3,7 +3,7 @@
 
 ## Graph theoretic construction of generalized product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:613026
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## Spectral techniques for expander codes and generalized cyclic codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:613032
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## On the construction of efficient multilevel coded modulations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:613459
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## An efficient class of SEC-DED-AUED codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:645128
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## A new class of t-error correcting/d-error detecting (d>t) and all unidirectional error detecting codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:640123
 - **Type**: conference
@@ -58,7 +58,7 @@
 
 ## Reed-Solomon bar codes for mail processing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:620399
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## Logic synthesis of multilevel circuits with concurrent error detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:644041
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## On the spectrum of distances of a multilevel code, decoded by a multistage decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:623183
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## A phase assignment method for virtual-wire-based hardware emulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:644040
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Coding for a channel with quantization in the presence of an estimable interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:554285
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Combination of BCM and TCM with 90/spl deg/, 180/spl deg/, and 270/spl deg/ phase rotational invariance
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:602585
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## On Diamond codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:623140
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Design, analysis, and evaluation of concurrent checking sorting networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:609877
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Good error-correcting codes based on very sparse matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:613028
 - **Type**: conference

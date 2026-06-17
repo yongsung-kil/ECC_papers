@@ -3,7 +3,7 @@
 
 ## Integrated Semi-definite Relaxation Receiver for LDPC-Coded MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1806.04295v1
 - **Type**: preprint

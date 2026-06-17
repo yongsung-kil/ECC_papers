@@ -3,7 +3,7 @@
 
 ## An algebraic approach to source coding with side information using list decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1110.6698v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Statistical Mechanical Analysis of Low-Density Parity-Check Codes on General Markov Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1110.1930v1
 - **Type**: preprint

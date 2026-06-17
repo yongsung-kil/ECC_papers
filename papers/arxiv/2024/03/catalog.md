@@ -3,7 +3,7 @@
 
 ## On the Performance of Low-complexity Decoders of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2403.19266v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Toward Low-latency Iterative Decoding of QLDPC Codes Under Circuit-Level Noise
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2403.18901v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Many-hypercube codes: High-rate quantum error-correcting codes for high-performance fault-tolerant quantum computing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2403.16054v3
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Quantum memory at nonzero temperature in a thermodynamically trivial system
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2403.10599v3
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Low-density parity-check representation of fault-tolerant quantum circuits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2403.10268v2
 - **Type**: preprint

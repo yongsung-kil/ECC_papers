@@ -3,7 +3,7 @@
 
 ## SimCommSys: Taking the errors out of error-correcting code simulations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1802.08522v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Design of Irregular SC-LDPC Codes With Non-Uniform Degree Distributions by Linear Programing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1802.07598v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Approximate low-weight check codes and circuit lower bounds for noisy ground states
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1802.07419v3
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Study of Knowledge-Aided Iterative Detection and Decoding for Multiuser MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1802.05960v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Polar-Coded Forward Error Correction for MLC NAND Flash Memory Polar FEC for NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1802.04576v1
 - **Type**: preprint

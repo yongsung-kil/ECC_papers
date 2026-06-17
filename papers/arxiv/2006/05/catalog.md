@@ -3,7 +3,7 @@
 
 ## Parallel vs. Sequential Belief Propagation Decoding of LDPC Codes over GF(q) and Markov Sources
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0605069v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## A General Method for Finding Low Error Rates of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0605051v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## The ML decoding performance of LDPC ensembles over Z/sub q/
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1424328
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Analysis and design of LDPC codes for time-selective complex-fading channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1427707
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Generalized low-density parity-check codes for optical communication systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1430793
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Design considerations leading to the development of good /spl pi/-rotation LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1431167
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## On the application of factor graphs and the sum-product algorithm to ISI channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1431126
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Robust iterative tree-pruning detection and LDPCC decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425645
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## A new approach to rapid PN code acquisition using iterative message passing techniques
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425635
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Concatenated codes: serial and parallel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1424305
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## On factor graphs and the Fourier transform
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1424306
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Wireless Wednesday at DAC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6500095
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Study of the technology migration path of the cellular wireless industry from 3G to 3.5G and beyond
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1515625
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## Performance comparison between non-binary LDPC codes and Reed-Solomon codes over noise bursts channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493349
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Semi-random construction of quasi-cyclic LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493351
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## The scheme of coded modulation based on low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493380
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## A new random construction for low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493379
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Structure protection for improving performance of low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493350
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## On importance sampling for iteratively decoded linear block codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493353
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Efficient frequency domain decoding of binary BCH codes based on prime-factor FFT
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1493352
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Low complexity, high speed decoder architecture for quasi-cyclic LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465953
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Multi-Gbit/sec low density parity check decoders with reduced interconnect complexity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465805
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Architectures for ASIC implementations of low-density parity-check convolutional encoders and decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465635
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Quasi-cyclic low-density parity-check coded multi-band-OFDM UWB systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464525
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## An analog/digital mode-switching LDPC codec
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465954
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Scheduling algorithm for partially parallel architecture of LDPC decoder by matrix permutation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465951
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Quantized LDPC decoder design for binary symmetric channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465952
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Parallelism/regularity-driven MIMO detection algorithm design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465746
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Digital built-in self-test of CMOS analog iterative decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465059
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Optimal packet length with energy efficiency for wireless sensor networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1465247
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Network-on-chip-centric approach to interleaving in high throughput channel decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464950
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## A parallel implementation of the message-passing decoder of LDPC codes using a reconfigurable optical model
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1434902
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Multiple-valued duplex asynchronous data transfer scheme for interleaving in LDPC decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1423175
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Constructing LDPC codes from simple loop-free encoding modules
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494433
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Design of variable-rate irregular LDPC codes with low error floor
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494431
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## EXIT charts for non-binary LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494432
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Two decoding algorithms for low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494436
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Optimization of a reduced-complexity decoding algorithm for LDPC codes by density evolution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494430
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## On the performance of LDPC-coded OFDM system with periodically terminated differential phase modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494681
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Phase detection involving parity-check equations and suited to transmissions at low signal to noise ratio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494704
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## High-rate serially concatenated codes using Hamming codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494429
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Joint iterative detection and decoding in the presence of phase noise and frequency offset
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494446
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## A scalable decoder architecture for linear congruential LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494672
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## The utility of hybrid error-erasure LDPC (HEEL) codes for wireless multimedia
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494539
 - **Type**: conference
@@ -465,7 +465,7 @@
 
 ## Detection of prescribed error events: application to perpendicular recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494700
 - **Type**: conference
@@ -476,7 +476,7 @@
 
 ## Optimal rate-compatible punctured concatenated zigzag codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494427
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## Gear-shift decoding for algorithms with varying complexity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494402
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## Bitplane coding for correlations exploitation in wireless sensor networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494482
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## Dc-free convolutional codes and dc-free turbo codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494428
 - **Type**: conference
@@ -520,7 +520,7 @@
 
 ## Performance analysis on coded system over quasi-static (MIMO) fading channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494462
 - **Type**: conference
@@ -531,7 +531,7 @@
 
 ## 2005 IEEE International Conference on Communications (IEEE Cat. No. 05CH37648)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494258
 - **Type**: conference
@@ -542,7 +542,7 @@
 
 ## Performance improvement of turbo coded multi-route multi-hop networks using parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1503237
 - **Type**: conference
@@ -553,7 +553,7 @@
 
 ## Synthesis of low power CED circuits based on parity codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1443443
 - **Type**: conference
@@ -564,7 +564,7 @@
 
 ## Performance evaluation of LDPC codes in the presence of ISI with application to 10GBASE-T Ethernet
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1557399
 - **Type**: conference
@@ -575,7 +575,7 @@
 
 ## Iterative ordered-statistic decoding for LDPC coded modulation systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1556908
 - **Type**: conference
@@ -586,7 +586,7 @@
 
 ## On the simulation of stochastic iterative decoder architectures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1557346
 - **Type**: conference

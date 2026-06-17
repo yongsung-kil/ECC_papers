@@ -3,7 +3,7 @@
 
 ## Rate-0.96 LDPC Decoding VLSI for Soft-Decision Error Correction of NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6547748
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Enhanced Precision Through Multiple Reads for LDPC Decoding in Flash Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804933
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Optimization of Generalized VDMM for Protograph-Based LDPC Coded BICM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6777400
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Density Evolution for Min-Sum Decoding of LDPC Codes Under Unreliable Message Storage
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6774414
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Finite Alphabet Iterative Decoders for LDPC Codes: Optimization, Architecture and Analysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6776564
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Classification Codes for Soft Information Generation from Hard Flash Reads
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804934
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Non-Binary LDPC Decoder Based on Symbol Flipping with Multiple Votes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6787156
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Structured Bit-Interleaved LDPC Codes for MLC Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804932
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## The Spammed Code Offset Method
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6798816
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Concatenated Raptor Codes in NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804931
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Fast Blind Recognition of Channel Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6816517
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Threshold-Based One-Bit Soft Forwarding for a Network Coded Multi-Source Single-Relay System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6783947
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Fast Polar Decoders: Algorithm and Implementation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804939
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Low-Complexity Soft-Output Decoding of Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804940
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Performance Limits and Practical Decoding of Interleaved Reed-Solomon Polar Concatenated Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6816518
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Optimal Detector for Multilevel NAND Flash Memory Channels with Intercell Interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804928
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## Storing Sparse Messages in Networks of Neural Cliques
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6658945
 - **Type**: journal
@@ -190,7 +190,7 @@
 
 ## Realizing Unequal Error Correction for nand Flash Memory at Minimal Read Latency Overhead
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6803051
 - **Type**: journal
@@ -201,7 +201,7 @@
 
 ## Optimal rate-distortion based unequal error protection in the transmission electrocardiograph signal
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6845613
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Reduction of encoding delay in compression of binary sources using turbo codes: A two-stage algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6842493
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Optimizing GNSS navigation data message decoding in urban environment
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6851419
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Authentication technology using QZSS
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6851394
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Polar Codes for Low-Complexity Forward Error Correction in Optical Access Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6839983
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Flexible non-binary LDPC decoding on FPGAs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6853936
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## A high throughput LDPC decoder using a mid-range GPU
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6855061
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Joint detection and decoding of LDPC coded distributed space-time signaling in wireless relay networks via linear programming
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6853930
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Asymptotic analysis and design of LDPC codes for laurent-based optimal and suboptimal CPM receivers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6854408
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Parallel programming of a symmetric transport-triggered architecture with applications in flexible LDPC encoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6855236
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Metric learning with rank and sparsity constraints
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6853550
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## A fast architecture for finding maximum (or minimum) values in a set
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6855071
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## FER prediction with variable codeword length
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6853935
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## LDPC coded transmissions over the Gaussian broadcast channel with confidential messages
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6845079
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Performance analysis of MC-CDMA system when image transmission is involved
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6866742
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Two-bit representation of the extrinsic LLR messages in the variable node processor of NB-LDPC decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6991185
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Decoding of short non-binary LDPC codes using a non iterative decoding algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6991187
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## An efficient component-interleaved nonbinary Low Density Parity Check Code scheme on Rayleigh fading channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6849016
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Asymptotic and finite-length performance of irregular spatially-coupled codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6849017
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Communication through collisions: Opportunistic utilization of past receptions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6848202
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Scheduling of multicast and unicast services under limited feedback by using rateless codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6848104
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Iterative receiver for Qc-LDPC coded underwater acoustic communication systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6859617
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## Software simulation of LDPC codes and performance analysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6859553
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## Implementation of LDPC decoder for L1 signaling in DVB-T2 transmission frame
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6904098
 - **Type**: conference
@@ -465,7 +465,7 @@
 
 ## A new hybrid decoding algorithm based on multi-dimensional searching for regular LDPC codes in finite geometries
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6999766
 - **Type**: conference
@@ -476,7 +476,7 @@
 
 ## A concatenated scheme to improve the performance of polar codes on symmetric memoryless channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6999836
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## Both transmitter and receiver IQ imbalance compensation and CFO synchronization for LDPC-coded MIMO-OFDM systems using OSTBC algorithms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6999749
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## A Low-Latency Algorithm and FPGA Design for the Min-Search of LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6969398
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## Advanced error prediction LDPC for high-speed reliable TLC nand-based SSDs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6849375
 - **Type**: conference
@@ -520,7 +520,7 @@
 
 ## Iterative Decoding of Network Coding HARQ in LDPC System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7022961
 - **Type**: conference
@@ -531,7 +531,7 @@
 
 ## Detection and Decoding in Large-Scale MIMO Systems: A Non-Binary Belief Propagation Approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7022876
 - **Type**: conference
@@ -542,7 +542,7 @@
 
 ## Ultra fast, two-bit ECC for Emerging Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6849370
 - **Type**: conference
@@ -553,7 +553,7 @@
 
 ## Stopping a Rapid Tornado with a Puff
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6956584
 - **Type**: conference
@@ -564,7 +564,7 @@
 
 ## Evaluation of Cramer-Rao Bounds for Phase Estimation of Coded Linearly Modulated Signals
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7022915
 - **Type**: conference
@@ -575,7 +575,7 @@
 
 ## Iterative Interference Modulation Classification
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7022962
 - **Type**: conference
@@ -586,7 +586,7 @@
 
 ## Link Adaptation Scheme for Uplink MIMO Transmission with Turbo Receivers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7022972
 - **Type**: conference
@@ -597,7 +597,7 @@
 
 ## Artificial noise and LDPC code aided physical layer security enhancement
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6913670
 - **Type**: conference
@@ -608,7 +608,7 @@
 
 ## The performance of LDPC coded frequency hopping system under follower jamming
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6913666
 - **Type**: conference
@@ -619,7 +619,7 @@
 
 ## The performance of LDPC coded FFH/BFSK system over Rician fading channel under multitone jamming
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6913657
 - **Type**: conference
@@ -630,7 +630,7 @@
 
 ## A high rate non-binary QC-LDPC codes in high order Galois Field for PR2 and EPR2 channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6839791
 - **Type**: conference
@@ -641,7 +641,7 @@
 
 ## A novel structure of variable rate non-binary LDPC codes for MIMO channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6839769
 - **Type**: conference
@@ -652,7 +652,7 @@
 
 ## Low-complexity key reconciliation algorithm using LDPC bit-flipping decoding for quantum key distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6839886
 - **Type**: conference
@@ -663,7 +663,7 @@
 
 ## Diversity Performance of Physical Layer Network Coding based on Reed-Solomon Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6843206
 - **Type**: conference
@@ -674,7 +674,7 @@
 
 ## Design and Test of Adaptive Computing Fabrics for Scalable and High-Efficiency Cognitive SoC Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6875448
 - **Type**: conference
@@ -685,7 +685,7 @@
 
 ## Mitigating Constant Jamming in Cognitive Radio Networks Using Hybrid FEC Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6838733
 - **Type**: conference
@@ -696,7 +696,7 @@
 
 ## Space-time storage codes for wireless distributed storage systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6934407
 - **Type**: conference

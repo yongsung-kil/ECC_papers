@@ -3,7 +3,7 @@
 
 ## Loop Calculus Helps to Improve Belief Propagation and Linear Programming Decodings of Low-Density-Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0609154v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Exhausting Error-Prone Patterns in LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0609046v1
 - **Type**: preprint

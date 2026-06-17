@@ -3,7 +3,7 @@
 
 ## Rate-Adaptive Protograph-Based MacKay-Neal Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10793401
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Optimized design of quasi-GRS codes with multi-step simplified MLD
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10923676
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Minimum-Set Min-Sum Decoding Algorithms for Non-Binary LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10649650
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Quantum Communication for Video Transmission Over Error-Prone Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10934102
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Improving Learning-Based Semantic Coding Efficiency for Image Transmission via Shared Semantic-Aware Codebook
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10654371
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Logical Operators and Fold-Transversal Gates of Bivariate Bicycle Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10812769
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Efficient Active Deep Decoding of Linear Codes Using Importance Sampling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10787032
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Soft-Output Guessing Codeword Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10795170
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Analysis of Terahertz Communication Under Dust Storm Conditions on Mars
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10810382
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Deploying the Qline System for a QKD Metropolitan Network on the Berlin OpenQKD Testbed
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10795138
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Flash-Gen: Spatio-Temporal Generator for Flash Memory Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10634193
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## SwinJSCC: Taming Swin Transformer for Deep Joint Source-Channel Coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10589474
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Soft-Output Successive Cancellation List Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10778976
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Analysis of Bit Rate vs SNR in Coded FSO Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10963345
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Concatenated Channel Coding with Ring Structure in Screen-Camera Links
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10920832
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Smart Energy Management with Integrated WSN and WMN: Advancing Efficiency and Sustainability
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10989836
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Adaptive Modulation and Coding Techniques for Next-Generation Wireless Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10989994
 - **Type**: conference

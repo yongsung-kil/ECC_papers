@@ -3,7 +3,7 @@
 
 ## Thresholds of absorbing sets in Low-Density-Parity-Check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1401.8168v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Probabilistic Signal Shaping for Bit-Metric Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1401.6190v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Image Block Loss Restoration Using Sparsity Pattern as Side Information
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1401.5966v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Upper Bounds on the Minimum Distance of Quasi-Cyclic LDPC codes Revisited
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1401.2120v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Novel Reconciliation Protocol Based on Spinal Code for Continuous-variable Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1909.12496v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Analysis and Comparison of the LDPC and Reed Solomon Encodings in Mitigating the Impact of Clipping Noise in OFDM-Based VLC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1909.10104v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Fault-tolerant gates on hypergraph product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1909.07424v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## On maximum-likelihood decoding with circuit-level errors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1909.06732v4
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## LDPC Codes Achieve List Decoding Capacity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1909.06430v4
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Hyper-Graph-Network Decoders for Block Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1909.09036v2
 - **Type**: preprint

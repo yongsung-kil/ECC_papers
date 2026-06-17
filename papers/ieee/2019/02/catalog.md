@@ -3,7 +3,7 @@
 
 ## New Design of High-Rate Generalized Root Protograph LDPC Codes for Nonergodic Block Interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8571264
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Integrated Design of JSCC Scheme Based on Double Protograph LDPC Codes System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8594605
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## More Accurate Analysis of Sum-Product Decoding of LDPC Codes Using a Gaussian Approximation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8572793
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Characterization and Efficient Search of Non-Elementary Trapping Sets of LDPC Codes With Applications to Stopping Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8434325
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Hybrid Check Node Architectures for NB-LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8464053
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## CRC-Aided Sphere Decoding for Short Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8570830
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## A Two-Bit Precision Decoding Algorithm for LDPC Codes Over the Binary Symmetric Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8421051
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Compute–Forward Multiple Access (CFMA): Practical Implementations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8485351
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## A Novel Weight Coefficient PEG Algorithm for Ultra-Reliable Short Length Analog Fountain Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8425638
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Ultrareliable and Low-Latency Communication Techniques for Tactile Internet Services
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8474959
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Design of SCMA Codebooks Based on Golden Angle Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8576566
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Deep Learning Constellation Design for the AWGN Channel With Additive Radar Interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8490882
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Lattice-Partition-Based Downlink Non-Orthogonal Multiple Access Without SIC for Slow Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8517129
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Systematic Fountain Codes for Massive Storage Using the Truncated Poisson Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8519783
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Throughput Region of Spatially Correlated Interference Packet Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8421262
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## An Efficient Optimal Algorithm for the Successive Minima Problem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8502084
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## Performance of Viterbi Decoding With and Without ARQ on Rician Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8487021
 - **Type**: journal
@@ -190,7 +190,7 @@
 
 ## An Unequal Error Protection of Quasi-Cyclic Low Density Parity Check (QC-LDPC) Codes Based on Combinatorial Designs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8821723
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Performance Analysis of Circle-Constellation-Based M-DCSK Modulation for Broadcasting Application with Enhanced Reliability by LDPC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8821728
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Serial Concatenated Convolution Codes for Coded OFDM in Digital Audio Broadcasting Environment
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8908080
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Generalized Two-Magnitude Check Node Updating with Self Correction for 5G LDPC Codes Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661344
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Static Layered Schedules and Core-Only Parity Check for the 5G New Radio LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661345
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Two-Dimensional Magnetic Recording Systems with CRC-concatenated Polar Channel Coding Schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661322
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## On the Relation between PAPR and System Performance in Multicarrier Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661312
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Multilevel Coding over Eisenstein Integers with Ternary Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661302
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Two-Stage Dimension-Wise Coded Modulation for Four-Dimensional Hurwitz-Integer Constellations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661331
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Polar Code Construction for List Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661319
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## On Decoding Schemes for the MDPC-McEliece Cryptosystem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661339
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Genetic Algorithm-based Polar Code Construction for the AWGN Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661304
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Channel-Optimized Information Bottleneck Design for Signal Forwarding and Discrete Decoding in Cloud-RAN
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661338
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Protograph-Based LDPC Code Design for Ternary Message Passing Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661301
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Signal Constellations for Physical-Layer Security
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661330
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## The Turbo Principle in Molecular Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8661323
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Soft Decision-based Data Detection Scheme for NR Communications System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8669050
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Deep Learning for Polar Codes over Flat Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8669025
 - **Type**: conference

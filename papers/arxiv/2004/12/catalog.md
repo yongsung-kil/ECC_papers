@@ -3,7 +3,7 @@
 
 ## An Efficient MN-Algorithm for Joint Source-Channel Coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0412572v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Towards a communication-theoretic understanding of system-level power consumption
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1010.4855v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## On a Low-Rate TLDPC Code Ensemble and the Necessary Condition on the Linear Minimum Distance for Sparse-Graph Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1010.1911v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Design and Performance of Rate-compatible Non-Binary LDPC Convolutional Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1010.0060v2
 - **Type**: preprint

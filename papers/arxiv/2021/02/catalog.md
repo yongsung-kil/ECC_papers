@@ -3,7 +3,7 @@
 
 ## A High-Throughput Multi-Mode LDPC Decoder for 5G NR
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2102.13228v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## On Quantum Weight Reduction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2102.10030v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Capacity Optimality of AMP in Coded Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2102.05441v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Proximal Decoding for LDPC-coded Massive MIMO Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2102.05256v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Encoding and Decoding Construction D' Lattices for Power-Constrained Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2102.04741v1
 - **Type**: preprint

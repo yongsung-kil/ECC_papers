@@ -3,7 +3,7 @@
 
 ## LEDAkem: a post-quantum key encapsulation mechanism based on QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.08867v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Constructing LDPC Codes from Partition and Latin-Style Splicing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.08811v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Analysis and Design of Serially Concatenated LDGM Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.08270v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Asymptotic Analysis on Spatial Coupling Coding for Two-Way Relay Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.06328v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## The decoding failure probability of MDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.04668v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## LDPC Codes over Gaussian Multiple Access Wiretap Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.04420v2
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## LDPC Codes with Local and Global Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.03951v2
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Characterization and Efficient Search of Non-Elementary Trapping Sets of LDPC Codes with Applications to Stopping Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1801.02028v1
 - **Type**: preprint

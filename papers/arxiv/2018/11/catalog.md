@@ -3,7 +3,7 @@
 
 ## Neural Belief-Propagation Decoders for Quantum Error-Correcting Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1811.07835v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Good approximate quantum LDPC codes from spacetime circuit Hamiltonians
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1811.00277v1
 - **Type**: preprint

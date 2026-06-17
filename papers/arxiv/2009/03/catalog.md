@@ -3,7 +3,7 @@
 
 ## On the Iterative Decoding of High-Rate LDPC Codes With Applications in Compressed Sensing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0903.2232v4
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Decay of Correlations for Sparse Graph Error Correcting Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0903.1842v1
 - **Type**: preprint

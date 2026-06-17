@@ -3,7 +3,7 @@
 
 ## Critical Noise Levels for LDPC decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0203159v1
 - **Type**: preprint

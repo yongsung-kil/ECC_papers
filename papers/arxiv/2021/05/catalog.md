@@ -3,7 +3,7 @@
 
 ## LDPC Codes with Soft Interference Cancellation for Uncoordinated Unsourced Multiple Access
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2105.13985v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Keeping up with the bits: tracking physical layer latency in millimeter-wave Wi-Fi networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2105.13147v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Communication-Efficient LDPC Code Design for Data Availability Oracle in Side Blockchains
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2105.06004v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## On Compressed Sensing of Binary Signals for the Unsourced Random Access Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2105.05350v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Necessary and Sufficient Girth Conditions for Tanner Graphs of Quasi-Cyclic LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2105.03462v1
 - **Type**: preprint

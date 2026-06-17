@@ -3,7 +3,7 @@
 
 ## Performance of Polar Codes on wireless communications Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.6106v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## High Performance Error Correction for Quantum Key Distribution using Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.5882v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Correction Trees as an Alternative to Turbo Codes and Low Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.5317v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Tight lower bound of consecutive lengths for QC-LDPC codes with girth twelve
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.4864v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Improved Quantum LDPC Decoding Strategies For The Misidentified Quantum Depolarizing Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.4223v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Ultra Low Complexity Soft Output Detector for Non-Binary LDPC Coded Large MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.4151v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Reduced-Complexity Column-Layered Decoding and Implementation for LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.2577v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Decomposition Methods for Large Scale LP Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1204.0556v2
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Some problems of Graph Based Codes for Belief Propagation decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1511.00133v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Computing the minimum distance of nonbinary LDPC codes using block Korkin-Zolotarev method
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1511.00125v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Error correction for encoded quantum annealing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1511.00004v3
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Iterative Decoding of LDPC Codes over the q-ary Partial Erasure Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1510.05311v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## New Characterization and Efficient Exhaustive Search Algorithm for Elementary Trapping Sets of Variable-Regular LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1510.04954v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Density Evolution Analysis of Spatially Coupled LDPC Codes Over BIAWGN Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1510.04763v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## A Fully-Unrolled LDPC Decoder Based on Quantized Message Passing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1510.04589v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Local Hamiltonians Whose Ground States are Hard to Approximate
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1510.02082v3
 - **Type**: preprint

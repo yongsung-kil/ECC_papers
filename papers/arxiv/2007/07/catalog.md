@@ -3,7 +3,7 @@
 
 ## Use of a $d$-Constraint During LDPC Decoding in a Bliss Scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0707.3925v1
 - **Type**: preprint

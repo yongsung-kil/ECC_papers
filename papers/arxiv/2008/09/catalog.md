@@ -3,7 +3,7 @@
 
 ## MBBP for improved iterative channel decoding in 802.16e WiMAX systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0809.1348v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Low-Complexity Coding and Source-Optimized Clustering for Large-Scale Sensor Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0809.1330v1
 - **Type**: preprint

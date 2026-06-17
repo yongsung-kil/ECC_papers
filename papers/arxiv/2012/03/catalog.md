@@ -3,7 +3,7 @@
 
 ## On the Convergence Speed of Turbo Demodulation with Turbo Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1203.5037v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Near Capacity Approaching for Large MIMO Systems by Non-Binary LDPC Codes with MMSE Detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1203.0960v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## On constructions and parameters of symmetric configurations v_{k}
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1203.0709v1
 - **Type**: preprint

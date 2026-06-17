@@ -3,7 +3,7 @@
 
 ## Practical Entanglement Distillation Scheme Using Recurrence Method And Quantum Low Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0907.1130v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Statistical mechanics of LDPC codes on channels with memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0907.0775v1
 - **Type**: preprint

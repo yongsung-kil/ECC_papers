@@ -3,7 +3,7 @@
 
 ## High-Rate Short-Block LDPC Codes for Iterative Decoding with Applications to High-Density Magnetic Recording Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1104.1457v1
 - **Type**: preprint

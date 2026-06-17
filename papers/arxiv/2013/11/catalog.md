@@ -3,7 +3,7 @@
 
 ## Spin glass reflection of the decoding transition for quantum error correcting codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1311.7688v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Homological Product Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1311.0885v1
 - **Type**: preprint

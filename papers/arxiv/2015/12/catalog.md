@@ -3,7 +3,7 @@
 
 ## On tensor products of CSS Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1512.07081v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Study of Structured Root-LDPC Codes and PEG Techniques for Block-Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1512.02520v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Performance Comparison of LDPC Block and Spatially Coupled Codes over GF(q)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1408.2621v1
 - **Type**: preprint

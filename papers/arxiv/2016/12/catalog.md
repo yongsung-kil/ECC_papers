@@ -3,7 +3,7 @@
 
 ## Roads towards fault-tolerant universal quantum computation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1612.07330v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Transmission and Storage Rates for Sequential Massive Random Access
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1612.07163v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Least reliable messages based early termination method for LT soft decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1612.05461v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Construction of Full-Diversity LDPC Lattices for Block-Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1612.04039v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Symmetric blind information reconciliation for quantum key distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1612.03673v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Graph based linear error correcting codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1612.03279v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Statistical Physics of Irregular Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/9908358v2
 - **Type**: preprint

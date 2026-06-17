@@ -3,7 +3,7 @@
 
 ## Practical Encoder and Decoder for Power Constrained QC-LDPC lattices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1603.07010v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## A Generalized LDPC Framework for Robust and Sublinear Compressive Sensing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1603.06286v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Hardware Acceleration for Boolean Satisfiability Solver by Applying Belief Propagation Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1603.05314v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Proof of Threshold Saturation for Spatially Coupled Sparse Superposition Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1603.01817v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## A Novel Interleaving Scheme for Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1603.00644v2
 - **Type**: preprint

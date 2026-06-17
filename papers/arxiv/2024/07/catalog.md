@@ -3,7 +3,7 @@
 
 ## On the energy barrier of hypergraph product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2407.20526v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Telecommand Rejection Probability for CCSDS-compliant LDPC-Coded Transmissions with Tail Sequence
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2407.16258v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Error correction for encoded quantum annealing revisited
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2407.15480v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## SSIP: automated surgery with quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2407.09423v1
 - **Type**: preprint

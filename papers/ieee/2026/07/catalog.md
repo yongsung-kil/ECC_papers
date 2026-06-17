@@ -3,7 +3,7 @@
 
 ## From SMURF to HI-SMURF: Scalable Multivariate Nonlinear Function Approximation via Compact Stochastic Architectures
 
-- **Status**: in(포함)
+- **Status**: ✅
 - **Reason**: 확률컴퓨팅 기반 비선형함수 근사 HW를 LDPC 디코딩에 평가 — 저자원 디코더 HW 아키텍처로 이식 가능(D)
 - **ID**: ieee:11499434
 - **Type**: journal

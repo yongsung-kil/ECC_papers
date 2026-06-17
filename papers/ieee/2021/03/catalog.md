@@ -3,7 +3,7 @@
 
 ## Noisy Density Evolution With Asymmetric Deviation Models
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9266091
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Low Complexity Generalized-LDPC Decoder Based on Trellis Splicing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9246528
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Deep Neural Network Media Noise Predictor Turbo-Detection System for 1-D and 2-D High-Density Magnetic Recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9261349
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Nonorthogonal Multiple Access With Orthogonal Time–Frequency Space Signal Transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9123984
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Bounds on the Error Probability of Raptor Codes Under Maximum Likelihood Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9312617
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Distance-Adaptive Absorption Peak Modulation (DA-APM) for Terahertz Covert Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9271892
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## End-to-End Reliability of Satellite Communication Network Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9072644
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Signal Detection Using Extrinsic Information From Neural Networks for Bit-Patterned Media Recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9205869
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## A Study on Neural Network Detector in SMR System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9210739
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Hierarchical Circular θ-QAM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9247436
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Performance Improvement of Dual STO Reading With AM–FM Combined Detection for 3-D Magnetic Recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9225723
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Multitrack Detection With 2-D Iterative Soft Estimate Aided Neural Network Equalizer for Heat-Assisted Interlaced Magnetic Recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9207938
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Quasi-Cyclic LDPC Codes for Short Block-Lengths
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9438238
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Reliable, Efficient Large-File Delivery over Lossy, Unidirectional Links
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9438494
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## A Multifaceted Approach for Improving Wireless Communications for Control of Safety-Critical Tasks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9438407
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## A Reinforcement Learning Based Decoding Method of Short Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9420004
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Path Metric Inherited SCL Decoding of Multilevel Polar-Coded Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9420011
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Improvement of the Bit Duplication Method for Rate-Compatible Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9535844
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Bounds on the Error Probability of Nonbinary Linear Codes over the Q-ary Symmetric Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9400302
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Optical Access Networks – From FTTH-Centric to New Use-Cases
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9399710
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Stochastic Circuit Design Based on Exact Synthesis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9461462
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Adapting SCMA Codebooks to Channel State
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9388063
 - **Type**: conference

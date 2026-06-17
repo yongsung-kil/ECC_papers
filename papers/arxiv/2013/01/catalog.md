@@ -3,7 +3,7 @@
 
 ## On the Performance of Low Density Parity Check Codes for Gaussian Interference Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1301.6643v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Linear Programming Decoding of Spatially Coupled Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1301.6410v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## A Proof of Threshold Saturation for Spatially-Coupled LDPC Codes on BMS Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1301.6111v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Spatial Coupling as a Proof Technique
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1301.5676v3
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Binary Diversity for Non-Binary LDPC Codes over the Rayleigh Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1301.4444v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## A Low-Complexity Encoding of Quasi-Cyclic Codes Based on Galois Fourier Transform
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1301.3220v1
 - **Type**: preprint

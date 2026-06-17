@@ -3,7 +3,7 @@
 
 ## Hardware-Efficient QC-LDPC Decoding Architecture With Reduced Bit-Width and Saturation Management
 
-- **Status**: in(포함)
+- **Status**: ✅
 - **Reason**: QC-LDPC 디코더 비트폭 축소·포화관리 VLSI 아키텍처 — NAND 디코더에 직접 이식 가능(D)
 - **ID**: ieee:11435440
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Enhanced-Throughput Antithetic Sample Generation Architecture for Monte Carlo Simulation
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: Monte Carlo 시뮬용 antithetic 표본생성 HW — LDPC는 BER 시뮬 대상일 뿐, 디코더 HW 아님
 - **ID**: ieee:11431593
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Toward a Practical Key Generation System for V2X Communications
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: V2X 무선 키생성/보안 응용 — LDPC는 키일치용 부수 언급, 이식 가능 기법 없음
 - **ID**: ieee:11278625
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Efficient and Resilient Packet Recovery for Federated Learning via Approximation
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 연합학습 패킷복구 저랭크근사+네트워크코딩 — LDPC ECC 아님, 채널코딩 디코더 기법 없음
 - **ID**: ieee:11267083
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## A Decorrelation-Based Fused Initial Key Generation and Joint Key Agreement Mechanism for V2V Communication
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: V2V 물리계층 키생성/보안 응용 — LDPC는 키일치용 부수 언급, 떼어낼 디코더/HW 기법 없음
 - **ID**: ieee:11240567
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Leveraging Overfitting for Low-Complexity and Modality-Agnostic Joint Source-Channel Coding
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: joint source-channel coding(JSCC) 신경망 — 소스 코딩 결합으로 채널 ECC 디코더로 떼어낼 기법 없음
 - **ID**: ieee:11460387
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## On the Role of Extrinsic Value Exchange in Expectation Propagation for Coded MIMO Systems
 
-- **Status**: in(포함)
+- **Status**: ✅
 - **Reason**: EP 검출기 LLR 통계 분석(negentropy로 Gaussianity 평가)으로 디코더 오류정정 능력 향상 — LLR 품질 분석은 NAND LDPC LLR 처리에 이식 가능(C 경계)
 - **ID**: ieee:11464434
 - **Type**: conference
@@ -80,7 +80,7 @@
 
 ## Spatially-Coupled OTFS Systems via Block Markov Superposition Transmission
 
-- **Status**: in(포함)
+- **Status**: ✅
 - **Reason**: Spatially-Coupled LDPC 구성+BMST, EXIT 차트 기반 SC 임계 최적화 — SC-LDPC 코드 설계 기법 이식 가능(E)
 - **ID**: ieee:11464769
 - **Type**: conference
@@ -91,7 +91,7 @@
 
 ## Binary Modulation on Conjugate-Reciprocal Zeros (MOCZ) with List Decoding for Unknown Channel Length
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: MOCZ 비동기 변조+list decoding, LDPC는 통상 BP로 부수 언급 — 떼어낼 신규 디코더/코드 기법 없음
 - **ID**: ieee:11460430
 - **Type**: conference
@@ -102,7 +102,7 @@
 
 ## Low-Bandwidth High-Fidelity Speech Transmission with Generative Latent Joint Source-Channel Coding
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 생성형 latent JSCC 음성전송 — 소스 코딩 결합, NAND 채널 ECC로 이식할 기법 없음
 - **ID**: ieee:11461563
 - **Type**: conference
@@ -113,7 +113,7 @@
 
 ## Modeling and Optimization of Noise-Tolerant Coding Algorithms for 6G-oriented Communication
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 6G용 fountain(LT/Raptor)·LDPC 비교 분석으로 erasure 채널 이론평가 중심, NAND로 이식할 디코더/HW/구성 기법 없음
 - **ID**: ieee:11537117
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## Would Learning Help? Adaptive CRC-QC-LDPC Selection for Integrity in 5G-NR V2X
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:11532867
 - **Type**: conference

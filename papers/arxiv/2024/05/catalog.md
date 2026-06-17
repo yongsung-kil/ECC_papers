@@ -3,7 +3,7 @@
 
 ## Practical implementation of geometric quasi-cyclic LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2405.20524v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## On stability of k-local quantum phases of matter
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2405.19412v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Eigenstate localization in a many-body quantum system
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2405.12279v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Channel Coding Toward 6G: Technical Overview and Outlook
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2405.07547v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Efficient soft-output decoders for the surface code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2405.07433v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## How much entanglement is needed for quantum error correction?
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2405.01332v2
 - **Type**: preprint

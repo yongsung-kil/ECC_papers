@@ -3,7 +3,7 @@
 
 ## Bethe Free Energy Approach to LDPC Decoding on Memory Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0904.0747v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## GNarsil: Splitting Stabilizers into Gauges
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.18302v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Toward a 2D Local Implementation of Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.17676v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## GLDPC-PC Codes: Channel Coding Towards 6G Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.14828v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## High-rate quantum LDPC codes for long-range-connected neutral atom registers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.13010v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Fault-tolerant quantum computing with the parity code and noise-biased qubits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.11332v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Robust Performance Over Changing Intersymbol Interference Channels by Spatial Coupling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.10367v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## On the Universality of Spatially Coupled LDPC Codes Over Intersymbol Interference Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.10348v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Study of Adaptive Reweighted Sparse Belief Propagation Decoders for Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.04674v1
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Fundamental Limits of Optical Fiber MIMO Channels With Finite Blocklength
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.04477v1
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Density Evolution Analysis of Generalized Low-density Parity-check Codes under a Posteriori Probability Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2404.01136v2
 - **Type**: preprint

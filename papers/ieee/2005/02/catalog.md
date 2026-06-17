@@ -3,7 +3,7 @@
 
 ## Construction of low-density parity-check codes by superposition
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1402646
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Shuffled iterative decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1402639
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Codes on finite geometries
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1386528
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## High-rate serially concatenated coding with extended Hamming codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1388739
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## A Decoding Algorithm for Finite-Geometry LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1402664
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Evaluation of the very low BER of FEC codes using dual adaptive importance sampling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1388740
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Approximate belief propagation, density evolution, and statistical neurodynamics for CDMA multiuser detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1386539
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Bounds on information combining
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1386530
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Signal processing for perpendicular recording channels with intertrack interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1396214
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Split soft-decision equalization for wireless channels with large delay spread
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1402649
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Interleaver and Accumulator Design for Systematic Repeat-Accumulate Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1624218
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## A 480Mb/s LDPC-COFDM-based UWB baseband transceiver
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494060
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## A 135Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494061
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Session 24 overview - baseband processing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1494058
 - **Type**: conference

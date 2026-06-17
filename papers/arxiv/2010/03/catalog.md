@@ -3,7 +3,7 @@
 
 ## Design of Nested LDGM-LDPC Codes for Compress-and-Forward in Relay Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1003.3765v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Decoding Complexity of Irregular LDGM-LDPC Codes Over the BISOM Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1003.2454v3
 - **Type**: preprint

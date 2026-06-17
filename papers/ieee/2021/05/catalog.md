@@ -3,7 +3,7 @@
 
 ## A Rate Scalable Construction of Non-Homogeneous Quantum LDPC Codes of CSS Type Based on Balanced Incomplete Block Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9328225
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## On Nested Property of Root-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9336043
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## High-Speed LDPC Decoders Towards 1 Tb/s
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9378807
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Quasi-Cyclic LDPC Codes With Parity-Check Matrices of Column Weight Two or More for Correcting Phased Bursts of Erasures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9353574
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Error Floor Estimation of LDPC Coded Modulation Systems Using Importance Sampling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9349511
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Spatially Coupled LDPC Codes With Sub-Block Locality
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9354799
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Bit-Plane Coding in Extractable Source Coding: Optimality, Modeling, and Application to 360° Data
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9319718
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Deep-Learning-Based Blind Recognition of Channel Code Parameters Over Candidate Sets Under AWGN and Multi-Path Fading Conditions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9344644
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Coding of Multi-Source Information Streams With Age of Information Requirements
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9374436
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Iterative Collision Resolution for Slotted ALOHA With NOMA for Heterogeneous Devices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9354838
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Shot Interference Detection and Mitigation for Underwater Acoustic Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9343880
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Code-Aided Modulation Classification Algorithm for Multiuser Uplink SC-FDMA Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9344668
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Unary Coding Design for Simultaneous Wireless Information and Power Transfer With Practical M-QAM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9303399
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## A Digital Two-Stage Phase Noise Compensation and rCFO/rSCO Tracking Module for mmW Single Carrier Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9374567
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## An Efficient Frame Optimization Scheme for Low Power Wide Area Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9347473
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Optimal Detection of Multiple Symbol-Slotted Random Access-Based Packet Transmissions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9330800
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## Hybrid Probabilistic-Geometric Shaped LDPC-coded PM- 16QAM in 140 km DWDM Metro Network Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9571396
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## LDPC-Coded Squeezed-Displaced States-based Quantum Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9571143
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## 2-µm-band Coherent Transmission of Nyquist-WDM 16-QAM Signal by On-chip Spectral Translation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9571617
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## A Code Scheme for G3-PLC Physical Layer Specification Based on Turbo Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9441595
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## A Deep Learning Based Method for Blind Recognition of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9441497
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Blind Recognition of LDPC Codes Using Convolutional Neural Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9450940
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Novel Multi-Parameter based Rate-Matching of Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9486401
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Information Bottleneck Message Passing for Military Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9486405
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## A High Throughput QC-LDPC Decoder Architecture for Near-Earth Satellite Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9464195
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Uniquely Decodable Ternary Codes via Augmented Sylvester-Hadamard Matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9527898
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Channel Reconstruction Based Multiuser Precoding with Limited Feedback
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9527824
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## A Low Complexity Parallel QC-LDPC Encoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9499562
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## High Energy-Efficient LDPC Decoder with AVFS System for NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401163
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## A 33.2 Gbps/Iter. Reconfigurable LDPC Decoder Fully Compliant with 5G NR Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401329
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Segmented Reconfigurable Cyclic Shifter for QC-LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401118
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## High-Efficient Nonbinary LDPC Decoder with Early Layer Decoding Schedule
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401072
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Content Distribution Network for Streaming Using Multiple Galois Fields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401700
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## BER Evaluation System Considering Device Characteristics of TLC and QLC NAND Flash Memories in Hybrid SSDs with Real Storage Workloads
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401203
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Efficient Fast-SCAN Flip Decoder for Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9401398
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Performance Analysis of LDPC Decoding Algorithms for CCSDS Telecommand Space Data Link Protocol
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9456163
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Associated Sectors of Magnetic Recording System via Spatially Coupled LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9454834
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Joint Design of Channel Output Quantizer and LUT-Based LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9454862
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Determining the Effectiveness of LDPC Codes for 5G Information Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9501120
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Application and Analysis of Expectation Propagation Algorithm in the Binary Erasure Quantization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9519624
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## Combining Scrambling and Multilevel Coding for Physical-Layer Security
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9472213
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## CICADA: A New Tool to Design Circuits with Correction and Detection Abilities
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9438900
 - **Type**: conference

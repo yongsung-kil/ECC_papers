@@ -3,7 +3,7 @@
 
 ## Design of High-Performance and Area-Efficient Decoder for 5G LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9275343
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Decoding of NB-LDPC Codes Over Subfields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9249036
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Machine Learning for LLR Estimation in Flash Memory With LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9169701
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## A Study on AM–FM Combined Detection for Magnetic Recording Using STO Reading
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9149895
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Flexible Multilevel Coding With Concatenated Polar-Staircase Codes for M-QAM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9260206
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Improvement of Iterative Decoding With LLR Modulator by Neural Network Using Magnetic Transition Information in SMR System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9146935
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## A Configurable Successive-Cancellation List Polar Decoder Using Split-Tree Architecture
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9144240
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## PHY Abstraction Techniques for V2X Enabling Technologies: Modeling and Analysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9332271
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## SCMA System Design With Index Modulation via Codebook Assignment
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9343752
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Optimizing Lifetime Capacity and Read Performance of Bit-Alterable 3-D NAND Flash
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9104673
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## On Polar Coding for Side Information Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9247135
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Demonstration of 108 Gb/s Duo-Binary PAM-8 Transmission and the Probabilistic Modeling of DB-PAM-M BER
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9335038
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Performance Analysis of Mixed MIMO RF/FSO DF Relaying Based on Globally Coupled Low Density Parity Check (GC-LDPC) Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9370871
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## A High Throughput and Flexible Rate 5G NR LDPC Encoder on a Single GPU
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9370366
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Performance Analysis of Iterative minsum Message Passing Decoding Algorithm for 5G NR LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9388463
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## VLSI Implementation of Error Detection and Correction Codes for Space Engineering
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9388477
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Secret key extraction in direct reconciliation CV-QKD systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9435567
 - **Type**: conference

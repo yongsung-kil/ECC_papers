@@ -3,7 +3,7 @@
 
 ## Construction of LDPC convolutional codes via difference triangle sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2008.13470v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Transmitting Extra Bits by Rotating Signal Constellations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2008.10818v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## New Cosystolic Expanders from Tensors Imply Explicit Quantum LDPC Codes with $Ω(\sqrt{n}\log^kn)$ Distance
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2008.09495v2
 - **Type**: preprint

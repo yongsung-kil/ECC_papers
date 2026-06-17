@@ -3,7 +3,7 @@
 
 ## Two techniques for constructing DC-free codes with minimum distance 4
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:394760
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## Expander codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:365734
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## Logic Synthesis Techniques For Reduced Area Implementation Of Multilevel Circuits With Concurrent Error Detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:629891
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## Transparent memory testing for pattern sensitive faults
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:528033
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## Computing upper bounds to error probability of coded modulation schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:368803
 - **Type**: conference
@@ -58,7 +58,7 @@
 
 ## On the programmable real-time error correcting coder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:467053
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## Techniques of bounding the probability of decoding error for block coded modulation structures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:335901
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## M-ary phase coding for the noncoherent AWGN channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:340470
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Performance of a general decoding technique over the class of randomly chosen parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:272474
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## On the structure of linear codes with covering radius two and three
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:333857
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Two-level coding based on trellis-coded modulation and Reed-Solomon codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:339830
 - **Type**: journal

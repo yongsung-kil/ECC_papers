@@ -3,7 +3,7 @@
 
 ## GaussianSource Coding Based on P-LDPC Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10045706
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Delayed Bit-Interleaved Coded Transmission for Spatial Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10038596
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Trapping and Absorbing Set Enumerators for Nonbinary Protograph-Based Low-Density Parity-Check Code Ensembles
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10032599
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Efficient BCH Code Encoding and Decoding Algorithm With Divisor-Distance-Based Polynomial Division for STT-MRAM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9696257
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Recursive Decoding of Reed-Muller Codes Starting With the Higher-Rate Constituent Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9845388
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Codebook Mismatch can be Fully Compensated by Mismatched Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9966730
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Multicarrier Acoustic Communications in Multiuser and Interference-Limited Regimes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10035752
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Frequency-Domain RF Self-Interference Cancellation for In-Band Full-Duplex Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9913884
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Reconfigurable Intelligent Surface-Aided $M$-Ary FM-DCSK System: A New Design for Noncoherent Chaos-Based Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9970371
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Quantum Algorithm for Higher-Order Unconstrained Binary Optimization and MIMO Maximum Likelihood Detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10044091
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Single-Photon-Memory Measurement-Device-Independent Quantum Secure Direct Communication—Part I: Its Fundamentals and Evolution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10049402
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Attention-Empowered Residual Autoencoder for End-to-End Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10042061
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Two-Stage Constructions for the Rate-Compatible Shortened Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9906049
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Deep Learning for Waveform Level Receiver Design With Natural Redundancy
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9966932
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Adaptive Parameter Selection in the Simultaneous Transmission of CPM Communication and PN Ranging
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9870540
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## A Rate Compatible LDPC Scheme in the Quantum Key Distribution System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10211941
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## VLSI Architecture of a High Speed Polar Code Decoder using Finite Length Scaling LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10157091
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Fast Polar Decoder Implementation using Special Nodes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10136054
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Comparison and Analysis of Ricean $K$-Factor Estimators in Industrial Wireless Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10144125
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Research on Physical Layer Key Generation Based on Wireless Channel Characteristics in New Power System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10154784
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Generalized low rank parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10160243
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Neural Belief Propagation Decoding of Quantum LDPC Codes Using Overcomplete Check Matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10161656
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Rate-Adaptive Protograph MacKay-Neal Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10161636
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Achievable Information Rates and Concatenated Codes for the DNA Nanopore Sequencing Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10161642
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## A modified probabilistic amplitude shaping scheme to use sign-bit-like shaping with a BICM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10161666
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Performance Improvement of Multi-level Redundant Discrete Wavelet Transform OFDM System by Using LDPC Encoding and Belief Propagation Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10151120
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Direct Transposition Interleaving Technique for DNA Data Storage
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10248051
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## An Improved Belief Propagation Bit-Flipping Decoder for Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10248708
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## An Improved DVB-S2 Phase Coarse Synchronization Algorithm and Its FPGA Implementation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10248943
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## An Efficient FPGA Implementation of LDPC Decoder for 5G New Radio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10134365
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## McEliece Cryptosystem: Reducing the Key Size with QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10108339
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## R-LDPC: Refining Behavior Descriptions in HLS to Implement High-throughput LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10136941
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## High Efficient Secret Key Reconciliation Scheme Based on Cascade Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10142787
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Achieving Real-Time Spectrum Sharing in 5G Underlay Coexistence With Channel Uncertainty
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9580537
 - **Type**: journal

@@ -3,7 +3,7 @@
 
 ## Antenna Position Estimation Based on Weighted Centroid Localization for Short-Range MIMO Transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10355756
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Code-Aided Channel Estimation in LDPC-Coded MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10319806
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Customized Joint Blind Frame Synchronization and Decoding Methods for Analog LDPC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10296886
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Optimized Non-Surjective FAIDs for 5G LDPC Codes With Learnable Quantization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10352132
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Deep Learning Aided LLR Correction Improves the Performance of Iterative MIMO Receivers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10246845
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Shift-Sum Decoding of Non-Binary Cyclic Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10269061
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Variational Inference-Based Iterative Receiver for Unified Non-Orthogonal Waveform (uNOW)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10246433
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Low-Complexity SVD Precoding for Faster-Than-Nyquist Signaling Using High-Order Modulations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10292444
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Reed-Solomon Coded Probabilistic Constellation Shaping for Molecular Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10356127
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Generalized Channel Coding and Decoding With Natural Redundancy in Protocols
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10303283
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## An Efficient Approximate EP-Based Iterative Detection and Decoding for Massive MIMO
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10234642
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## An Improved Adaptive Coding and Modulation Scheme With Hybrid Switching Standard for UAV-to-Ground Free Space Optical Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10308596
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Research and Analysis of CRC Checksum Algorithm Based on FPGA
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10612854
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Communication Synchronization and Anti-Interference Technology based on Artificial Intelligence
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10499063
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Performance Analysis of LDPC Coded Outdoor Long-Distance Imaging MIMO System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10556090
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Comparisons of TDM and FDM Pilot Signals for Phase Noise Estimation with High-Order QAM for DFT-Spread OFDM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10556069
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## An Efficient PLS Scheme for Coded MIMO Systems Under Imperfect Channel Estimation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10556020
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Quad Ways for Polar Coded HARQ
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10473255
 - **Type**: conference

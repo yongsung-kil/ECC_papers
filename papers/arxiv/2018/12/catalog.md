@@ -3,7 +3,7 @@
 
 ## Multi-edge-type LDPC code design with G-EXIT charts for continuous-variable quantum key distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1812.05867v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Study of Puncturing Techniques for Polar Codes in 5G Cellular and IoT Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1812.03588v1
 - **Type**: preprint

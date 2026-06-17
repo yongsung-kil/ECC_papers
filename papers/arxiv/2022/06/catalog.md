@@ -3,7 +3,7 @@
 
 ## Reducing the Error Floor of the Sign-Preserving Min-Sum LDPC Decoder via Message Weighting of Low-Degree Variable Nodes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2206.11532v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Two-sided Robustly Testable Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2206.09973v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Good Quantum LDPC Codes with Linear Time Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2206.07750v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Efficient decoding up to a constant fraction of the code length for asymptotically good quantum codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2206.07571v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## An efficient decoder for a linear distance quantum LDPC code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2206.06557v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## 6G-AUTOR: Autonomic CSI-Free Transceiver via Realtime On-Device Signal Analytics
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2206.03250v1
 - **Type**: preprint

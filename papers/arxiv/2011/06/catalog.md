@@ -3,7 +3,7 @@
 
 ## Operating LDPC Codes with Zero Shaping Gap
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1106.1944v1
 - **Type**: preprint

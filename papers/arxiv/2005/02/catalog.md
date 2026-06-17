@@ -3,7 +3,7 @@
 
 ## On the Typicality of the Linear Code Among the LDPC Coset Code Ensemble
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0502084v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Constructions and performance of classes of quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:quant-ph/0502086v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Improved Iterative Decoding for Perpendicular Magnetic Recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0502036v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Pseudo-Codewords of Cycle Codes via Zeta Functions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0502033v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Idempotents, Mattson-Solomon Polynomials and Binary LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0502024v1
 - **Type**: preprint

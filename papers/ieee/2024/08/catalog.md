@@ -3,7 +3,7 @@
 
 ## A Neural Network-Based Compressive LDPC Decoder Design Over Correlated Noise Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10430452
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## An Optimization Model for Offline Scheduling Policy of Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10551701
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Degree-degree correlated low-density parity-check codes and their extensions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10666064
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Protograph LDPC Code and Shaped Index Modulation Design for Multi-Mode OAM Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10475375
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Generalized Low-Rank Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10536109
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Quantum LDPC Codes From Intersecting Subsets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10531296
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Weighted Parity-Check Codes for Channels With State and Asymmetric Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10534819
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Exploiting Parity-Polytope Geometry in Approximate and Randomized Scheduled ADMM-LP Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10480433
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Front cover
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10666070
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Optimization of Quantum Circuits for Stabilizer Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10504563
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## SemantIC: Semantic Interference Cancellation Toward 6G Wireless Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10553320
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Throughput Analysis for Parallel Decoding of Irregular Repetition Slotted ALOHA With Noise
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10509787
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Polar Code Construction for Resistive Memories With Sneak-Path Interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10556737
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Characterization of the Complexity of Computing the Capacity of Colored Gaussian Noise Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10478964
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## IoT Enabled Intelligent Receiver Synchronization System for Long-Range 6G Consumer Technology
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10552142
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Real-Time Water-to-Air Communication System Under Dynamic Water Surface and Strong Background Radiation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10543051
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## Construction of Spatially Coupled GC-LDPC Code for NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10681799
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## A Construction of Algebraic Geometric LDPC Codes*
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10681681
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## A Complex Network Approach to Designing Bernoulli Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10682017
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Adaptive Wireless Image Semantic Transmission and Over-The-Air Testing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10681697
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Enhancing Communication Resilience through Fluid Antenna Index Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10681905
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Demonstration of a 900m Non-Line-of-Sight UV Communication System Using an LED Array
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10681929
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Delay Sensitive Link Adaptation for LEO Satellite-Terrestrial Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10681721
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Deep Over-the-Air Computation Based Multi-User Semantic Communication for Smart Cities
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10693735
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Neuromorphic Wireless Device-Edge Co-Inference via the Directed Information Bottleneck
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10766561
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## In-Memory Bit Flipping LDPC Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10715253
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Learning on JPEG-LDPC Compressed Images: Classifying with Syndromes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10715347
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## VLSI Design for Error Correcting Codes in Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10731125
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Design and Implementation of LDPC Decoder using VHDL for Space application
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10730918
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Optimization of Iterative Decoding for Polar Product Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10679318
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Reinforcement Learning-Based Read Performance Throttling to Enhance Lifetime of 3D NAND SSD
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10693665
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Phase Noise Compensation Techniques for Cellular Systems in Millimeter-Wave Bands
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10679276
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Cost-Efficient Partially-Parallel LDPC Decoder Architecture for 50G-PON Standard
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10762337
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## An Improved Check Polytope Projection Penalized Algorithm for ADMM Decoding of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10770364
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Performance Investigation of OAM-SK Optical Communication System Based on PCNN-NMS
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10699747
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Evaluations of Distinct Bitonic Sorters for ORBGRAND
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10791234
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Exploring Digital Communication Concepts to Improve Audio Watermarking System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10658698
 - **Type**: conference

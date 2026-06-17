@@ -3,7 +3,7 @@
 
 ## On Quantum and Classical Error Control Codes: Constructions and Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0812.5104v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Error-Trellis State Complexity of LDPC Convolutional Codes Based on Circulant Matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0812.4642v2
 - **Type**: preprint

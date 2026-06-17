@@ -3,7 +3,7 @@
 
 ## Constant-overhead quantum error correction with thin planar connectivity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2109.14609v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Bounds on stabilizer measurement circuits and obstructions to local implementations of quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2109.14599v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Quantifying nonlocality: how outperforming local quantum codes is expensive
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2109.10982v1
 - **Type**: preprint

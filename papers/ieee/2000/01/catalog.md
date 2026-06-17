@@ -3,7 +3,7 @@
 
 ## Gaussian approximation for sum-product decoding of low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866616
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## Low density parity check codes based on finite geometries: a rediscovery
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866498
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## Low density parity check codes: construction based on finite geometries
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:891254
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## Design of provably good low-density parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866497
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## Thresholds for turbo codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866615
 - **Type**: conference
@@ -58,7 +58,7 @@
 
 ## One-shot Reed-Solomon decoding for high-performance dependable systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:857567
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## Watermark codes: reliable communication over insertion/deletion channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866775
 - **Type**: conference
@@ -80,7 +80,7 @@
 
 ## Codes on graphs: normal realizations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866299
 - **Type**: conference
@@ -91,7 +91,7 @@
 
 ## Vector symbol decoding with list inner symbol decisions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866779
 - **Type**: conference
@@ -102,7 +102,7 @@
 
 ## AWGN coding theorems from ensemble weight enumerators
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866757
 - **Type**: conference
@@ -113,7 +113,7 @@
 
 ## Performance limits of concatenated codes with iterative decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866442
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## Content adaptive watermarking based on a stochastic multiresolution image modeling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7075622
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## On structure and decoding of product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866376
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Torbo decoding for high-rate concatenated parity-check codes on PRML channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:872295
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Parity-accumulate codes for magnetic recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:872292
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Serial concatenated trellis coded modulation with rate-1 inner code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:891245
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Evaluation of low-density parity-check codes over block fading channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:853686
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Multiple serially concatenated single parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:853569
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Constructing low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:874812
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Iterative decoding of systematic binary algebraic block codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:891257
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Low complexity turbo space-time code for system with large number of antennas
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:891286
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Bounds on the maximum likelihood decoding error probability of low density parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866588
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Implementation of near Shannon limit error-correcting codes using reconfigurable hardware
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:903409
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Fault-tolerant dynamic systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866742
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Simple soft-output detection for magnetic recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866555
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## On the efficiency of some suboptimal algorithms for bit decoding of binary codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866721
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Iterative decoding of one-step majority logic deductible codes based on belief propagation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:848552
 - **Type**: journal
@@ -300,7 +300,7 @@
 
 ## Sphere-bound-achieving coset codes and multilevel coset codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:841165
 - **Type**: journal
@@ -311,7 +311,7 @@
 
 ## The geometry of turbo-decoding dynamics
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:817505
 - **Type**: journal
@@ -322,7 +322,7 @@
 
 ## Generalized minimum distance decoding in Euclidean space: performance analysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:817509
 - **Type**: journal
@@ -333,7 +333,7 @@
 
 ## A fast algorithm for determining the linear complexity of a sequence with period p/sup n/ over GF(q)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:868492
 - **Type**: journal
@@ -344,7 +344,7 @@
 
 ## Gallager codes for CDMA applications .I. Generalizations, constructions, and performance bounds
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:871391
 - **Type**: journal
@@ -355,7 +355,7 @@
 
 ## The super-trellis structure of turbo codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:868494
 - **Type**: journal
@@ -366,7 +366,7 @@
 
 ## A method for convergence analysis of iterative probabilistic decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:868493
 - **Type**: journal
@@ -377,7 +377,7 @@
 
 ## A minimax robust decoding algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:841200
 - **Type**: journal
@@ -388,7 +388,7 @@
 
 ## The feasibility of magnetic recording at 1 Terabit per square inch
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:824422
 - **Type**: journal
@@ -399,7 +399,7 @@
 
 ## The generalized distributive law
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:825794
 - **Type**: journal
@@ -410,7 +410,7 @@
 
 ## Correctness of Local Probability Propagation in Graphical Models with Loops
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6789822
 - **Type**: journal
@@ -421,7 +421,7 @@
 
 ## Gallager codes for CDMA applications. II. Implementations, complexity, and system capacity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:886472
 - **Type**: journal
@@ -432,7 +432,7 @@
 
 ## Cochannel interference suppression through time/space diversity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:841171
 - **Type**: journal
@@ -443,7 +443,7 @@
 
 ## Turbo decoding for high-rate concatenated parity-check codes on PRML channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:908347
 - **Type**: journal
@@ -454,7 +454,7 @@
 
 ## FIR parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:855518
 - **Type**: journal
@@ -465,7 +465,7 @@
 
 ## Low density parity check codes for magnetic recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:908351
 - **Type**: journal
@@ -476,7 +476,7 @@
 
 ## On Gallager's low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866500
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## Low density parity check codes for magnetic recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:872298
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## Using low density parity check codes in the McEliece cryptosystem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866513
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## Analytical approach to low-density convolutional codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:866499
 - **Type**: conference
@@ -520,7 +520,7 @@
 
 ## Precoder design for concatenating convolutional codes with generalized partial response channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:891956
 - **Type**: conference
@@ -531,7 +531,7 @@
 
 ## Iterative turbo decoder analysis based on Gaussian density evolution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:904940
 - **Type**: conference
@@ -542,7 +542,7 @@
 
 ## Interference mitigation in frequency-hopped spread-spectrum systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:878081
 - **Type**: conference
@@ -553,7 +553,7 @@
 
 ## Turbo decoding of a low-density generator matrix code for a high-density magnetic recording channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:891960
 - **Type**: conference
@@ -564,7 +564,7 @@
 
 ## Decoding low density parity check codes with finite quantization bits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:824757
 - **Type**: journal
@@ -575,7 +575,7 @@
 
 ## Improved upper bounds on the ensemble performance of ML decoded low density parity check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:831034
 - **Type**: journal

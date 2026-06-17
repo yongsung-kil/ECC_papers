@@ -3,7 +3,7 @@
 
 ## Block-LDPC: a practical LDPC coding system design approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1417070
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Packet-LDPC codes for tape drives
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1420691
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## On implementation of min-sum algorithm and its modifications for decoding low-density Parity-check (LDPC) codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425734
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## LDPC coded MIMO multiple access with iterative joint decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1412036
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Optimization of LDPC-coded turbo CDMA systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1408199
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Joint channel-state estimation and decoding of low-density parity-check codes on the two-state noiseless/useless BSC block interference channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425745
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Design of multi-input multi-output systems based on low-density Parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425744
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Improved bit-flipping decoding of low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1412054
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Extremes of information combining
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1412027
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## On the Application of Factor Graphs and the Sum-Product Algorithm to ISI Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425759
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Generic Procedure for Tightly Bounding the Capacity of MIMO Correlated Rician Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425760
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Frame Time-Hopping Patterns in Multirate Optical CDMA Networks Using Conventional and Multicode Schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425762
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## A Class of Signal Processing Schemes for Reducing the Envelope Fluctuations of CDMA Signals
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1425761
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## n-channel symmetric multiple descriptions-part II:An achievable rate-distortion region
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1412031
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## A factor graph approach to link loss monitoring in wireless sensor networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1413474
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Short-block LDPC codes for a low-frequency power-line communications system
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1430473
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## A decoding for low density parity check codes over impulsive noise channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1430471
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Low-density parity-check coding for impulse noise correction on power-line channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1430472
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Efficient framing and ARQ for high-speed PLC systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1430459
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Partition-and-shift LDPC codes for high density magnetic recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1463924
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## On LDPC codes satisfying the (0, k) constraint
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1463928
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Performance evaluation of LDPC codes for patterned media
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1463922
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Low-density parity-check codes with variable rate and randomized constraints for advanced magnetic tape recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464239
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Field programmable gate array-based investigation of the error floor of low density parity check (LDPC) codes for magnetic recording channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464236
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## An efficient R-Mesh implementation of LDPC codes message-passing decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1420099
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Robustness of per-survivor iterative timing recovery in perpendicular recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464240
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Advanced channel detection and iterative decoding for perpendicular recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464231
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Beyond PRML: linear-complexity turbo equalization using the soft-feedback equalizer
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1464233
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Decoding for magnetic recording media with overlapping tracks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1463921
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Performance of BCJR-DFE based detectors over recording channels using pattern-dependent noise prediction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1463920
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Efficient adaptive modulation and power allocation algorithm for OFDMA cellular systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1524783
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## OFDM and its application to 4G
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1553751
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Ubiquitous access to distributed data in large-scale sensor networks through decentralized erasure codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1440909
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Sensing capacity for discrete sensor network applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1440911
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Forced Convergence Decoding of LDPC Codes - EXIT Chart Analysis and Combination with Node Complexity Reduction Techniques
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5755261
 - **Type**: conference

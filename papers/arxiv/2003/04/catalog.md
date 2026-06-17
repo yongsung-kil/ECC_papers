@@ -3,7 +3,7 @@
 
 ## Average and reliability error exponents in low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0304520v1
 - **Type**: preprint

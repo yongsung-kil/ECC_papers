@@ -3,7 +3,7 @@
 
 ## Linear representations of finite geometries and associated LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1908.06824v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Prototyping Software Transceiver for the 5G New Radio Physical Uplink Shared Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1908.04376v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Protograph LDPC Code Design for Asynchronous Random Access
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1908.01607v1
 - **Type**: preprint

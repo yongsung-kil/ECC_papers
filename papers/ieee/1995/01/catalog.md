@@ -3,7 +3,7 @@
 
 ## Codes and iterative decoding on general graphs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:550455
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## A new construction of nonlinear unequal error protection codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:550479
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## Simulation of HF circuits with FDTD technique including non-ideal lumped elements
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:405969
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## Combined multilevel turbo-code with 8PSK modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:502009
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## Channel coding for co-channel interference suppression in wireless communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:524229
 - **Type**: conference
@@ -58,7 +58,7 @@
 
 ## Error correction codes with even minimum distance for DCT image transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:483311
 - **Type**: conference

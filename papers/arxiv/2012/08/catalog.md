@@ -3,7 +3,7 @@
 
 ## Wave-Like Solutions of General One-Dimensional Spatially Coupled Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1208.5273v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Performance Analysis of Protograph-based LDPC Codes with Spatial Diversity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1208.2394v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Fault-Tolerance of "Bad" Quantum Low-Density Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1208.2317v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Biff (Bloom Filter) Codes : Fast Error Correction for Large Data Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1208.0798v1
 - **Type**: preprint

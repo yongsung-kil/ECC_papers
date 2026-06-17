@@ -3,7 +3,7 @@
 
 ## Advanced Physical-Layer Technologies in VHF Data Link Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2005.11456v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Decoding Across the Quantum LDPC Code Landscape
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2005.07016v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Design and Convergence Analysis of an IIC-based BICM-ID Receiver for FBMC-QAM Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2005.00320v1
 - **Type**: preprint

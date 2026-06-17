@@ -3,7 +3,7 @@
 
 ## Improving Belief Propagation Decoding of Polar Codes Using Scattered EXIT Charts
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1611.03655v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## An Experimental Comparison of Coded Modulation Strategies for 100 Gbit/s Transceivers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1611.00263v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Protograph-Based LDPC Code Design for Ternary Message Passing Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1809.10910v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## A Neural Network Aided Approach for LDPC Coded DCO-OFDM with Clipping Distortion
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1809.01022v1
 - **Type**: preprint

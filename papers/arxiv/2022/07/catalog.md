@@ -3,7 +3,7 @@
 
 ## Time-Efficient Constant-Space-Overhead Fault-Tolerant Quantum Computation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2207.08826v3
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Conservation laws and quantum error correction: towards a generalised matching decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2207.06428v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Belief Propagation with Quantum Messages for Symmetric Classical-Quantum Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2207.04984v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## High-throughput decoder of quasi-cyclic LDPC codes with limited precision for continuous-variable quantum key distribution systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2207.01860v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Grant-Free Transmission by LDPC Matrix Mapping and Integrated Cover-MPA Detector
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2207.00272v1
 - **Type**: preprint

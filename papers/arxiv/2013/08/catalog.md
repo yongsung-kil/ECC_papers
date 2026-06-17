@@ -3,7 +3,7 @@
 
 ## Improving Sparse Associative Memories by Escaping from Bogus Fixed Points
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1308.6003v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Joint Phase Noise Estimation and Data Detection in Coded MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1308.3772v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## On Characterization of Elementary Trapping Sets of Variable-Regular LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1308.1259v1
 - **Type**: preprint

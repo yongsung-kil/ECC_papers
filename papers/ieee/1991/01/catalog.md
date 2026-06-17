@@ -3,7 +3,7 @@
 
 ## Sequential Decoding With Adaptive Reordering Of Codeword Trees
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:695348
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## Producing soft-decision information at the output of a class IV partial response Viterbi detector
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:162473
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## Map representations and coding-based priors for segmentation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:139727
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## Block coded modulation: an application to frequency/phase modulation and a procedure for the construction of trellis diagrams
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:160686
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## Multistage decoding using erasing technique for multilevel coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:188489
 - **Type**: conference
@@ -58,7 +58,7 @@
 
 ## On maximum likelihood soft decoding of some binary self dual codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:217739
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## The use of random coset coding for bounding the probability of error in coded modulations schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:217736
 - **Type**: conference
@@ -80,7 +80,7 @@
 
 ## Fault diagnosis for space-division digital switching network in large-scale SPC telephone switching systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:184404
 - **Type**: conference
@@ -91,7 +91,7 @@
 
 ## On the covering radius of subcodes of a code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:104338
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## A cell loss recovery method using FEC in ATM networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:108684
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Runlength-limited codes for mixed-error channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:104318
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Theory and design of t-error correcting/d-error detecting (d>t) and all unidirectional error detecting codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:73584
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## On two probabilistic decoding algorithms for binary linear codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:104339
 - **Type**: journal

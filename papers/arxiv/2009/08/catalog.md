@@ -3,7 +3,7 @@
 
 ## Sharp approximation for density dependent Markov chains
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0908.2088v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Problems in application of LDPC codes to information reconciliation in quantum key distribution protocols
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0908.2042v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Exposing Pseudoweight Layers in Regular LDPC Code Ensembles
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0908.1298v1
 - **Type**: preprint

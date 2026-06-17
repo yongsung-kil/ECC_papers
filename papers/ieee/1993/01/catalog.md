@@ -3,7 +3,7 @@
 
 ## High-Dimensional Symmetric Compacted Code - Error-Correcting of High Bit Error Rate of 10/sub -1/ ~ 10/sub -2/
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:748611
 - **Type**: conference
@@ -14,7 +14,7 @@
 
 ## Transfer-Routing: A QOS-driven Routing and Multicast Architecture
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:665377
 - **Type**: conference
@@ -25,7 +25,7 @@
 
 ## Fault-tolerant Distributed Decoding of Cyclic Block Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:748417
 - **Type**: conference
@@ -36,7 +36,7 @@
 
 ## A Mobile Multimedia workstation for network management
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:665382
 - **Type**: conference
@@ -47,7 +47,7 @@
 
 ## On post-decision symbol-reliability generation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:397372
 - **Type**: conference
@@ -58,7 +58,7 @@
 
 ## A compact BCM modem implementation for SDH access radio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:264013
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## A class of Hopfield decodable codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:471880
 - **Type**: conference
@@ -80,7 +80,7 @@
 
 ## Block coded modulation on the Rician fading channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:407164
 - **Type**: conference
@@ -91,7 +91,7 @@
 
 ## Systolic architecture for the VLSI implementation of high-speed staged decoders/quantizers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:397239
 - **Type**: conference
@@ -102,7 +102,7 @@
 
 ## Bandwidth- and power-efficient pragmatic codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:318311
 - **Type**: conference
@@ -113,7 +113,7 @@
 
 ## Multilevel codes for unequal error protection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:243441
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## On the generalized Hamming weights of product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:259662
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Fault tolerant VLSI systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:220905
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Concatenated multilevel block coded modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:212363
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Weight enumerators of more irreducible cyclic binary codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:259661
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Distributed decoding of cyclic block codes using a generalization of majority-logic decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:259638
 - **Type**: journal

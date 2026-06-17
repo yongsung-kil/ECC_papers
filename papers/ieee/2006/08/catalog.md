@@ -3,7 +3,7 @@
 
 ## On the Dimensions of Certain LDPC Codes Based on$q$-Regular Bipartite Graphs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1661850
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Product code optimization for determinate state LDPC decoding in robust image transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1658078
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## An 860-Mb/s (8158,7136) Low-Density Parity-Check Encoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1661745
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Nonlinear programming approaches to decoding low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1665013
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Analysis of low-density parity-check codes based on EXIT functions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1673673
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Shortened Array Codes of Large Girth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1661848
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Performance evaluation of LDPC codes in bliss scheme-based storage systems using density evolution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1706484
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Low-Complexity Approaches to Slepian–Wolf Near-Lossless Distributed Data Compression
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1661834
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## 100-gb/s transmission using orthogonal frequency-division multiplexing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1652957
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Differential turbo-coded modulation with APP channel estimation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1673672
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Error exponents for channel coding with application to signal constellation design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:1665017
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## A High Speed Flexible Encoder for Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4267145
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Design, Simulation and Hardware Implementation of a Digital Television System: LDPC channel coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4100552
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Design, Simulation and Hardware Implementation of a Digital Television System: Performance Evaluation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4100554
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## A High Speed, Low Memory FPGA Based LDPC Decoder Architecture for Quasi-Cyclic LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4101090
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Image Communications Based on Adaptive Segmentation and WIPC-LDPC over Wireless Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4097894
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Multiple Hybrid Concatenated Single Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:4097851
 - **Type**: conference

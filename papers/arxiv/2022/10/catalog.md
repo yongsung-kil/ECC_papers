@@ -3,7 +3,7 @@
 
 ## GRAND-assisted Optimal Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.16187v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Design of Protograph LDPC-Coded MIMO-VLC Systems with Generalized Spatial Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.16007v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Opportunities and Challenges in Fault-Tolerant Quantum Computation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.15844v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Entanglement Purification with Quantum LDPC Codes and Iterative Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.14143v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Implementing Clifford Gates on Stabilizer Codes via Measurement
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.14074v3
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Iterative Detection and Decoding for Cell-Free Massive Multiuser MIMO with LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.12906v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## NLTS Hamiltonians from classical LTCs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2210.02999v2
 - **Type**: preprint

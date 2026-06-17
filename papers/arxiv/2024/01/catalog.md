@@ -3,7 +3,7 @@
 
 ## Bounded-degree Low Rank Parity Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.15195v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Topology-Aware Exploration of Energy-Based Models Equilibrium: Toric QC-LDPC Codes and Hyperbolic MET QC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.14749v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Shift-Interleave Coding for DNA-Based Storage: Correction of IDS Errors and Sequence Losses
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.14594v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Friendly Attacks to Improve Channel Coding Reliability
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.14184v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Log-Log Domain Sum-Product Algorithm for Information Reconciliation in Continuous-Variable Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.13748v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Fault tolerance of stabilizer channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.12017v2
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Codebook-enabled Generative End-to-end Semantic Communication Powered by Transformer
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2402.16868v2
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## LDPC-cat codes for low-overhead quantum computing in 2D
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.09541v2
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Small Quantum Codes from Algebraic Extensions of Generalized Bicycle Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.07583v1
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Lift-Connected Surface Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2401.02911v2
 - **Type**: preprint

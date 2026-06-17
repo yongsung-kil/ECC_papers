@@ -3,7 +3,7 @@
 
 ## Study of Adaptive Activity-Aware Iterative Detection Techniques for Massive Machine-Type Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1907.13248v1
 - **Type**: preprint

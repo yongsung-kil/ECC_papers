@@ -3,7 +3,7 @@
 
 ## An Area Time-Efficient Structure to Find the Approximate First Two Minima for Min-Sum-Based LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7410047
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Non-Binary LDPC Codes for Magnetic Recording Channels: Error Floor Analysis and Optimized Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7482740
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Exploiting Intracell Bit-Error Characteristics to Improve Min-Sum LDPC Decoding for MLC NAND Flash-Based Storage in Mobile Device
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7445886
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Design of LDPC Codes Based on Multipath EMD Strategies for Progressive Edge Growth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7489038
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Reduced-Complexity Nonbinary LDPC Decoder for High-Order Galois Fields Based on Trellis Min–Max Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7399426
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## An Efficient Algorithm to Improve the Success Threshold of Node-Based Verification-Based Algorithms in Compressed Sensing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7470554
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Optimization Design and Asymptotic Analysis of Systematic Luby Transform Codes Over BIAWGN Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7493629
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## A Factor Graph Approach to Iterative Channel Estimation, Detection, and Decoding for Two-Path Successive Relay Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7458882
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Perfect Secrecy in Physical-Layer Network Coding Systems From Structured Interference
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7464919
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Polar Code Design for Noisy Blackwell Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7487044
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## expanCodes: Tailored LDPC Codes for Big Data Storage
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7588911
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## The design and implementation of the unidirectional data transmission equipment based on 802.11 physical frame
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7883165
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Performance scrutiny and optimization of LDPC coded MIMO OFDM systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7824815
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## A construction method of terminated LDPC convolutional codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7879667
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## An improved successive cancellation decoder for polar codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7879671
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Parallelizing LDPC Decoding Using OpenMP on Multicore Digital Signal Processors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7576451
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Message Passing for Analysis and Resilient Design of Self-Healing Interdependent Cyber-Physical Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7568543
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Probabilistic-relationships in the DVB-T2 mobile-reception signal received from a fix-reception mode broadcasting service
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7821920
 - **Type**: conference

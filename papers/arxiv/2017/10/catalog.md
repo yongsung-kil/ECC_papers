@@ -3,7 +3,7 @@
 
 ## Protograph LDPC Codes with Block Thresholds: Extension to Degree-1 and Generalized Nodes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1710.09651v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## A Binary Wyner-Ziv Code Design Based on Compound LDGM-LDPC Structures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1710.07985v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## High dimensional expanders and coset geometries
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1710.05304v4
 - **Type**: preprint

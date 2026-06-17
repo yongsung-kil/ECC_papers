@@ -3,7 +3,7 @@
 
 ## Design of Protograph Codes for Additive White Symmetric Alpha-Stable Noise Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.13245v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Analysis of reaction and timing attacks against cryptosystems based on sparse parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.12215v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## CVR: A Continuously Variable Rate LDPC Decoder Using Parity Check Extension for Minimum Latency
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.12016v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Compute-and-forward relaying with LDPC codes over QPSK scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.08306v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Efficient Search and Elimination of Harmful Objects in Optimized QC SC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.07158v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Mutual Information-Maximizing Quantized Belief Propagation Decoding of Regular LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.06666v5
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Iterative Decoding of Trellis-Constrained Codes inspired by Amplitude Amplification (Preliminary Version)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.06473v2
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Degenerate Quantum LDPC Codes With Good Finite Length Performance
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1904.02703v3
 - **Type**: preprint

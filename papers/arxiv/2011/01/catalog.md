@@ -3,7 +3,7 @@
 
 ## Multi-Edge type Unequal Error Protection LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1101.5985v1
 - **Type**: preprint

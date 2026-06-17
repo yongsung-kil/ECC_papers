@@ -3,7 +3,7 @@
 
 ## Quantum Error Correction with Girth-16 Non-Binary LDPC Codes via Affine Permutation Construction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.17790v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Subcode Ensemble Decoding of Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.17511v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Explicit Lossless Vertex Expanders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.15087v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## A Short Proof of Coding Theorems for Reed-Muller Codes Under a Mild Assumption
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.14842v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Feedforward suppression of readout-induced faults in quantum error correction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.13083v3
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Planar quantum low-density parity-check codes with open boundaries
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.08887v4
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Continuous-Variable Quantum Key Distribution with Composable Security and Tight Error Correction Bound for Constrained Devices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.06384v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Online Gaussian elimination for quantum LDPC decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.05080v2
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## QUITS: A modular Qldpc code circUIT Simulator
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.02673v2
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Linear Time Iterative Decoders for Hypergraph-Product and Lifted-Product Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2504.01728v1
 - **Type**: preprint

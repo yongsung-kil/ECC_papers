@@ -3,7 +3,7 @@
 
 ## Binary Linear-Time Erasure Decoding for Non-Binary LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0910.1922v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Design of network-coding based multi-edge type LDPC codes for multi-source relaying systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0910.1145v1
 - **Type**: preprint

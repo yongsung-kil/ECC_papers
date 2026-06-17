@@ -3,7 +3,7 @@
 
 ## On the Number of Minimum Stopping Sets and Minimum Codewords of Array LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5545626
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Adaptive Mixed Scheduling for Correcting Errors in Trapping Sets of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5545624
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Mitigation of Impulsive Noise Effect on the PLC Channel With QC–LDPC Codes as the Outer Coding Scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5439947
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Adaptive-Normalized/Offset Min-Sum Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5545625
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Reduced-Memory Decoding of Low-Density Lattice Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5545622
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## On the Dynamics of the Error Floor Behavior in (Regular) LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5485006
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## An Improved Belief-Propagation Decoder for LDPC-Coded Partial-Response Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5422626
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## A Separation Algorithm for Improved LP-Decoding of Linear Block Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5485012
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## A Novel JSCC Framework With Diversity-Multiplexing-Coding Gain Tradeoff for Scalable Video Transmission Over Cooperative MIMO
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5473098
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## A modified Offset Min-Sum decoding algorithm for LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5564884
 - **Type**: conference
@@ -113,7 +113,7 @@
 
 ## High performance of parallel concatenated code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5564637
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## High parallel variation Banyan network based permutation network for reconfigurable LDPC decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5540964
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Application of 2-state trellis LDPC code in OFDM system
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5554812
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## A fully-overlapped multi-mode QC-LDPC decoder architecture for mobile WiMAX applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5540958
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## A note on relationship between algebraic geometric codes and LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555509
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Dynamic Power Management on LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5572822
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Quasi-cyclic LDPC-coded signal space diversity with precoding over fading channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555283
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Cross-layer design in multiuser diversity system
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555417
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Improved BP-OSD cascade decoding algorithm using limited likelihood information
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555229
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Performance of distributed GLD codes over mobile-to-mobile fading channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555708
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Improved syndrome-based ordered statistic decoding algorithm for LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555626
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## A self-hosting configuration management system to mitigate the impact of Radiation-Induced Multi-Bit Upsets in SRAM-based FPGAs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5637493
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Control of a high torque density seven-phase induction motor with field-weakening capability
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5637787
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Reverse link performance of packet data with LDPC and soft handoff in cellular CDMA
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5591646
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## The SP algorithm decoding of convolutional codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5582047
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Rate-Adaptive nonbinary-LDPC-coded modulation with backpropagation for long-haul optical transport networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5549085
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Generalized hybrid subcarrier/amplitude/phase/polarization LDPC-coded modulation based FSO networking
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5549018
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Performance of adaptive low-density parity check codes in a low cost spectrum-sliced WDM network
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5549249
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## The stability of LDPC codes with higher order modulation schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5580434
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## LDPC FEC code extension for unequal error protection in 2nd generation DVB systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5582541
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Embedded multicore architectures for LDPC decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5642046
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## A GPU implementation for two MIMO-OFDM detectors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5642054
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Modified progressive edge-growth algorithm based LDPC coded-modulation for 400 Gb/s optical transport
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5553711
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Performance analysis of projective geometry LDPC coded UWB system
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5568734
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Symmetric Distributed Joint Source-Channel Coding Using Raptor Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5575677
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Idle time reduction in TDMP implementation of LDPC decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555310
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## New algorithm for message restoring with errors detection and correction using binary LDPC-codes and network coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5555305
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## What is the role of DSP in future optical access?
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5546422
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Iterative bit-flipped decoding of concatenated reed solomon/convolutional codes with HMAC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5588212
 - **Type**: conference

@@ -3,7 +3,7 @@
 
 ## SC-LDPC Codes Over $\mathbb{F}_q$: Minimum Distance, Decoding Analysis and Threshold Saturation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.24232v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Generalized Hyperderivative Reed-Solomon Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.22948v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Iterative Channel Estimation, Detection and Decoding for Multi-Antenna Systems with RIS
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.22731v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## General Construction of Quantum Error-Correcting Codes from Multiple Classical Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.22116v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Poincaré Duality and Multiplicative Structures on Quantum Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.21922v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Small quantum Tanner codes from left--right Cayley complexes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.20532v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Metrologically advantageous states: long-range entanglement and asymmetric error correction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.20426v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Towards a point-to-point CV-QKD system: Implementation challenges and perspectives
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.19834v1
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## A 14ns-Latency 9Gb/s 0.44mm$^2$ 62pJ/b Short-Blocklength LDPC Decoder ASIC in 22FDX
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.17834v1
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Cryptanalysis of LDPC-Based Pseudorandom Error-Correcting Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.17310v2
 - **Type**: preprint
@@ -113,7 +113,7 @@
 
 ## Bosonic quantum computing with near-term devices and beyond
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.15063v1
 - **Type**: preprint
@@ -124,7 +124,7 @@
 
 ## Secret-key-based physical layer security for feedback-aided unsourced random access
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.09104v3
 - **Type**: preprint
@@ -135,7 +135,7 @@
 
 ## Improved bounds and optimal constructions of pure quantum locally recoverable codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.07256v1
 - **Type**: preprint
@@ -146,7 +146,7 @@
 
 ## Beam search decoder for quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.07057v2
 - **Type**: preprint
@@ -157,7 +157,7 @@
 
 ## Increasing Data Rate through Shaping on Wireless Channels Subject to Mobility and Delay Spread
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.06494v3
 - **Type**: preprint
@@ -168,7 +168,7 @@
 
 ## Deformed LDPC codes with spontaneously broken non-invertible duality symmetries
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.04174v1
 - **Type**: preprint
@@ -179,7 +179,7 @@
 
 ## Pseudocodewords of quantum, quasi-cyclic, and spatially-coupled LDPC codes: a fundamental cone perspective
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2512.02941v1
 - **Type**: preprint

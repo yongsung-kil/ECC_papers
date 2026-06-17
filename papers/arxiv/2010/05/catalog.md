@@ -3,7 +3,7 @@
 
 ## New Families of LDPC Block Codes Formed by Terminating Irregular Protograph-Based LDPC Convolutional Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1005.1065v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## On the Joint Decoding of LDPC Codes and Finite-State Channels via Linear Programming
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1005.0052v3
 - **Type**: preprint

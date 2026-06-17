@@ -3,7 +3,7 @@
 
 ## LDPC Decoding with Limited-Precision Soft Information in Flash Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1210.0149v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Universal set of scalable dynamically corrected gates for quantum error correction with always-on qubit couplings
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1209.2764v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Joint Detection/Decoding Algorithms for Nonbinary LDPC Codes over ISI Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1209.2542v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Balanced Modulation for Nonvolatile Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1209.0744v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Average Coset Weight Distribution of Combined LDPC Matrix Ensemble
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0504011v1
 - **Type**: preprint

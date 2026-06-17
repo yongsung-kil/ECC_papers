@@ -3,7 +3,7 @@
 
 ## Iterative Detection and Decoding for Multiuser MIMO Systems with Low Resolution Precoding and PSK Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2009.10036v5
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Low Density Parity Check Code (LDPC Codes) Overview
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2009.08645v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Fiber Bundle Codes: Breaking the $N^{1/2} \operatorname{polylog}(N)$ Barrier for Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2009.03921v2
 - **Type**: preprint

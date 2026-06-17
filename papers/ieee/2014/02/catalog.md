@@ -3,7 +3,7 @@
 
 ## Array Convolutional Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6697911
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Joint Blind Frame Synchronization and Encoder Identification for Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6708135
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Construction of Irregular QC-LDPC Codes via Masking with ACE Optimization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6715252
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## High Throughput LDPC Decoder on GPU
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6715256
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Efficient Progressive Edge-Growth Algorithm Based on Chinese Remainder Theorem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6725573
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Analysis and Enumeration of Absorbing Sets for Non-Binary Graph-Based Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6712186
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Spectrum-Efficient Coded Modulation Design for Two-Way Relay Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6514947
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Generalized and Extended Subspace Algorithms for Error Correction with Quantized DFT Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6712182
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Convergence of Weighted Min-Sum Decoding Via Dynamic Programming on Trees
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6661340
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Quantum LDPC Codes With Positive Rate and Minimum Distance Proportional to the Square Root of the Blocklength
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6671468
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Turbo equalization techniques toward robust PDM 16-QAM optical fiber transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6739405
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Low complexity encoding algorithm of RS-based QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804249
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Decoding of quasi-cyclic LDPC codes with section-wise cyclic structure
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804221
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Check-hybrid GLDPC codes without small trapping sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804215
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## LDPC code designs based on √I matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804247
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Unconventional behavior of the noisy min-sum decoder over the binary symmetric channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804283
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## A class of compression systems with model-free encoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6804206
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## 27.6 An 821MHz 7.9Gb/s 7.3pJ/b/iteration charge-recovery LDPC decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6757514
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## 27.7 A scalable 1.5-to-6Gb/s 6.2-to-38.1mW LDPC decoder for 60GHz wireless networks in 28nm UTBB FDSOI
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6757515
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## 19.1 A 128Gb MLC NAND-Flash device using 16nm planar cell
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6757454
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## 10.7 A 105GOPS 36mm2 heterogeneous SDR MPSoC with energy-aware dynamic scheduling and iterative detection-decoding for 4G in 65nm CMOS
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6757394
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## 6.2 High-capacity scalable optical communication for future Optical Transport Network
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6757363
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Coding and signal processing for ultra-high density magnetic recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6785330
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Joint network channel fountain scheme for reliable communication in wireless networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6785332
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Generalized Belief Propagation to break trapping sets in LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6766441
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Anytime spatially coupled codes for relay channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6766425
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Lossless compression of uniform binary sources with coded side-information
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6766436
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Frame-asynchronous physical-layer network coding using cyclic codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6766435
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Implementation of a low power LDPC decoder using bit serial architecture
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7034089
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Improvements on construction of quasi cyclic irregular non binary LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7034108
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Performance improvement of Q-OFDMA systems using low complexity approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7034061
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## A novel QC-LDPC code with flexible construction and low error floor
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6778997
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Adaptive steganography scheme based on LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6778941
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Joint iterative channel estimation and decoding under pulsed radio frequency interference condition
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6779105
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Exact split information function for SPC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6779150
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Performance investigation of reduced complexity bit-flipping using variable thresholds and noise perturbation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6779175
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Single Carrier Multi-Tone modulation scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6779024
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Over-clocked SSD: Safely running beyond flash memory chip I/O clock specs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6835962
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Rediscovering Logarithmic Diameter Topologies for Low Latency Network-on-Chip-Based Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6787308
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Wi-Fi LDPC encoder with approximate lower triangular diverse implementation and verification
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6808840
 - **Type**: conference

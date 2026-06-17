@@ -3,7 +3,7 @@
 
 ## Good quantum LDPC codes with linear time decoder from lossless expanders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2203.03581v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## A Unified Spatially Coupled Code Design: Threshold, Cycles, and Locality
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2203.02052v3
 - **Type**: preprint

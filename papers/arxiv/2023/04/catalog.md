@@ -3,7 +3,7 @@
 
 ## Spatially-Coupled QLDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2305.00137v6
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Spacetime codes of Clifford circuits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2304.05943v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## List-Based Detection and Selection of Access Points in Cell-Free Massive MIMO Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2304.04159v1
 - **Type**: preprint

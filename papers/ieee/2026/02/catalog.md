@@ -3,7 +3,7 @@
 
 ## Spectrum-Efficient LDPC-Coded Joint Radar and Communication Systems Using Flipping-Based Integrated Waveforms
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 레이더/통신 통합 파형 응용 특이적, 떼어낼 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11134046
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## BayesBB: A 9.6-Gb/s 1.61-ms Configurable All-Message-Passing Baseband-Accelerator for B5G/6G Cell-Free Massive-MIMO Systems
 
-- **Status**: in(포함)
+- **Status**: ✅
 - **Reason**: 구성가능 메시지패싱 디코더 HW(LDPC/polar 언폴디드 아키텍처) — HW 이식 가능(D)
 - **ID**: ieee:11045284
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Improved Decoding Algorithm of BD-LRPC Codes
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 랭크메트릭 LRPC 부호 디코딩 — LDPC 아니며 NAND ECC 이식 불가
 - **ID**: ieee:11316450
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Deep Learning for Channel Code Type Recognition
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 채널코드 종류 인식(분류) — 디코더/HW/코드설계 아님
 - **ID**: ieee:11146638
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Design and Analysis for Multilevel-Modulated Signal Using the Scattering Coefficient $b$ in Inverse Scattering Transform
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 광섬유 역산란변환 다중레벨 변조 신호설계 — LDPC/디코더 없음
 - **ID**: ieee:11339870
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Fully Parallelized BP Decoding for Quantum LDPC Codes Can Outperform BP-OSD
 
-- **Status**: in(포함)
+- **Status**: ✅
 - **Reason**: qLDPC지만 완전병렬 BP 디코더+Chase식 speculative post-processing으로 Gaussian elimination 제거, 디코더 알고리즘/병렬 HW가 명확히 이식 가능(C/D)
 - **ID**: ieee:11408621
 - **Type**: conference
@@ -69,7 +69,7 @@
 
 ## Pinball: A Cryogenic Predecoder for Quantum Error Correction Decoding Under Circuit-Level Noise
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 양자 오류정정(surface code) cryogenic predecoder — 양자 EC로 제외 대상, NAND로 이식 가능한 BP/HW 기법 없음
 - **ID**: ieee:11408464
 - **Type**: conference
@@ -80,7 +80,7 @@
 
 ## A Low-Oversampling Timing Synchronization Algorithm Suitable for Millimeter-Wave Broadband Communication Systems
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 밀리미터파 타이밍 동기화 알고리즘 — ECC/LDPC 무관, 이식할 디코더/코드설계 기법 없음
 - **ID**: ieee:11452961
 - **Type**: conference
@@ -91,7 +91,7 @@
 
 ## Investigation of the Component Code Parameters and Iteration Count Impact on the SC-BCH Decoder Performance
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: SC-BCH 코드 파라미터/반복횟수 영향 분석, 광통신 FEC 특이적이며 LDPC 디코더/HW로 이식할 기법 없음
 - **ID**: ieee:11414024
 - **Type**: conference
@@ -102,7 +102,7 @@
 
 ## Adaptive Channel Switching Algorithm for Enhanced Resilience in Hybrid OCC-RF Drone Systems
 
-- **Status**: out(제외)
+- **Status**: ❌
 - **Reason**: 드론 OCC-RF 하이브리드 채널전환 알고리즘으로 LDPC는 적응 FEC로 부수 언급, 이식 가능 기법 없음
 - **ID**: ieee:11454232
 - **Type**: conference
@@ -113,7 +113,7 @@
 
 ## Graph Neural Network Approaches to LDPC Decoding in 5G/6G Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:11460731
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## Securing Underwater Wireless Sensor Networks Using Quantum Sensing: Open Issues, Challenges and Future Directions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:11499715
 - **Type**: conference

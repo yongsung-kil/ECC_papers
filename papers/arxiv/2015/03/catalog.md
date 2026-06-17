@@ -3,7 +3,7 @@
 
 ## Decoding LDPC codes via Noisy Gradient Descent Bit-Flipping with Re-Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1503.08913v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Strategies for High-Throughput FPGA-based QC-LDPC Decoder Architecture
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1503.02986v3
 - **Type**: preprint

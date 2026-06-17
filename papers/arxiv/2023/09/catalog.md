@@ -3,7 +3,7 @@
 
 ## Layer Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2309.16503v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Towards surgery with good quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2309.16406v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Limitations of local update recovery in stabilizer-GKP codes: a quantum optimal transport approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2309.16241v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Geometrically Local Quantum and Classical Codes from Subdivision
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2309.16104v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Splitting decoders for correcting hypergraph faults
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2309.15354v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Long-range-enhanced surface codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2309.11719v4
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Efficient LDPC Decoding using Physical Computation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2312.02161v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## New Quantum LDPC Codes Based on Euclidean Geometry
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2310.02197v1
 - **Type**: preprint

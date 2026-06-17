@@ -3,7 +3,7 @@
 
 ## Triggering Wave-Like Convergence of Tail-biting Spatially Coupled LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1507.01970v2
 - **Type**: preprint

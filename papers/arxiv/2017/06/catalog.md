@@ -3,7 +3,7 @@
 
 ## Scattered EXIT Charts for Finite Length LDPC Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1706.09239v6
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## LDPC Codes over the q-ary Multi-Bit Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1706.09146v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Pseudocodeword-Free Criterion for Codes with Cycle-Free Tanner Graph
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1706.06648v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Analytical lower bounds for the size of elementary trapping sets of variable-regular LDPC codes with any girth and irregular ones with girth 8
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1706.01703v1
 - **Type**: preprint

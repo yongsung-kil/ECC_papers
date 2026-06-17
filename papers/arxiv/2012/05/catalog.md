@@ -3,7 +3,7 @@
 
 ## Blind Reconciliation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1205.5729v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## LDPC for QKD Reconciliation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1205.4977v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Graph-based Code Design for Quadratic-Gaussian Wyner-Ziv Problem with Arbitrary Side Information
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1205.4332v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## A New Ensemble of Rate-Compatible LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1205.4070v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Spatially-Coupled Random Access on Graphs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1205.3317v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Time-Varying Space-Only Codes for Coded MIMO
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1205.0699v2
 - **Type**: preprint

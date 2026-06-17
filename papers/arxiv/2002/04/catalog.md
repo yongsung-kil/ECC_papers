@@ -3,7 +3,7 @@
 
 ## Typical performance of low-density parity-check codes over general symmetric channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0204554v2
 - **Type**: preprint

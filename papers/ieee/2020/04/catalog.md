@@ -3,7 +3,7 @@
 
 ## A Threshold-Based Min-Sum Algorithm to Lower the Error Floors of Quantized LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8970554
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Using Error Modes Aware LDPC to Improve Decoding Performance of 3-D TLC NAND Flash
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8634908
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## A 75-Gb/s/mm2 and Energy-Efficient LDPC Decoder Based on a Reduced Complexity Second Minimum Approximation Min-Sum Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8935206
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Failure Analysis of the Interval-Passing Algorithm for Compressed Sensing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8968331
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Edge-Coloring Technique to Analyze Elementary Trapping Sets of Spatially-Coupled LDPC Convolutional Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8943947
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Syndrome-Coupled Rate-Compatible Error-Correcting Codes: Theory and Application
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8957447
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Interleaved Polar (I-Polar) Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8968424
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## A Grant-Free Random Access Scheme for M2M Communication in Massive MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8993804
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Efficient Sparse Code Multiple Access Decoder Based on Deterministic Message Passing Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8967122
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Blind Estimation of Code Parameters for Product Codes Over Noisy Channel Conditions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8804240
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Low-Complexity Detection for Faster-than-Nyquist Signaling Based on Probabilistic Data Association
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8941122
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Comprehensive Study on CC-LDPC, BC-LDPC and Polar Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9124897
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Design of Protograph-Based Quasi-Cyclic Spatially Coupled Ldpc Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9124803
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## Coding Techniques for 5G Networks: A Review
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9137797
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Codeword Generation for a Combined Cryptography and LDPC Coding System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9198715
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## On Efficient and Low-Complexity Decoding of Binary LDPC-Coded CSK Signals for GNSS Links with Increased Data Rates
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9110196
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## LDPC Decoding Based On Statistical Mechanics Of Spin-Glasses: A Study
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9092331
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Investigation of Harmonic Frequency Multiplication on Transmitted Data through Pulse Shaping for 6G Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9102565
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Exploiting Asymmetric Errors for LDPC Decoding Optimization on 3D NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8936476
 - **Type**: journal

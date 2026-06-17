@@ -3,7 +3,7 @@
 
 ## Parallel decoder for Low Density Parity Check Codes: A MPSoC study
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2211.14382v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## McEliece cryptosystem based on Plotkin construction with QC-MDPC and QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2211.14206v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Comparison of different coding schemes for 1-bit ADC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2211.10712v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Homomorphic Logical Measurements
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2211.03625v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Survey on Source-coding technique
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2211.00230v2
 - **Type**: preprint

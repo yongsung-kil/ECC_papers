@@ -3,7 +3,7 @@
 
 ## Decoding in Hyperbolic Spaces: LDPC Codes With Linear Rate and Efficient Error Correction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1312.2546v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Space-Time Polar Coded Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1312.1799v2
 - **Type**: preprint

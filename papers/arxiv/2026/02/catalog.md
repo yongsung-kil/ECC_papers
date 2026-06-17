@@ -3,7 +3,7 @@
 
 ## The Distance Spectrum of IEEE 802.11 Binary Convolutional Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.23651v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Quantum Approximate Optimization for Decoding of Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.21124v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Generalized $\mathbb{Z}_p$ toric codes as qudit low-density parity-check codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.20158v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Fault-tolerant interfaces for quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.16948v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Self-dual Stacked Quantum Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.15372v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Non-Abelian Quantum Low-Density Parity Check Codes and Non-Clifford Operations from Gauging Logical Gates via Measurements
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.12228v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Robust Composite DNA Storage under Sampling Randomness, Substitution, and Insertion-Deletion Errors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.11951v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## The Pinnacle Architecture: Reducing the cost of breaking RSA-2048 to 100 000 physical qubits using quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.11457v2
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Six Times to Spare: Characterizing GPU-Accelerated 5G LDPC Decoding for Edge-RSU Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.04652v2
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Qudit Twisted-Torus Codes in the Bivariate Bicycle Framework
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.04443v1
 - **Type**: preprint
@@ -113,7 +113,7 @@
 
 ## Design of Root Protograph LDPC Codes Simultaneously Achieving Full Diversity and High Coding Gain
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2602.01555v1
 - **Type**: preprint

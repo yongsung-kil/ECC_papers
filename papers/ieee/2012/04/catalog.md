@@ -3,7 +3,7 @@
 
 ## Interleaved Product LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6168203
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Design of Finite-Length Irregular Protograph Codes with Low Error Floors over the Binary-Input AWGN Channel Using Cyclic Liftings
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6168186
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Searching for Voltage Graph-Based LDPC Tailbiting Codes With Large Girth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6084747
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Maximum-Girth Cylinder-Type Block-Circulant LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6164079
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## On Practical Implementation and Generalizations of $ \max^{\ast}$ Operator for Turbo and LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6086614
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Windowed Decoding of Protograph-Based LDPC Convolutional Codes Over Erasure Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6086762
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## On the Construction of Structured LDPC Codes Free of Small Trapping Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6169192
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Design of Low Complexity Non-Binary LDPC Codes with an Approximated Performance-Complexity Tradeoff
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6155572
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Rank Minimization Over Finite Fields: Fundamental Limits and Coding-Theoretic Interpretations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6094216
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## A Constrained-Coding Alternative to MPPM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6152074
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Fixed Initialization Decoding of LDPC Codes Over a Binary Symmetric Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6138913
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## A 2.37-Gb/s 284.8 mW Rate-Compatible (491,3,6) LDPC-CC Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6157639
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Hard decision directed frequency tracking for OFDM on frequency selective channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6180046
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## On the Distance Spectrum of Tail-Biting Repeat-Accumulate Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6150655
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Uniformly Reweighted Belief Propagation for Estimation and Detection in Wireless Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6153324
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Separable Reversible Data Hiding in Encrypted Image
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6081934
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## High-Speed Quantum Key Distribution System for 1-Mbps Real-Time Key Generation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6150994
 - **Type**: journal
@@ -190,7 +190,7 @@
 
 ## GPU Acceleration of the Updated Goddard Shortwave Radiation Scheme in the Weather Research and Forecasting (WRF) Model
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6155618
 - **Type**: journal
@@ -201,7 +201,7 @@
 
 ## Quantize-and-Forward Schemes for the Orthogonal Multiple-Access Relay Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6150974
 - **Type**: journal
@@ -212,7 +212,7 @@
 
 ## Code Reverse Engineering Problem for Identification Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6126033
 - **Type**: journal
@@ -223,7 +223,7 @@
 
 ## Comment on "DACO: A High Performance Disk Architecture”
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:5710886
 - **Type**: journal
@@ -234,7 +234,7 @@
 
 ## On Pseudocodewords and Decision Regions of Linear Programming Decoding of HDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6152076
 - **Type**: journal
@@ -245,7 +245,7 @@
 
 ## Design of Efficient Joint eIRA-Coded MSK Modulation Systems for Space Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6178083
 - **Type**: journal
@@ -256,7 +256,7 @@
 
 ## BER and throughput analysis of X-OR network coded D-F relays alongwith LDPC channel coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6268539
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## DVB-T2 LDPC decoder with perfect conflict resolution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6212664
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## The Bit Interleaved Coded Modulation module for DVB-NGH: Enhanced features for mobile reception
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6221327
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Non-binary LDPC Coded Orthogonal Modulation with Non-coherent Detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6221216
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Simulation of LDPC convolutional decoders with CPU and GPU
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6202062
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Efficient encoding of quasi-cyclic LDPC codes with continuously variable length
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6202041
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## A serial concatenated scheme for LDPC code to achieve better error correction performance
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6202087
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Decoding performance of binary and non-binary LDPC codes for IEEE 802.11n standard
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6206782
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Design and optimization of combined constellation shaping and bit LDPC coded modulation using EXIT chart
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6216912
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Challenges and improvement strategies for the physical layer in vehicular communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6216885
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Image transmission over Gilbert-Elliot and ITU fading channels using DVB-T2 channel coding and QPSK-OFDM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6204548
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Comparison of CASCADE error correction protocol and LDPC error correction codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6204429
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Comparison of the non-rotated and rotated constellations used in DVB-T2 standard
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6207641
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Girth analysis of polynomial-based time-invariant LDPC convolutional codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6208082
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## An experimental investigation of SIMO, MIMO, interference-alignment (IA) and coordinated multi-point (CoMP)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6208110
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Improved method of secret key generation based on variations in wireless channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6208317
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Experimental evaluation of MIMO coded modulation systems: Concatenation with OSTBC or spatial multiplexing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6208331
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## Sparse Binary Matrices of LDPC Codes for Compressed Sensing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6189286
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## C29. Source-channel rate allocation scheme for robust progressive image transmission using LDPC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6208547
 - **Type**: conference
@@ -465,7 +465,7 @@
 
 ## EXIT Chart-Based Side Information Refinement for Wyner-Ziv Video Coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6189252
 - **Type**: conference
@@ -476,7 +476,7 @@
 
 ## Binary diversity for non-binary LDPC codes over the Rayleigh channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6214035
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## Two new approaches to bandwidth-efficient partnering for cooperative diversity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6213939
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## Flooding-assisted informed dynamic scheduling for rateless codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6214065
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## MIMO Truncated Shannon Bound for system level capacity evaluation of wireless networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:6215504
 - **Type**: conference

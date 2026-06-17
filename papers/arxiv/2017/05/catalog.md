@@ -3,7 +3,7 @@
 
 ## A method for constructing parity-check matrices of non-binary quasi-cyclic LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1705.10717v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Symmetric blind information reconciliation and hash-function-based verification for quantum key distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1705.06664v3
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## A Survey on Trapping Sets and Stopping Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1705.05996v1
 - **Type**: preprint

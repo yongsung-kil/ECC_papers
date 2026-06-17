@@ -3,7 +3,7 @@
 
 ## Reliability Ratio-Based Serial Algorithm of LDPC Decoder for Turbo Equalization Schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9435416
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Concatenated Spatially Coupled LDPC Codes With Sliding Window Decoding for Joint Source-Channel Coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9606889
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Parity-Check Coding Transmit Diversity for Wireless Communications With High Mobility
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9647964
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Neural Network Aided Impulsive Perturbation Decoding for Short Raptor-Like LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9601295
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## On the Design of Channel Coding Autoencoders With Arbitrary Rates for ISI Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9631961
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Rate-Splitting Multiple Access for Downlink Multiuser MIMO: Precoder Optimization and PHY-Layer Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9663192
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Adaptive Demodulation in Impulse Noise Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9645175
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Unsourced Random Access Over Fading Channels via Data Repetition, Permutation, and Scrambling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9628092
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Dynamic SCL Decoder With Path-Flipping for 5G Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9622756
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Bounds for List-Decoding and List-Recovery of Random Linear Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9611262
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Revisiting the Concrete Security of Goldreich&#x2019;s Pseudorandom Generator
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9615074
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Low-Complexity Voronoi Shaping for the Gaussian Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9626008
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Polar Code and Symbol Mapping Design for Multi-Level Cell Spin-Torque Transfer Magnetic Random Access Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9444418
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## A Low-Complexity Endurance Modulation for Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9502845
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## STNet: Low-Complexity Neural Network Decoder With Network Pruning
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9614188
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Performance of LDPC and Turbo Coded Power Line Communication over Multipath Channel and Narrowband Noise
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9820886
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Performance Analysis of Mixed MIMO RF/FSO DF Relaying Based on Globally Coupled Low Density Parity Check (GC-LDPC) Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9728906
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## A High Throughput and Flexible Rate 5G NR LDPC Encoder on a Single GPU
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9728890
 - **Type**: conference

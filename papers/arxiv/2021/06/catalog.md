@@ -3,7 +3,7 @@
 
 ## Generalizing Syndrome Decoding problem to the totally Non-negative Grassmannian
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2106.15526v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Coded Faster-than-Nyquist Signaling for Short Packet Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2106.10574v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Connectivity constrains quantum codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2106.00765v4
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Performance Analysis of Protograph LDPC Codes for Nakagami-$m$ Fading Relay Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1304.6614v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Iterative Detection and Decoding for MIMO Systems with Knowledge-Aided Message Passing Algorithms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1304.6152v1
 - **Type**: preprint

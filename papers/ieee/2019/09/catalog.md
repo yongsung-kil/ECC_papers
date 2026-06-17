@@ -3,7 +3,7 @@
 
 ## Optimal Search for Girth-8 Quasi Cyclic and Spatially Coupled Multiple-Edge LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8745471
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Multi-Stage Bit-Flipping Decoding Algorithms for LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8742682
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Automatic Verification of GCD Constraint for Construction of Girth-Eight QC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8750852
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## A Fast Approximate Check Polytope Projection Algorithm for ADMM Decoding of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8752435
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## An Improved Symbol-Flipping Algorithm for Nonbinary LDPC Codes and its Application to NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8741212
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## An LDPC-Coded SCMA Receiver With Multi-User Iterative Detection and Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8766141
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Variable-Length Coding With Shared Incremental Redundancy: Design Methods and Examples
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8736397
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Comparison of Low-Density Parity-Check Codes in ATSC 3.0 and 5G Standards
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8509633
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Root-Protograph-Based BICM-ID: A Reliable and Efficient Transmission Solution for Block-Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8740906
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Universal Sparse Superposition Codes With Spatial Coupling and GAMP Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8723607
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Deep Joint Source-Channel Coding for Wireless Image Transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8723589
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Physical Layer Performance Evaluation of LTE-Advanced Pro Broadcast and ATSC 3.0 Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8454855
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Irregular Repetition Slotted ALOHA With Energy Harvesting Nodes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8758880
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Reliable State Estimation of an Unmanned Aerial Vehicle Over a Distributed Wireless IoT Network
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8637032
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Radio-Frequency Impairments Compensation in Ultra High-Throughput Satellite Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8752011
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Error-Correcting WOM Codes: Concatenation and Joint Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8717691
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## Upper and Lower Bounds on the Computational Complexity of Polar Encoding and Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8719012
 - **Type**: journal
@@ -190,7 +190,7 @@
 
 ## Code Design Based on Connecting Spatially Coupled Graph Chains
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8718022
 - **Type**: journal
@@ -201,7 +201,7 @@
 
 ## Gaussian Mixture Message Passing for Blind Known Interference Cancellation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8745691
 - **Type**: journal
@@ -212,7 +212,7 @@
 
 ## Expander Recovery Performance of Bipartite Graphs With Girth Greater Than 4
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8584893
 - **Type**: journal
@@ -223,7 +223,7 @@
 
 ## A Study on Dual-Polarized MIMO-ICI Canceller With Complexity Reduction Under Mobile Reception of OFDM Signals
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8563051
 - **Type**: journal
@@ -234,7 +234,7 @@
 
 ## Improved Extended Min-Sum Algorithm for Non-Binary LDPC Codes Based on Node Reliability
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8870565
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Creation of communication system for unmanned aerial vehicles using SDR and SOC technologies
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9165422
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Dual Trellis Construction for High-Rate Punctured Convolutional Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8880816
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## A Modified Shuffling Method to Split the Critical Path Delay in Layered Decoding of QC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8904435
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Partial Access for LDPC-Coded-IDMA Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8904215
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Error-correcting Performance Comparison for Polar Codes, LDPC Codes and Convolutional Codes in High-performance Wireless
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9115442
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## A Decomposition Mapping based Quantized Belief Propagation Decoding for 5G LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8905133
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## NEXTRACK - Next Generation ESTRACK Uplink Services
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8895312
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Improved read/write cost tradeoff in DNA-based data storage using LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8919890
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Message Scheduling for Performant, Many-Core Belief Propagation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8916366
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Coding for optical communications — Can we approach the Shannon limit with low complexity?
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125535
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Coded modulation using a 512-ary Hurwitz-integer constellation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125653
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Delivery of 1.196-Tb/s signal over 800 M based on RF/FSO convergence
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125769
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Long-haul mode multiplexing transmission enhanced by interference cancellation technique
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125636
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## FPGA assisted design of concatenated LDPC convolutional and BCH codes for optical fiber communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125510
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## 16384-QAM transmission at 10 GBd over 25-km SSMF using polarization-multiplexed probabilistic constellation shaping
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125758
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Enumerative sphere shaping for rate adaptation and reach increase in WDM transmission systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125723
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Performance-complexity tradeoffs of concatenated FEC for 64-QAM MLC and BICM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125534
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Experimental validation of clipping combined with digital resolution enhancer for high speed optical transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125700
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## Highly spectral efficient transmission of 183 + 24.5 GBaud 256-QAM spatial super channels over 55 km three-mode fiber
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9125640
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## Low Complexity Decoding Scheme of Raptor-Like LDPC Code in Sufficient SNR Scenarios
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891425
 - **Type**: conference
@@ -465,7 +465,7 @@
 
 ## Outer Code-Based HARQ Retransmission for Multicast/Broadcast Services in 5G
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891304
 - **Type**: conference
@@ -476,7 +476,7 @@
 
 ## Efficient Concatenated Same Codebook Construction for the Random Access Gaussian MAC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891568
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## An Iterative Receiver for Polar-Coded Massive MU-MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891345
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## Performance Analysis of Finite Length Non-Binary Raptor Codes under Ordered Statistics Decoder
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891217
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## Offset min-sum Optimization for General Decoding Scheduling: A Deep Learning Approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891434
 - **Type**: conference
@@ -520,7 +520,7 @@
 
 ## Partial Enumerative Sphere Shaping
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891195
 - **Type**: conference
@@ -531,7 +531,7 @@
 
 ## Weight-Adaptive Analog Fountain Codes toward Massive Machine Type Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891449
 - **Type**: conference
@@ -542,7 +542,7 @@
 
 ## Design on Polarization Weight-Based Polar Coded SCMA System over Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891433
 - **Type**: conference
@@ -553,7 +553,7 @@
 
 ## A Curve Fitting Method to Construct Polar Coded OFDM Systems with Channel Side Information for the Transmitter
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891458
 - **Type**: conference
@@ -564,7 +564,7 @@
 
 ## A Polar Code Based Unsourced Random Access for the Gaussian MAC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8891583
 - **Type**: conference
@@ -575,7 +575,7 @@
 
 ## Deep Log-Likelihood Ratio Quantization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8902805
 - **Type**: conference
@@ -586,7 +586,7 @@
 
 ## On the Impact of CW interference on 5G NR
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8871665
 - **Type**: conference
@@ -597,7 +597,7 @@
 
 ## Performance Study of a Class of Irregular LDPC Codes Based on Their Weight Distribution Analysis
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8903633
 - **Type**: conference
@@ -608,7 +608,7 @@
 
 ## Estimation strategies for channel side information applied to the decoding of LDPC codes over impulsive noise channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8882153
 - **Type**: conference
@@ -619,7 +619,7 @@
 
 ## Obtaining structured generator matrices for QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8893395
 - **Type**: conference
@@ -630,7 +630,7 @@
 
 ## Performance Study of a Class of Irregular LDPC Codes through Low Complexity Bounds on Their Belief-Propagation Decoding Thresholds
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8893306
 - **Type**: conference
@@ -641,7 +641,7 @@
 
 ## A Simplified Application of Ordered Statistics Decoding to Single Parity Check Product Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8893385
 - **Type**: conference
@@ -652,7 +652,7 @@
 
 ## Symbol Message Passing Decoding of Nonbinary Spatially-Coupled Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8893373
 - **Type**: conference
@@ -663,7 +663,7 @@
 
 ## A Genetic Algorithm Decoder for Low-Density Parity-Check Codes Over an Impulse Noise Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8882169
 - **Type**: conference
@@ -674,7 +674,7 @@
 
 ## Using Non-Binary LDPC and MDPC Codes in the McEliece Cryptosystem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8893339
 - **Type**: conference
@@ -685,7 +685,7 @@
 
 ## Optimization Info Rate Using APSK Modulation Scheme for Delivery GSM ABIS over Satellite Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8977020
 - **Type**: conference
@@ -696,7 +696,7 @@
 
 ## Prototyping Software Transceiver for the 5G New Radio Physical Uplink Shared Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8882079
 - **Type**: conference
@@ -707,7 +707,7 @@
 
 ## Construction of Length and Rate Adaptive MET QC-LDPC Codes by Cyclic Group Decomposition
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8884427
 - **Type**: conference
@@ -718,7 +718,7 @@
 
 ## Protograph Sieving Method for Construction Moderate Length Multi-Edge Type QC-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8884381
 - **Type**: conference
@@ -729,7 +729,7 @@
 
 ## Multidimensional Cross Parity Check Codes as a Promising Solution to CubeSat Low Data Rate Downlinks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8867037
 - **Type**: conference

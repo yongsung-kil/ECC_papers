@@ -3,7 +3,7 @@
 
 ## Worst Configurations (Instantons) for Compressed Sensing over Reals: a Channel Coding Approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.5113v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## VLSI Architectures for WIMAX Channel Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.4694v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Girth-12 Quasi-Cyclic LDPC Codes with Consecutive Lengths
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.3916v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Dirty Paper Coding using Sign-bit Shaping and LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.3476v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Multilevel Decoders Surpassing Belief Propagation on the Binary Symmetric Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.3421v2
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Source Coding With Side Information Using List Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.2805v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Check Reliability Based Bit-Flipping Decoding Algorithms for LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.2503v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Divide & Concur and Difference-Map BP Decoders for LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1001.1730v1
 - **Type**: preprint

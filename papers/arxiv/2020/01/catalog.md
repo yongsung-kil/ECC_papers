@@ -3,7 +3,7 @@
 
 ## Peeling Close to the Orientability Threshold: Spatial Coupling in Hashing-Based Data Structures
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2001.10500v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## 100Mbps Reconciliation for Quantum Key Distribution Using a Single Graphics Processing Unit
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2001.07979v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Construction of Rate (n-1)/n Non-Binary LDPC Convolutional Codes via Difference Triangle Sets
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2001.07969v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Pruning Neural Belief Propagation Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2001.07464v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Prefix-Free Code Distribution Matching for 5G New Radio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2001.05810v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Design of Capacity-Approaching Low-Density Parity-Check Codes using Recurrent Neural Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2001.01249v1
 - **Type**: preprint

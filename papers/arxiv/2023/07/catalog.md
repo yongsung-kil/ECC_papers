@@ -3,7 +3,7 @@
 
 ## Spherical and Hyperbolic Toric Topology-Based Codes On Graph Embedding for Ising MRF Models: Classical and Quantum Topology Machine Learning
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.15778v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Absorbing Sets in Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.14532v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## qecGPT: decoding Quantum Error-correcting Codes with Generative Pre-trained Transformers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.09025v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Deep learning based enhancement of ordered statistics decoding of short LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.06575v3
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Improved rate-distance trade-offs for quantum codes with restricted connectivity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.03283v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Physical Layer Secret Key Agreement Using One-Bit Quantization and Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.02391v2
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Efficient Information Reconciliation for High-Dimensional Quantum Key Distribution
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2307.02225v2
 - **Type**: preprint

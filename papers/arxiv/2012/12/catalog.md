@@ -3,7 +3,7 @@
 
 ## Quantum "hyperbicycle" low-density parity check codes with finite rate
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1212.6703v2
 - **Type**: preprint

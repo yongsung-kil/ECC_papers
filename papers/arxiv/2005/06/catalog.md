@@ -3,7 +3,7 @@
 
 ## A New Construction for LDPC Codes using Permutation Polynomials over Integer Rings
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0506091v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## On the dimensions of certain LDPC codes based on q-regular bipartite graphs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0506011v3
 - **Type**: preprint

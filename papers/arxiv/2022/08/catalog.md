@@ -3,7 +3,7 @@
 
 ## An Modified Cole's Importance Sampling Method For Low Error Floor QC-LDPC Codes Construction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2208.05795v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Energy-Efficient Backscatter-Assisted Coded Cooperative-NOMA for B5G Wireless Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2208.01123v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Fast erasure decoder for hypergraph product codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2208.01002v3
 - **Type**: preprint

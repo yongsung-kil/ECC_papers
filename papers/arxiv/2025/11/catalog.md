@@ -3,7 +3,7 @@
 
 ## TransCoder: A Neural-Enhancement Framework for Channel Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.22539v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Constructions of block MDS LDPC codes from punctured circulant matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.22183v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## FPGA-tailored algorithms for real-time decoding of quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.21660v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Kernelized Decoded Quantum Interferometry
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.20016v3
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Study of Iterative Dynamic Channel Tracking for Multiple RIS-Assisted MIMO Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.18669v1
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Explicit construction of low-overhead gadgets for gates on quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.15989v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Assessing Finite Scalability in Early Fault-Tolerant Quantum Computing for Homogeneous Catalysts
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.10388v1
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Cyclic Hypergraph Product Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.09683v2
 - **Type**: preprint
@@ -91,7 +91,7 @@
 
 ## Nyquist Signaling Modulation (NSM): An FTN-Inspired Paradigm Shift in Modulation Design for 6G and Beyond
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.08553v1
 - **Type**: preprint
@@ -102,7 +102,7 @@
 
 ## Addressable gate-based logical computation with quantum LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.06124v1
 - **Type**: preprint
@@ -113,7 +113,7 @@
 
 ## Random Construction of Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.04634v1
 - **Type**: preprint
@@ -124,7 +124,7 @@
 
 ## DecodeX: Exploring and Benchmarking of LDPC Decoding across CPU, GPU, and ASIC Platforms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.02952v1
 - **Type**: preprint
@@ -135,7 +135,7 @@
 
 ## List Decoding and New Bicycle Code Constructions for Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.02951v1
 - **Type**: preprint
@@ -146,7 +146,7 @@
 
 ## HyperNQ: A Hypergraph Neural Network Decoder for Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:2511.01741v1
 - **Type**: preprint

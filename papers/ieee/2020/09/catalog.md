@@ -3,7 +3,7 @@
 
 ## Code Design for Run-Length Control in Visible Light Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:11291610
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Efficient Implementation of a Threshold Modified Min-Sum Algorithm for LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9115068
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Designing Protograph-Based Quasi-Cyclic Spatially Coupled LDPC Codes With Large Girth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9112247
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Joint Component Design for the JSCC System Based on DP-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9115063
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Min-Sum Algorithm Using Multi-Edge-Type Normalized Scheme for ATSC 3.0 LDPC Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9034088
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Concatenated LDPC/2-D-Marker Codes and Non-Iterative Detection/Decoding for Recovering Position Errors in Racetrack Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9146591
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Multi-Round Belief Propagation Decoding With Impulsive Perturbation for Short LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9094192
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## A Scheme for Collective Encoding and Iterative Soft-Decision Decoding of Cyclic Codes of Prime Lengths: Applications to Reed–Solomon, BCH, and Quadratic Residue Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9025269
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Toward Practical Quantum Secure Direct Communication: A Quantum-Memory-Free Protocol and Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9130765
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Spatially Coupled Codes via Partial and Recursive Superposition for Industrial IoT With High Trustworthiness
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8957069
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## A Collaborative RC QC-LDPC Code Construction Scheme Using Both Extension and Splitting
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9099853
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Design of I-Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9096323
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Trainable Communication Systems: Concepts and Prototype
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9118963
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Unsupervised Linear and Nonlinear Channel Equalization and Decoding Using Variational Autoencoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9080094
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## A Deep Learning Assisted Node-Classified Redundant Decoding Algorithm for BCH Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9112337
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Mitigation Techniques for Impulsive Noise With Memory Modeled by a Two State Markov-Gaussian Process
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9031347
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## Multi-Kernel Polar Codes: Concept and Design Principles
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9130741
 - **Type**: journal
@@ -190,7 +190,7 @@
 
 ## Local Decode and Update for Big Data Compression
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9115085
 - **Type**: journal
@@ -201,7 +201,7 @@
 
 ## Coding for Two-User Energy Harvesting Interference Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8972570
 - **Type**: journal
@@ -212,7 +212,7 @@
 
 ## Minimizing the Number of Detrimental Objects in Multi-Dimensional Graph-Based Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9080117
 - **Type**: journal
@@ -223,7 +223,7 @@
 
 ## On Secure Communications Over Gaussian Wiretap Channels via Finite-Length Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9093879
 - **Type**: journal
@@ -234,7 +234,7 @@
 
 ## Machine Learning Based Iterative Detection and Multi-Interference Cancellation for Cognitive IoT
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9099310
 - **Type**: journal
@@ -245,7 +245,7 @@
 
 ## A Network Linear Block Coding Approach to Selective Detect-and-Forward Multi-Way Relaying With Differential Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9104013
 - **Type**: journal
@@ -256,7 +256,7 @@
 
 ## PEG-LDPC Coding for Critical Communications in Factory Automation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9211899
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## FPGA Implementation of LDPC Encoder Architecture for Wireless Communication Standards
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9200293
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Hyper Neural Network as the Diffeomorphic Domain for Short Code Soft Decision Beyound Belief Propagation Decoding Problem
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9224643
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## A Digital Root Based Modular Reduction Technique for Power Efficient, Fault Tolerance in FPGAs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9221606
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Performance Evaluation of OFDM Index Modulation with LDPC Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9217242
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Prediction and Voting Based Symbol Flipping Non-Binary LDPC Decoding Algorithms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9217108
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## A Soft Cancellation Decoder for Parity-Check Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9217144
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Variable Quantization for Memory-Efficient Successive Cancellation Decoding of Polar Codes - A Heuristic Approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9217289
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Blind Twins: Siamese Networks for Non-Interactive Information Reconciliation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9217278
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Performance Analysis of DVB-T2 System Based on MIMO Using Low Density Parity Check (LDPC) Code Technique and Maximum Likelihood (ML) Detection
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9231792
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Performance Analysis of MIMO Detection Techniques in DVB-T2 Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9231868
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Interleaved Non-Binary LDPC Code for Synchronization Error Correction in DNA Storage
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9258250
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Improved Normalized Probabilistic Minimum Summation Algorithm for LDPC Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9258198
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Probabilistic Amplitude Shaping in Power Line Communication
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9236908
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Design Issues and Challenges of an FPGA-based Orthogonal Matching Pursuit Implementation for Compressive Sensing Reconstruction
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9250973
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## FPGA based design and prototyping of efficient 5G QC-LDPC channel decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9244853
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Improving the minimum distance of QC-LDPC codes by removing cycles
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9241207
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## Low Density Parity Check Code (LDPC) for Enhancement of Visible Light Communication (VLC) Performance
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9234285
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## Low Complexity Bounds on a Class of Irregular LDPC Belief-Propagation Decoding Thresholds
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9238285
 - **Type**: conference
@@ -465,7 +465,7 @@
 
 ## Evaluation of Intensity Modulated WDM FOTS with Interleaved RS-FEC Code Schemes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9238320
 - **Type**: conference
@@ -476,7 +476,7 @@
 
 ## RS-LDPC Concatenated Coding for NAND Flash Memory: Designs and Reduction of Short Cycles
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9232125
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## Evaluation of Channel Coding Techniques for Massive Machine-Type Communication in 5G Cellular Network
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9232037
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## A Novel Demodulation Network for Binary Partial Response CPM Signals
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9232041
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## An Efficient Low-Latency Algorithm and Implementation for Rate-Matching and Bit-Interleaving in 5G NR
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9221397
 - **Type**: conference
@@ -520,7 +520,7 @@
 
 ## Low Complexity LDPC Error Correction Code for Modified Anderson PUF to Improve its Uniformity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9215273
 - **Type**: conference
@@ -531,7 +531,7 @@
 
 ## Performance of Downlink SISO NR System using MMSE-IRC Receiver
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9221267
 - **Type**: conference
@@ -542,7 +542,7 @@
 
 ## CURE: A High-Performance, Low-Power, and Reliable Network-on-Chip Design Using Reinforcement Learning
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9061016
 - **Type**: journal

@@ -3,7 +3,7 @@
 
 ## On Efficient Concatenation of LDPC Codes With Constrained Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8960509
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Quasi-Cyclic Spatially Coupled LDPC Code for Broadcasting
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8798970
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Variable-Weight Block Dual-Diagonal Structure for Low-Rate QC LDPC Codes With Low Error Floors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8922716
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Design and Decoding of Irregular LDPC Codes Based on Discrete Message Passing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8851267
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Process Variation Aware Read Performance Improvement for LDPC-Based nand Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8642917
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## A Novel Graph Expansion and a Decoding Algorithm for NB-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8939414
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## More on the Minimum and Stopping Distances of RS-LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8924639
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Adaptive Linear Programming Decoding of Nonbinary Linear Codes Over Prime Fields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8911339
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Performance Analysis and Optimization of Spatially Coupled Protograph-Based Low-Density Parity-Check Codes for Two-Dimensional Magnetic Recording Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8955831
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Counting Short Cycles in Bipartite Graphs: A Fast Technique/Algorithm and a Hardness Result
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8943145
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## The Need for Structure in Quantum LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8908824
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## A Pliable Index Coding Approach to Data Shuffling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8906011
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Finite Block-Length Analog Fountain Codes for Ultra-Reliable Low Latency Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8954789
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Joint Detection and Decoding of Polar Coded 5G Control Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8948322
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## A Stochastic Computing Architecture for Iterative Estimation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8713530
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Application of Maximum Entropy Theorem in Channel Estimation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:10848240
 - **Type**: journal
@@ -179,7 +179,7 @@
 
 ## A Novel Dynamic Detection for Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8728228
 - **Type**: journal
@@ -190,7 +190,7 @@
 
 ## BeLDPC: Bit Errors Aware Adaptive Rate LDPC Codes for 3D TLC NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9116324
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Stochastic EXIT Design for Low-Latency Short-Block LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9083080
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Joint Optimization of Processing Complexity and Rate Allocation through Entropy Tunability for 64-/256-QAM Based Radio Fronthauling with LDPC and PAS-OFDM
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9082985
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## 50G PON FEC Evaluation with Error Models for Advanced Equalization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9083155
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Analysis of 5G Wireless Systems in FR1 and FR2 Frequency Bands
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9074973
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Systematic Low Density Parity Check Codes with Hard Decision Message Passing Algorithm for Non-binary Symbols
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9077506
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## A LDPC codes based Authentication Scheme
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9079253
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Low-Latency CUDA LDPC Decoder for SDR Solutions
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9213279
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Performance of Polar-LDPC Concatenated Coding on AWNG Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9194794
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Improved Optimization Design of Degree Distributions in Fountain Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9194925
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## On the Universality of Low-Density Parity-Check Block Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9086211
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Coexistence of Orthogonal and Non-orthogonal Multicarrier Signals in Beyond 5G Scenarios
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9083780
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## LDPC Decoder Power Consumption Optimization
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9059248
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## Iris Recognition System Implementation Improved by QC-LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9081256
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## LifeTech 2020 Abstracts
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9081062
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Lightweight Key Encapsulation Using LDPC Codes on FPGAs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8877876
 - **Type**: journal

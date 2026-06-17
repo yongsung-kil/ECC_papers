@@ -3,7 +3,7 @@
 
 ## Minimum-Delay Decoding of Turbo-Codes for Upper-Layer FEC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0803.1807v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Entanglement-Assisted Quantum Quasi-Cyclic Low-Density Parity-Check Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0803.0100v2
 - **Type**: preprint

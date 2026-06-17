@@ -3,7 +3,7 @@
 
 ## Improving the Finite-Length Performance of Spatially Coupled LDPC Codes by Connecting Multiple Code Chains
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1402.7170v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Repeat Accumulate Based Designs for LDPC Codes on Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1402.5692v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Double Cylinder Cycle codes of Arbitrary Girth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1403.0804v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## New LDPC Codes Using Permutation Matrices with Higher Girth than QC-LDPC Codes Constructed by Fossorier
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1402.1614v3
 - **Type**: preprint

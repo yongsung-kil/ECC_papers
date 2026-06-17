@@ -3,7 +3,7 @@
 
 ## Key Reconciliation with Low-Density Parity-Check Codes for Long-Distance Quantum Cryptography
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1702.07740v2
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## A Correlation-Breaking Interleaving of Polar Codes in Concatenated Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1702.05202v2
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Comparison of Polar Decoders with Existing Low-Density Parity-Check and Turbo Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1702.04707v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## On Multilevel Coding Schemes Based on Non-Binary LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1702.02372v1
 - **Type**: preprint

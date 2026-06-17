@@ -3,7 +3,7 @@
 
 ## 1-State Error-Trellis Decoding of LDPC Convolutional Codes Based on Circulant Matrices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:0912.4995v3
 - **Type**: preprint

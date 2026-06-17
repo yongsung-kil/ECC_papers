@@ -3,7 +3,7 @@
 
 ## On Distance Properties of Quasi-Cyclic Protograph-Based LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.5429v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Analysis of Quasi-Cyclic LDPC codes under ML decoding over the erasure channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.5217v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Optimized puncturing distributions for irregular non-binary LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.5216v2
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## Split-Extended LDPC codes for coded cooperation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.5214v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Apologizing Comment on `Quantum Quasi-Cyclic Low-Density Parity-Check codes$\,$"
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.4488v3
 - **Type**: preprint
@@ -58,7 +58,7 @@
 
 ## Threshold Saturation on BMS Channels via Spatial Coupling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.3742v1
 - **Type**: preprint
@@ -69,7 +69,7 @@
 
 ## Capacity Achieving Low Density Parity Check Lattices
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.1749v4
 - **Type**: preprint
@@ -80,7 +80,7 @@
 
 ## Circulant Arrays on Cyclic Subgroups of Finite Fields: Rank Analysis and Construction of Quasi-Cyclic LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1004.1184v1
 - **Type**: preprint

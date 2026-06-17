@@ -3,7 +3,7 @@
 
 ## On the Class of High-Rate QC-LDPC Codes With Girth 8 From Sequences Satisfied in GCD Condition
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9045939
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Asymptotic Behavior of Spatial Coupling LDPC Coding for Compute-and-Forward Two-Way Relaying
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9066881
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Designing Finite Alphabet Iterative Decoders of LDPC Codes Via Recurrent Quantized Neural Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9057584
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Design and Optimization of Tail-Biting Spatially Coupled Protograph LDPC Codes Under Shuffled Belief-Propagation Decoding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9057491
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## Delayed Bit Interleaved Coded Sparse Code Multiple Access
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9091254
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Adaptive 2-D Scheduling-Based Nonbinary Majority-Logic Decoding for NAND Flash Memory
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8796433
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## A Sub-Graph Expansion-Contraction Method for Error Floor Computation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9072180
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Saddlepoint Approximations for Short-Packet Wireless Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9072306
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Code-Based Channel Shortening for Faster-Than-Nyquist Signaling: Reduced-Complexity Detection and Code Design
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9072441
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## On the Achievable Rate of Multiple-Input–Multiple-Output Underwater Acoustic Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8737846
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Design and Simulation of Parallel BCH Code with LDPC Code For Flash Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9171743
 - **Type**: conference
@@ -124,7 +124,7 @@
 
 ## MATLAB-Based PHY Simulators for Performance Study of the IEEE 802.11ah/af Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9163438
 - **Type**: conference
@@ -135,7 +135,7 @@
 
 ## Wireless Channels Topology Invariant as Mathematical Foundation of Neural Network Channel Estimation Transfer Learning Properties
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9163528
 - **Type**: conference
@@ -146,7 +146,7 @@
 
 ## A High-Throughput LDPC Decoder Based on GPUs for 5G New Radio
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9219558
 - **Type**: conference
@@ -157,7 +157,7 @@
 
 ## Raptor-like Rateless Spinal Codes using Outer Systematic Polar Codes for Reliable Deep Space Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9162666
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Physical-Layer Arithmetic for Federated Learning in Uplink MU-MIMO Enabled Wireless Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9155479
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Is the Packetized Transmission Efficient? An Age-Energy Perspective
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9162651
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Spread Spectrum Techniques with Channel Coding for Wideband Secured Communication Links
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9329603
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## EXIT Chart Analysis of Protograph-based LDPC Codes for Unequal Power Two-User Gaussian Multiple Access Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9183034
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Modeling Temperature Behavior in the Helper Data for Secret-Key Binding with SRAM PUFs
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9162300
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## A Survey on Channel Coding in Wireless Networks
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9182213
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## A Survey about Deep Learning for Constellation Design in Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9249528
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## SDR Testbed of Full-Duplex Jamming for Secrecy
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9249552
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Efficient Adjacent 3D Parity Error Detection and Correction Codes for Embedded Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9198452
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Probabilistic Shaping for PAM-8 Optical Ethernet Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9203547
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Ultra-High Capacity Optical Transmission over 10-Pbit/s Based on Optical Space Division Multiplexing Technologies
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9203145
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## A Design of Hybrid Automatic Repeat Request Scheme Based on Systematic Polar Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9152326
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Coherent Access: Status and Opportunities
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9161039
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## FEC Implementation and Options for Short-Reach Optical Transmission
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:9161028
 - **Type**: conference

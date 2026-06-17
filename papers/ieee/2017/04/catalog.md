@@ -3,7 +3,7 @@
 
 ## Bit Mapping Design for LDPC Coded BICM Schemes With Multi-Edge Type EXIT Chart
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7801862
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Construction and Encoding of QC-LDPC Codes Using Group Rings
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7822940
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## Low-Complexity Transformed Encoder Architectures for Quasi-Cyclic Nonbinary LDPC Codes Over Subfields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7779152
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## Efficient ADMM Decoding of LDPC Codes Using Lookup Tables
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7835149
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## A New Variant of the McEliece Cryptosystem Based on QC-LDPC and QC-MDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7784752
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## Asymptotic Error Probability of the Gallager B Decoder Under Timing Errors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7805222
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Toward the Prediction of Irreducible Error Floor in Space Time Trellis Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7811264
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## Efficient Hardware Implementation of Probabilistic Gradient Descent Bit-Flipping
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7786873
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## On Nonuniform Noisy Decoding for LDPC Codes With Application to Radiation-Induced Errors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7833151
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Linear network coding and parallel transmission increase fault tolerance and optical reach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7901451
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## Lattice Index Codes From Algebraic Number Fields
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7822990
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Design of Generalized Concatenated Codes Based on Polar Codes With Very Short Outer Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7513399
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## EXIT Chart-Based IRA Code Design for TDMR Turbo-Equalization System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7837588
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Quasi-Universal BATS Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7522090
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## Data-Pattern-Aware Error Prevention Technique to Improve System Reliability
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7814316
 - **Type**: journal
@@ -168,7 +168,7 @@
 
 ## Error detection and correction in semiconductor memories using 3D parity check code with hamming code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8286516
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## Design of LDPC decoder using message passing algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8286733
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Maximizing System Capacity Using Adaptive Coding and Modulation Techniques for Slowly Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8359070
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Compressed Sensing Performance of Binary Matrices with Binary Column Correlations
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7921910
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## A detector-aware LDPC code optimization for ultra-high density magnetic recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8007593
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## A cascaded channel model and hybrid decoding for spin-torque transfer magnetic random access memory (STT-MRAM)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8008051
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Iterative channel detection with LDPC product code for bit patterned media recording
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8007596
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## Design of LDPC codes for unequal ISI channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8007592
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## Non-binary protograph-based LDPC codes for 2-D ISI magnetic recording channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8007591
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Secure key management for 5G physical layer security
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7930246
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Non zero syndrome parallel concatenated gallager codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8074180
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Performance analysis of IEEE 802.11ac/ax WLAN technologies under the presence of CFO
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7937579
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Determination of partial weight enumerators of BCH codes by Hash methods
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7934666
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## DaRe: Data Recovery through Application Layer Coding for LoRaWAN
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:7946866
 - **Type**: conference

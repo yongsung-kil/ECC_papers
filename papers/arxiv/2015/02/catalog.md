@@ -3,7 +3,7 @@
 
 ## On the Energy Complexity of LDPC Decoder Circuits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1502.07999v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## An Upper Bound on the Minimum Distance of LDPC Codes over GF(q)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1502.06874v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## On the Multiple Threshold Decoding of LDPC codes over GF(q)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1502.06871v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## LDPC Code Design for Noncoherent Physical Layer Network Coding
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1502.05784v1
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## Rewriting Flash Memories by Message Passing
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1502.00189v1
 - **Type**: preprint

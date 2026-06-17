@@ -3,7 +3,7 @@
 
 ## Communication near the channel capacity with an absence of compression: Statistical Mechanical Approach
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cond-mat/0301005v1
 - **Type**: preprint

@@ -3,7 +3,7 @@
 
 ## Performance Analysis of Practical QC-LDPC Codes: From DVB-S2 to ATSC 3.0
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8554116
 - **Type**: journal
@@ -14,7 +14,7 @@
 
 ## Analysis of the Joint Viterbi Detector/Decoder (JVDD) Over a Coded AWGN/ISI System ss an LDPC Alternative
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8434235
 - **Type**: journal
@@ -25,7 +25,7 @@
 
 ## An Efficient Post-Processor for Lowering the Error Floor of LDPC Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8395069
 - **Type**: journal
@@ -36,7 +36,7 @@
 
 ## LDPC Codes Over the BEC: Bounds and Decoding Algorithms
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8519768
 - **Type**: journal
@@ -47,7 +47,7 @@
 
 ## LDPC Code Design for Fading Interference Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8606262
 - **Type**: journal
@@ -58,7 +58,7 @@
 
 ## BP-LED Decoding Algorithm for LDPC Codes Over AWGN Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8445606
 - **Type**: journal
@@ -69,7 +69,7 @@
 
 ## Adaptive Artificial Neural Network-Coupled LDPC ECC as Universal Solution for 3-D and 2-D, Charge-Trap and Floating-Gate NAND Flash Memories
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8599122
 - **Type**: journal
@@ -80,7 +80,7 @@
 
 ## A (21150, 19050) GC-LDPC Decoder for NAND Flash Applications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8528505
 - **Type**: journal
@@ -91,7 +91,7 @@
 
 ## Performance Analysis of LDPC-BICM System Based on Gaussian Approximation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8566157
 - **Type**: journal
@@ -102,7 +102,7 @@
 
 ## Multiset-Partition Distribution Matching
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8533438
 - **Type**: journal
@@ -113,7 +113,7 @@
 
 ## A Key Recovery Reaction Attack on QC-MDPC
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8502112
 - **Type**: journal
@@ -124,7 +124,7 @@
 
 ## Key Technologies and Measurements for DTMB-A System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8368065
 - **Type**: journal
@@ -135,7 +135,7 @@
 
 ## Performance of Interleaved Block Codes With Burst Errors
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8464100
 - **Type**: journal
@@ -146,7 +146,7 @@
 
 ## Learning Mixtures of Sparse Linear Regressions Using Sparse Graph Codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8429915
 - **Type**: journal
@@ -157,7 +157,7 @@
 
 ## FPGA Implementation of FEC Encoder with BCH & LDPC Codes for DVB S2 System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8711664
 - **Type**: conference
@@ -168,7 +168,7 @@
 
 ## Performance Analysis of Mixed-Scheduling Belief Propagation for LDPC Decoders in OFDM System under Double Fading Channels
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8938879
 - **Type**: conference
@@ -179,7 +179,7 @@
 
 ## FPGA-Based Real-Time Soft-Decision LDPC Performance Verification for 50G-PON
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696463
 - **Type**: conference
@@ -190,7 +190,7 @@
 
 ## Nonbinary Polar Coding for Multilevel Modulation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696792
 - **Type**: conference
@@ -201,7 +201,7 @@
 
 ## Partition-Based Probabilistic Shaping for Fiber-Optic Communication Systems
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696571
 - **Type**: conference
@@ -212,7 +212,7 @@
 
 ## Rate-Adaptive Probabilistic Shaping Enabled by Punctured Polar Codes with Pre-Set Frozen Bits
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696832
 - **Type**: conference
@@ -223,7 +223,7 @@
 
 ## Joint Source-Channel Coding via Compressed Distribution Matching in Fiber-Optic Communications
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696846
 - **Type**: conference
@@ -234,7 +234,7 @@
 
 ## Single-Wavelength and Single-Photodiode Entropy-Loaded 554-Gb/s Transmission Over 22-km SMF
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696539
 - **Type**: conference
@@ -245,7 +245,7 @@
 
 ## 74.38 Tb/s Transmission Over 6300 km Single Mode Fiber with Hybrid EDFA/Raman Amplifiers
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696534
 - **Type**: conference
@@ -256,7 +256,7 @@
 
 ## 35-Tb/s C-Band Transmission Over 800 km Employing 1-Tb/s PS-64QAM Signals Enhanced by Complex 8 × 2 MIMO Equalizer
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696972
 - **Type**: conference
@@ -267,7 +267,7 @@
 
 ## Single-Wavelength Symmetric 50 Gbit/s Equalization-Free NRZ IM/DD PON with up to 33 dB Loss Budget and Fiber Transmission over >40 km
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696513
 - **Type**: conference
@@ -278,7 +278,7 @@
 
 ## Demonstration of 100-Gb/s/λ PAM-4 TDM-PON Supporting 29-dB Power Budget with 50-km Reach using 10G-class O-Band DML Transmitters
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696951
 - **Type**: conference
@@ -289,7 +289,7 @@
 
 ## Single-Channel Direct Detection Reception Beyond 1 Tb/s
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696932
 - **Type**: conference
@@ -300,7 +300,7 @@
 
 ## Multi-Rate Prefix-Free Code Distribution Matching
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696370
 - **Type**: conference
@@ -311,7 +311,7 @@
 
 ## Optimum Bit-Level Distribution Matching with at Most O(N3) Implementation Complexity
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696977
 - **Type**: conference
@@ -322,7 +322,7 @@
 
 ## Integrated Dual-DFB Laser for 408 GHz Carrier Generation Enabling 131 Gbit/s Wireless Transmission over 10.7 Meters
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8697005
 - **Type**: conference
@@ -333,7 +333,7 @@
 
 ## 5×510 Gbps Single-Polarization Direct-Detection WDM Transmission over 80 km of SSMF
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8696275
 - **Type**: conference
@@ -344,7 +344,7 @@
 
 ## Design of Unequal Error Protection LDPC Code in PPM and LDPC Optical Communication System
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8873472
 - **Type**: conference
@@ -355,7 +355,7 @@
 
 ## Wireless Sensors Converged Network Enhancement
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8893181
 - **Type**: conference
@@ -366,7 +366,7 @@
 
 ## Improving Short-Length LDPC Codes with a CRC and Iterative Ordered Statistic Decoding : (Invited Paper)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8693053
 - **Type**: conference
@@ -377,7 +377,7 @@
 
 ## Protograph-Based LDPC Code Design for Probabilistic Shaping with On-Off Keying
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8693049
 - **Type**: conference
@@ -388,7 +388,7 @@
 
 ## Discretized Density Evolution for Rate Compatible Modulation : Invited Presentation
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8693058
 - **Type**: conference
@@ -399,7 +399,7 @@
 
 ## Binary Message Passing Decoding of Product Codes Based on Generalized Minimum Distance Decoding : (Invited Paper)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8692862
 - **Type**: conference
@@ -410,7 +410,7 @@
 
 ## Spatially Coupled LDPC Codes and the Multiple Access Channel
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8692899
 - **Type**: conference
@@ -421,7 +421,7 @@
 
 ## Performance of Self-Corrected Min-Sum Decoding Algorithm for Decoders with Quantized Input
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8717757
 - **Type**: conference
@@ -432,7 +432,7 @@
 
 ## Scaling the Fast x86 DVB-S2 Decoder to 1 Gbps
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8742225
 - **Type**: conference
@@ -443,7 +443,7 @@
 
 ## Acquisition and tracking for communications between Lunar South Pole and Earth
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8742112
 - **Type**: conference
@@ -454,7 +454,7 @@
 
 ## Proximity Link Telecommunication and Tracking Scenarios for a Potential Mars Sample Return Campaign
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8741917
 - **Type**: conference
@@ -465,7 +465,7 @@
 
 ## Performance of 5GNR with Interference Alignment
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8713752
 - **Type**: conference
@@ -476,7 +476,7 @@
 
 ## Iterative Carrier Phase Recovery for MPSK Systems Based on Simplified EM Algorithm
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8729542
 - **Type**: conference
@@ -487,7 +487,7 @@
 
 ## Short Polar-coded Non-coherent Receiver
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8729533
 - **Type**: conference
@@ -498,7 +498,7 @@
 
 ## Research on Polarization Code Encoding and Decoding Algorithm Based on HARQ Technology
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8729289
 - **Type**: conference
@@ -509,7 +509,7 @@
 
 ## Error correction using LDPC code for performance improvement in clipped and biased OFDM with direct detection over optical fiber
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: ieee:8877013
 - **Type**: conference

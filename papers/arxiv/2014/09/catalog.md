@@ -3,7 +3,7 @@
 
 ## Error correcting codes and spatial coupling
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1409.7465v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## LDPC Code Density Evolution in the Error Floor Region
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1409.5783v1
 - **Type**: preprint
@@ -25,7 +25,7 @@
 
 ## Delay-Exponent of Bilayer Anytime Code
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1409.5177v1
 - **Type**: preprint
@@ -36,7 +36,7 @@
 
 ## ADMM LP decoding of non-binary LDPC codes in $\mathbb{F}_{2^m}$
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1409.5141v2
 - **Type**: preprint
@@ -47,7 +47,7 @@
 
 ## An ontology-based approach to the optimization of non-binary (2,v)-regular LDPC codes
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:1409.2019v1
 - **Type**: preprint

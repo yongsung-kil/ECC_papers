@@ -3,7 +3,7 @@
 
 ## Finite-Dimensional Bounds on Zm and Binary LDPC Codes with Belief Propagation Decoders
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0610052v1
 - **Type**: preprint
@@ -14,7 +14,7 @@
 
 ## Iterative Decoding of Low-Density Parity Check Codes (A Survey)
 
-- **Status**: 미선별
+- **Status**: ⬜ 미선별
 - **Reason**: N/A
 - **ID**: arxiv:cs/0610022v1
 - **Type**: preprint
