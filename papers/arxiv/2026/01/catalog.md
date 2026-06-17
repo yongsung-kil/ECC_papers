@@ -3,8 +3,8 @@
 
 ## Fast magic state preparation by gauging higher-form transversal gates in parallel
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 magic state preparation/qLDPC — 양자EC로 제외
 - **ID**: arxiv:2601.22939v1
 - **Type**: preprint
 - **Published**: 2026-01-30
@@ -14,8 +14,8 @@
 
 ## Structural Conditions for Native CCZ Magic-State Fountains in qLDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: qLDPC magic-state fountain 구조조건 — 양자EC로 제외
 - **ID**: arxiv:2601.22489v1
 - **Type**: preprint
 - **Published**: 2026-01-30
@@ -25,8 +25,8 @@
 
 ## 5G LDPC Codes as Root LDPC Codes via Diversity Alignment
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: QC-LDPC protograph diversity evolution 분석/블록매핑 — 무선 block-fading 특이적이나 protograph 코드설계 기법 떼어낼 여지, 애매하여 살림(Phase3 재검토)
 - **ID**: arxiv:2601.22470v1
 - **Type**: preprint
 - **Published**: 2026-01-30
@@ -36,8 +36,8 @@
 
 ## Quantum bootstrap product codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 bootstrap product 코드(CSS qLDPC) — 양자EC로 제외
 - **ID**: arxiv:2601.22363v1
 - **Type**: preprint
 - **Published**: 2026-01-29
@@ -47,8 +47,8 @@
 
 ## Belief Propagation with Quantum Messages for Symmetric Q-ary Pure-State Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 메시지 BP(BPQM) classical-quantum 채널 디코더 — 양자 제외 카테고리
 - **ID**: arxiv:2601.21330v1
 - **Type**: preprint
 - **Published**: 2026-01-29
@@ -58,8 +58,8 @@
 
 ## Bayesian Optimization for Quantum Error-Correcting Code Discovery
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(qLDPC) 코드 발견(bivariate bicycle codes) 전용 — 독립적으로 떼어낼 고전 QC-LDPC 부호설계 기법 없음
 - **ID**: arxiv:2601.18562v1
 - **Type**: preprint
 - **Published**: 2026-01-26
@@ -69,8 +69,8 @@
 
 ## Analog-to-Stochastic Converter Using Magnetic Tunnel Junction Devices for Vision Chips
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: MTJ 기반 analog-to-stochastic 변환기(비전칩) — LDPC는 동기 언급뿐, NAND에 이식할 디코더/HW 기법 없음
 - **ID**: arxiv:2601.14640v1
 - **Type**: preprint
 - **Published**: 2026-01-21
@@ -80,8 +80,8 @@
 
 ## On Existence of Girth-8 QC-LDPC Code with Large Column Weight: Combining Mirror-sequence with Classification Modulo Ten
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: girth-8 QC-LDPC 대표적 코드 설계 기법(E) — 짧은 길이·large column weight 구성, NAND LDPC 부호 설계에 직접 이식 가능
 - **ID**: arxiv:2601.10170v1
 - **Type**: preprint
 - **Published**: 2026-01-15
@@ -91,8 +91,8 @@
 
 ## Time-Dynamic Circuits for Fault-Tolerant Shift Automorphisms in Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(qLDPC) fault-tolerant 회로·shift automorphism — 양자 EC 전용, 떼어낼 고전 ECC 기법 없음(제외 카테고리)
 - **ID**: arxiv:2601.09911v1
 - **Type**: preprint
 - **Published**: 2026-01-14
@@ -102,8 +102,8 @@
 
 ## Counting and Entropy Bounds for Structure-Avoiding Spatially-Coupled LDPC Constructions
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: QC-SC-LDPC error floor 낮추는 구조회피(짧은 사이클 제거) 설계론(E) — NAND LDPC 코드 설계에 이식 가능
 - **ID**: arxiv:2601.09674v2
 - **Type**: preprint
 - **Published**: 2026-01-14
@@ -113,8 +113,8 @@
 
 ## Two-dimensional Entanglement-assisted Quantum Quasi-cyclic Low-density Parity-check Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 2-D 고전 QC-LDPC girth>4/>6 구성 기법(E)이 핵심 — 최종 EA-QLDPC 도출이나 기반 고전 부호설계 떼어낼 수 있어 애매시 포함
 - **ID**: arxiv:2601.08927v2
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -124,8 +124,8 @@
 
 ## Breaking the Orthogonality Barrier in Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC 직교성 제약 극복 구성 — qLDPC 전용 설계로 고전 NAND LDPC로 떼어낼 기법 없음(제외)
 - **ID**: arxiv:2601.08824v3
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -135,8 +135,8 @@
 
 ## Quantum CSS LDPC Codes based on Dyadic Matrices for Belief Propagation-based Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: dyadic 행렬 기반 고전 binary QC-LDPC(girth 6) 구성을 우선 제시 후 CSS 확장 — 기반 고전 부호설계(E) 이식 가능, 애매시 포함
 - **ID**: arxiv:2601.08636v1
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -146,8 +146,8 @@
 
 ## An Efficient Algorithm to Sample Quantum Low-Density Parity-Check Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC용 self-orthogonal sparse 행렬 샘플링 알고리즘 — dual-containing 제약은 qLDPC 전용, NAND ECC로 떼어낼 기법 없음(제외)
 - **ID**: arxiv:2601.08387v2
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -157,8 +157,8 @@
 
 ## Land-then-transport: A Flow Matching-Based Generative Decoder for Wireless Image Transmission
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 무선 이미지 전송 JSCC/생성 디코더 — LDPC는 baseline 비교 대상일 뿐, 떼어낼 ECC 기법 없음(제외)
 - **ID**: arxiv:2601.07512v1
 - **Type**: preprint
 - **Published**: 2026-01-12
@@ -168,8 +168,8 @@
 
 ## Study of Adaptive Reliability-Driven Conditional Innovation Decoding for LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: AR-CID LDPC 디코딩 알고리즘(residual BP 개선, 빠른 수렴·저지연)(C) — NAND LDPC 디코더에 직접 이식 가능
 - **ID**: arxiv:2601.06732v1
 - **Type**: preprint
 - **Published**: 2026-01-11
@@ -179,8 +179,8 @@
 
 ## Coset Shaping: Constructions and Bounds
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: coset shaping은 coded QAM/PAM 신호 성형(변조) 기법 — LDPC는 부수 적용, NAND ECC로 떼어낼 디코더·부호설계 기법 없음(제외)
 - **ID**: arxiv:2601.05652v3
 - **Type**: preprint
 - **Published**: 2026-01-09
@@ -190,8 +190,8 @@
 
 ## The Number of Cycles of Bi-regular Tanner Graphs in Terms of the Eigenvalues of the Adjacency Matrix
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: QC-LDPC Tanner 그래프의 사이클/girth를 고유값으로 계산하는 코드설계 기법(E) — error floor·girth 최적화에 직접 이식 가능
 - **ID**: arxiv:2601.05340v1
 - **Type**: preprint
 - **Published**: 2026-01-08
@@ -201,8 +201,8 @@
 
 ## Achievable Rate and Coding Principle for MIMO Multicarrier Systems With Cross-Domain MAMP Receiver Over Doubly Selective Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: MIMO 멀티캐리어 MAMP 수신기·achievable rate 분석이 본질; LDPC는 finite-length 성능 벤치마크로 부수 언급, 떼어낼 ECC 기법 없음
 - **ID**: arxiv:2601.04433v1
 - **Type**: preprint
 - **Published**: 2026-01-07
@@ -212,8 +212,8 @@
 
 ## Single-Shot and Few-Shot Decoding via Stabilizer Redundancy in Bivariate Bicycle Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(BB 코드)·single-shot 디코딩·BP+OSD가 양자 EC 특이적, 제외 카테고리(양자 EC)
 - **ID**: arxiv:2601.01137v1
 - **Type**: preprint
 - **Published**: 2026-01-03
@@ -223,8 +223,8 @@
 
 ## Reinforcement-Learned Unequal Error Protection for Quantized Semantic Embeddings
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 강화학습 기반 시맨틱 임베딩 UEP·반복부호; LDPC는 비교 대상일 뿐, 시맨틱 통신·소스 코딩 영역으로 제외
 - **ID**: arxiv:2601.00186v1
 - **Type**: preprint
 - **Published**: 2026-01-01

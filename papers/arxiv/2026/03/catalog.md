@@ -3,8 +3,8 @@
 
 ## SAFT: Sensitivity-Aware Filtering and Transmission for Adaptive 3D Point Cloud Communication over Wireless Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 3D 포인트클라우드 무선전송(학습형 JSCC)이며 LDPC는 비교 베이스라인으로 부수 언급, 떼어낼 ECC 기법 없음
 - **ID**: arxiv:2603.26197v1
 - **Type**: preprint
 - **Published**: 2026-03-27
@@ -14,8 +14,8 @@
 
 ## Theory of (Co)homological Invariants on Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC (co)homological invariant·논리게이트·결함허용 순수 양자이론 — 이식 가능한 고전 디코더/HW/코드설계 기법 없음
 - **ID**: arxiv:2603.25831v1
 - **Type**: preprint
 - **Published**: 2026-03-26
@@ -25,8 +25,8 @@
 
 ## Exploiting the Degrees of Freedom: Multi-Dimensional Spatially-Coupled Codes Based on Gradient Descent
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 다차원 SC-LDPC 코드 설계, 유한길이 최적화·사이클/girth 제거를 스토리지·전송 시스템 대상으로 — 카테고리 E 이식 가능
 - **ID**: arxiv:2603.25824v1
 - **Type**: preprint
 - **Published**: 2026-03-26
@@ -36,8 +36,8 @@
 
 ## Clifford synthesis via generalized S and CZ gates
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Clifford 합성·다중큐빗 측정, qLDPC 결함허용 HW 대상 양자 회로 — 고전 NAND ECC로 이식 불가
 - **ID**: arxiv:2603.24731v1
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -47,8 +47,8 @@
 
 ## Finite-Degree Quantum LDPC Codes Reaching the Gilbert-Varshamov Bound
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(CSS) 구성과 GV bound 도달 증명 — 양자 + 순수 이론 bound, 이식 가능 디코더/HW 없음
 - **ID**: arxiv:2603.24588v2
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -58,8 +58,8 @@
 
 ## Benchmarking Techniques for Decoded Quantum Interferometry
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Decoded Quantum Interferometry용 양자회로 greedy 디코더 — 양자 알고리즘 벤치마킹, 고전 LDPC 디코더 이식 불가
 - **ID**: arxiv:2603.24441v1
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -69,8 +69,8 @@
 
 ## Unanticipated Adversarial Robustness of Semantic Communication
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 시맨틱 통신·DeepJSCC 적대적 견고성, LDPC는 공격 대상 베이스라인 — JSCC, 떼어낼 ECC 기법 없음
 - **ID**: arxiv:2603.24082v1
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -80,8 +80,8 @@
 
 ## Towards a Unified Coding Scheme for 6G
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 6G 통합 코딩 비전 백서 — 무선 응용 특이적, 구체적 이식 가능 디코더/HW/구성 기법 없음
 - **ID**: arxiv:2603.23123v1
 - **Type**: preprint
 - **Published**: 2026-03-24
@@ -91,8 +91,8 @@
 
 ## Distance-Finding Algorithms for Quantum Codes and Circuits
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 코드·회로 거리 계산 알고리즘 벤치마킹 — 양자 거리측정 도구, NAND LDPC ECC 이식 무관
 - **ID**: arxiv:2603.22532v1
 - **Type**: preprint
 - **Published**: 2026-03-23
@@ -102,8 +102,8 @@
 
 ## Optimal Compilation of Syndrome Extraction Circuits for General Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: qLDPC 신드롬 추출 회로 컴파일(ASC) — 양자 HW 배치 전용, 고전 디코더/HW로 이식 불가
 - **ID**: arxiv:2603.21499v1
 - **Type**: preprint
 - **Published**: 2026-03-23
@@ -113,8 +113,8 @@
 
 ## Independent Trivariate Bicycle Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Trivariate bicycle 양자 LDPC 코드, 결함허용 구현 — 양자 코드설계, 고전 NAND ECC 이식 불가
 - **ID**: arxiv:2603.17703v1
 - **Type**: preprint
 - **Published**: 2026-03-18
@@ -124,8 +124,8 @@
 
 ## Optimizing Logical Mappings for Quantum Low-Density Parity Check Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(Gross code) 논리 큐비트 매핑/컴파일 — 고전 NAND LDPC ECC로 이식할 디코더·HW·코드설계 기법 없음(제외: 양자)
 - **ID**: arxiv:2603.17167v1
 - **Type**: preprint
 - **Published**: 2026-03-17
@@ -135,8 +135,8 @@
 
 ## AtlasRAN: Timing-Aware Evaluation of Open-source 5G Platforms for Integrated Wireless Testbeds
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 5G/O-RAN 테스트베드 평가 프레임워크 — LDPC는 CUDA 오프로드 부수 언급, 떼어낼 ECC 기법 없음(무선 응용 특이적)
 - **ID**: arxiv:2603.14661v3
 - **Type**: preprint
 - **Published**: 2026-03-15
@@ -146,8 +146,8 @@
 
 ## Quantum Process Realization of LDPC Code Dualities and Product Constructions
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 회로로 LDPC 코드 쌍대성·곱 구성 실현(ZX-calculus) — 양자 프로세스 이론, 고전 NAND ECC 이식 기법 없음(제외: 양자)
 - **ID**: arxiv:2603.13538v1
 - **Type**: preprint
 - **Published**: 2026-03-13
@@ -157,8 +157,8 @@
 
 ## Learning to Decode Quantum LDPC Codes Via Belief Propagation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: BP 디코딩 + 강화학습 스케줄링/증분 업데이트 — 양자 대상이나 BP 개선·학습 스케줄 기법이 NAND LDPC 디코더로 이식 가능성(C, 애매시 in)
 - **ID**: arxiv:2603.10192v1
 - **Type**: preprint
 - **Published**: 2026-03-10
@@ -168,8 +168,8 @@
 
 ## Construction of a Family of Quantum Codes Using Sub-exceding Functions via the Hypergraph Product and the Generalized Shor Construction
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 하이퍼그래프 곱·Shor 구성 기반 양자 LDPC 코드족 구성 — 양자 stabilizer 코드 설계, 고전 NAND 이식 기법 없음(제외: 양자)
 - **ID**: arxiv:2603.08213v1
 - **Type**: preprint
 - **Published**: 2026-03-09
@@ -179,8 +179,8 @@
 
 ## Mirror codes: High-threshold quantum LDPC codes beyond the CSS regime
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Mirror codes — 양자 LDPC stabilizer 코드 구성·신드롬 추출 회로, CSS 비CSS 양자 EC(제외: 양자)
 - **ID**: arxiv:2603.05496v1
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -190,8 +190,8 @@
 
 ## QGPU: Parallel logic in quantum LDPC codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: QGPU clustered-cyclic 양자 LDPC 코드·논리 연산 병렬 surgery — 양자 FT 연산, NAND ECC 이식 기법 없음(제외: 양자)
 - **ID**: arxiv:2603.05398v1
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -201,8 +201,8 @@
 
 ## Simplified circuit-level decoding using Knill error correction
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Knill error correction 기반 양자 회로레벨 디코딩 — 양자 신드롬 측정/디코딩, 고전 NAND 이식성 없음(제외: 양자)
 - **ID**: arxiv:2603.05320v2
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -212,8 +212,8 @@
 
 ## Parsimonious Quantum Low-Density Parity-Check Code Surgery
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 코드 surgery용 ancilla 시스템 구성 — 양자 논리 측정 오버헤드, NAND ECC 이식 기법 없음(제외: 양자)
 - **ID**: arxiv:2603.05082v1
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -223,8 +223,8 @@
 
 ## Linear-Time Encodable and Decodable Quantum Error-Correcting Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 선형시간 인코딩·디코딩 가능 양자 ECC 구성 — 양자 채널용량 코드 이론, 고전 NAND LDPC 디코더/HW 이식 기법 없음(제외: 양자)
 - **ID**: arxiv:2603.04543v1
 - **Type**: preprint
 - **Published**: 2026-03-04
@@ -234,8 +234,8 @@
 
 ## Point Cloud Feature Coding for Object Detection over an Error-Prone Cloud-Edge Collaborative System
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 포인트클라우드 소스-채널 결합(JSCC) 프레임워크, LDPC는 기하정보 전송 베이스라인일 뿐 떼어낼 ECC 기법 없음
 - **ID**: arxiv:2603.03890v1
 - **Type**: preprint
 - **Published**: 2026-03-04
@@ -245,8 +245,8 @@
 
 ## Characterization of Blind Code Rate Recovery in Linear Block Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비협조 블라인드 코드율 복원(랭크기반 추정) 주제, 디코더/HW/코드설계로 이어지지 않는 신호인식 영역
 - **ID**: arxiv:2603.02031v1
 - **Type**: preprint
 - **Published**: 2026-03-02

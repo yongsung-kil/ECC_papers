@@ -3,8 +3,8 @@
 
 ## The Distance Spectrum of IEEE 802.11 Binary Convolutional Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: IEEE 802.11 BCC(컨볼루션 부호) 거리스펙트럼 분석, LDPC 부수 언급일 뿐 LDPC 기법 없음
 - **ID**: arxiv:2602.23651v1
 - **Type**: preprint
 - **Published**: 2026-02-27
@@ -14,8 +14,8 @@
 
 ## Quantum Approximate Optimization for Decoding of Low-Density Parity-Check Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: QAOA 기반 LDPC 디코더 — 양자 하드웨어이나 패리티체크+soft LLR 비용함수로 BP 대체 디코딩, 단·고잡음 개선 알고리즘(C)
 - **ID**: arxiv:2602.21124v1
 - **Type**: preprint
 - **Published**: 2026-02-24
@@ -25,8 +25,8 @@
 
 ## Generalized $\mathbb{Z}_p$ toric codes as qudit low-density parity-check codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Z_p 토릭코드 기반 qudit 양자 LDPC, 양자 EC 영역으로 제외
 - **ID**: arxiv:2602.20158v1
 - **Type**: preprint
 - **Published**: 2026-02-23
@@ -36,8 +36,8 @@
 
 ## Fault-tolerant interfaces for quantum LDPC codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC fault-tolerant 인터페이스, 양자 EC 영역으로 제외
 - **ID**: arxiv:2602.16948v1
 - **Type**: preprint
 - **Published**: 2026-02-18
@@ -47,8 +47,8 @@
 
 ## Self-dual Stacked Quantum Low-Density Parity-Check Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: self-dual 양자 LDPC 코드 구성, 양자 EC 영역으로 제외
 - **ID**: arxiv:2602.15372v1
 - **Type**: preprint
 - **Published**: 2026-02-17
@@ -58,8 +58,8 @@
 
 ## Non-Abelian Quantum Low-Density Parity Check Codes and Non-Clifford Operations from Gauging Logical Gates via Measurements
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: non-Abelian 양자 LDPC 게이징 구성, 양자 EC 영역으로 제외
 - **ID**: arxiv:2602.12228v1
 - **Type**: preprint
 - **Published**: 2026-02-12
@@ -69,8 +69,8 @@
 
 ## Robust Composite DNA Storage under Sampling Randomness, Substitution, and Insertion-Deletion Errors
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: Composite DNA 스토리지에서 LLR 유도 후 기존 LDPC로 오류정정 — 스토리지 ECC 일반(B), LLR/채널모델 기법 이식 여지
 - **ID**: arxiv:2602.11951v1
 - **Type**: preprint
 - **Published**: 2026-02-12
@@ -80,8 +80,8 @@
 
 ## The Pinnacle Architecture: Reducing the cost of breaking RSA-2048 to 100 000 physical qubits using quantum LDPC codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC로 RSA 깨는 fault-tolerant 양자 아키텍처, 양자 EC 영역으로 제외
 - **ID**: arxiv:2602.11457v2
 - **Type**: preprint
 - **Published**: 2026-02-12
@@ -91,8 +91,8 @@
 
 ## Six Times to Spare: Characterizing GPU-Accelerated 5G LDPC Decoding for Edge-RSU Communications
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 5G LDPC GPU offload 처리량 벤치마크 — NAND에 이식할 디코더/HW/코드설계 기법 없음, 무선 엣지 컴퓨팅 특이적
 - **ID**: arxiv:2602.04652v2
 - **Type**: preprint
 - **Published**: 2026-02-04
@@ -102,8 +102,8 @@
 
 ## Qudit Twisted-Torus Codes in the Bivariate Bicycle Framework
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Qudit 양자 LDPC(twisted-torus) 코드 — qLDPC/양자EC로 제외 카테고리
 - **ID**: arxiv:2602.04443v1
 - **Type**: preprint
 - **Published**: 2026-02-04
@@ -113,8 +113,8 @@
 
 ## Design of Root Protograph LDPC Codes Simultaneously Achieving Full Diversity and High Coding Gain
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: Protograph LDPC 코드 설계(density evolution+유전알고리즘 최적화) — 이식 가능 코드설계 기법(E)
 - **ID**: arxiv:2602.01555v1
 - **Type**: preprint
 - **Published**: 2026-02-02

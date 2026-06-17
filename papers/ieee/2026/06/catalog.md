@@ -47,8 +47,8 @@
 
 ## Performance Measurements of ATSC 3.0 MIMO System in Brazil: Field Tests
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: ATSC 3.0 디지털TV MIMO 야외 수신 측정 — LDPC 언급조차 없고 떼어낼 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11363483
 - **Type**: journal
 - **Published**: June 2026

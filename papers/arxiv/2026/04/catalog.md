@@ -3,8 +3,8 @@
 
 ## High-Girth Regular Quantum LDPC Codes from Square-Base Hypergraph Products via CPM Lifts
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 양자 CSS-LDPC이나 CPM lift·girth 6/8 구성, 짧은사이클 배제 조건, BP+OSD-lite 후처리 — 코드설계(E)·디코더(C) 이식 가능.
 - **ID**: arxiv:2604.27817v1
 - **Type**: preprint
 - **Published**: 2026-04-30
@@ -14,8 +14,8 @@
 
 ## Enabling High Error Tolerance in Satellite Video Transmissions by Generative Semantic Communication
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 위성 생성형 시맨틱 통신, LDPC는 FEC 베이스라인으로 부수 언급 — 떼어낼 ECC 기법 없음, 제외.
 - **ID**: arxiv:2604.25184v1
 - **Type**: preprint
 - **Published**: 2026-04-28
@@ -25,8 +25,8 @@
 
 ## Networked Realization of Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC의 네트워크 분산 구현(qubit 분할·teleported CNOT) — 양자 EC 제외, 이식형 고전 디코더/HW 없음.
 - **ID**: arxiv:2604.25026v1
 - **Type**: preprint
 - **Published**: 2026-04-27
@@ -36,8 +36,8 @@
 
 ## Covariance-Aware Demapping on Fourier-Curve Constellations
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 곡면 constellation 디매핑/물리계층 보안 — LDPC는 coded link 베이스라인일 뿐, 떼어낼 ECC 기법 없음.
 - **ID**: arxiv:2604.24918v1
 - **Type**: preprint
 - **Published**: 2026-04-27
@@ -47,8 +47,8 @@
 
 ## Optimization Using Locally-Quantum Decoders
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 디코더로 max-k-XORSAT 최적화 — 양자 알고리즘·최적화 목적, NAND ECC 이식형 고전 디코더 기법 아님.
 - **ID**: arxiv:2604.24633v1
 - **Type**: preprint
 - **Published**: 2026-04-27
@@ -58,8 +58,8 @@
 
 ## Semantic Error Correction and Decoding for Short Block Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 시맨틱 오류정정/리스트디코딩(BART 기반), short block code 대상 — LDPC는 비교군, 시맨틱 통신 제외 카테고리.
 - **ID**: arxiv:2604.22269v2
 - **Type**: preprint
 - **Published**: 2026-04-24
@@ -69,8 +69,8 @@
 
 ## High-Girth Regular Quantum LDPC Codes from Affine-Coset Structures
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(CSS) 코드 구성·BP 디코딩으로 기준상 명시적 제외 카테고리(qLDPC); 떼어낼 고전 NAND 이식 기법 불명
 - **ID**: arxiv:2604.20838v2
 - **Type**: preprint
 - **Published**: 2026-04-22
@@ -80,8 +80,8 @@
 
 ## Fault-Tolerant Quantum Computing with Trapped Ions: The Walking Cat Architecture
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 트랩이온 양자 컴퓨팅 FT 아키텍처용 qLDPC, 양자 EC로 명시적 제외, NAND 이식 가능 고전 디코더/HW 없음
 - **ID**: arxiv:2604.19481v1
 - **Type**: preprint
 - **Published**: 2026-04-21
@@ -91,8 +91,8 @@
 
 ## Three-Module SC-VAMP for LDPC-Coded Nonlinear Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비선형 채널 신호복구용 VAMP+BP 수신기 아키텍처, 무선 통신 응용 특이적이며 LDPC ECC 자체 기법 아님
 - **ID**: arxiv:2604.19061v1
 - **Type**: preprint
 - **Published**: 2026-04-21
@@ -102,8 +102,8 @@
 
 ## Efficient Routing of Quantum LDPC Codes on Programmable 2D Toric Architectures
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 LDPC(BB) 코드의 2D 토릭 하드웨어 라우팅, 양자 EC로 명시적 제외, 고전 NAND 디코더/HW 이식성 없음
 - **ID**: arxiv:2604.18714v1
 - **Type**: preprint
 - **Published**: 2026-04-20
@@ -113,8 +113,8 @@
 
 ## E2E-WAVE: End-to-End Learned Waveform Generation for Underwater Video Multicasting
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: E2E 학습 파형생성 시맨틱 수중영상 통신, LDPC는 베이스라인이며 오히려 FEC 무력화 주장—떼어낼 ECC 기법 없음(제외 카테고리)
 - **ID**: arxiv:2604.17047v1
 - **Type**: preprint
 - **Published**: 2026-04-18
@@ -124,8 +124,8 @@
 
 ## Towards Ultra-High-Rate Quantum Error Correction with Reconfigurable Atom Arrays
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 중성원자 어레이 초고율 양자 EC qLDPC, 명시적 제외; 디코더가 양자 신드롬 전용으로 NAND 이식성 없음
 - **ID**: arxiv:2604.16209v1
 - **Type**: preprint
 - **Published**: 2026-04-17
@@ -135,8 +135,8 @@
 
 ## Heuristic Search for Minimum-Distance Upper-Bound Witnesses in Quantum APM-LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 APM-LDPC 최소거리 상한 witness 탐색, 양자 EC 이론으로 명시적 제외
 - **ID**: arxiv:2604.15307v1
 - **Type**: preprint
 - **Published**: 2026-04-16
@@ -146,8 +146,8 @@
 
 ## Hidden Quantum Advantage near the Decoding Threshold of Decoded Quantum Interferometry
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: DQI 양자 우위 경계 이론, 순수 이론 bound이며 양자 알고리즘—디코더/HW/구성으로 안 이어짐
 - **ID**: arxiv:2604.15025v2
 - **Type**: preprint
 - **Published**: 2026-04-16
@@ -157,8 +157,8 @@
 
 ## Turán-Theoretic Bounds on Several Elementary Trapping Sets in LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 고전 LDPC elementary trapping set·error floor·QC-LDPC 구성으로 코드 설계(E) 직접 이식 가능
 - **ID**: arxiv:2604.12332v2
 - **Type**: preprint
 - **Published**: 2026-04-14
@@ -168,8 +168,8 @@
 
 ## Quantum Message Passing for Factor Graphs over Finite Abelian Groups
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: factor graph 메시지패싱 프레임워크가 LDPC 포함 고전 코드의 q-ary BP를 일반화—비이진 디코더 알고리즘(C) 이식 가능성, 애매하여 in
 - **ID**: arxiv:2604.12186v1
 - **Type**: preprint
 - **Published**: 2026-04-14
@@ -179,8 +179,8 @@
 
 ## SERC: LDPC-Inspired Semantic Error Correction for Retrieval-Augmented Generation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: LDPC를 은유로 차용한 LLM 환각 교정(시맨틱)이며 채널코딩 ECC 기법이 아님 — 떼어낼 디코더/HW/코드설계 없음
 - **ID**: arxiv:2605.28837v1
 - **Type**: preprint
 - **Published**: 2026-04-12
@@ -190,8 +190,8 @@
 
 ## Scalable Neural Decoders for Practical Fault-Tolerant Quantum Computation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: qLDPC용 CNN 신경망 디코더지만 코드 기하구조 활용·실시간 처리량 등 디코더 알고리즘이 NAND LDPC로 이식 가능(C)
 - **ID**: arxiv:2604.08358v1
 - **Type**: preprint
 - **Published**: 2026-04-09
@@ -201,8 +201,8 @@
 
 ## Belief Propagation Convergence Prediction for Bivariate Bicycle Quantum Error Correction Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: BP 수렴 사전예측(mod-w) 기법은 양자 BB코드 대상이나 BP 디코더 일반에 적용 가능한 알고리즘적 통찰(C)
 - **ID**: arxiv:2604.07995v1
 - **Type**: preprint
 - **Published**: 2026-04-09
@@ -212,8 +212,8 @@
 
 ## Channel Estimation and LDPC Decoding for Bursty Phase Noise
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 채널추정-LDPC 반복 디코딩 기법이며 무선 응용이나 burst-aware soft-decision LDPC 디코딩 알고리즘 이식 가능(C)
 - **ID**: arxiv:2604.07004v1
 - **Type**: preprint
 - **Published**: 2026-04-08
@@ -223,8 +223,8 @@
 
 ## Affine Subcode Ensemble Decoding of Linear Block Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 앙상블 디코딩(aSCED)·BP update rule·고성능 parity-check 구성 — LDPC에 직접 적용된 디코더/코드설계 기법(C/E)
 - **ID**: arxiv:2604.06889v1
 - **Type**: preprint
 - **Published**: 2026-04-08
@@ -234,8 +234,8 @@
 
 ## Would Learning Help? Adaptive CRC-QC-LDPC Selection for Integrity in 5G-NR V2X
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 5G-NR V2X 무선 응용 특이적 CRC-QC-LDPC 온라인 선택(컨텍스추얼 밴딧)으로 떼어낼 ECC 디코더/HW/코드설계 기법 없음
 - **ID**: arxiv:2604.04277v1
 - **Type**: preprint
 - **Published**: 2026-04-05
@@ -245,8 +245,8 @@
 
 ## Quasi-BP for BCH Codes and its Optimization
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: BCH용 quasi-BP 디코더이나 EXIT 차트 최적화·병렬 반복 디코딩 알고리즘이 LDPC BP에 이식 가능(C)
 - **ID**: arxiv:2604.04066v1
 - **Type**: preprint
 - **Published**: 2026-04-05
@@ -256,8 +256,8 @@
 
 ## Transversal non-Clifford gates on almost-good quantum LDPC and quantum locally testable codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: qLDPC transversal 비클리포드 게이트 — 순수 양자 EC 코드구성/위상수학이며 고전 NAND LDPC로 이식 불가
 - **ID**: arxiv:2604.01874v1
 - **Type**: preprint
 - **Published**: 2026-04-02
@@ -267,8 +267,8 @@
 
 ## Tunneling-Augmented Simulated Annealing for Short-Block LDPC Code Construction
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 단블록 LDPC parity-check 행렬 구성을 사이클·trapping set 제거로 최적화(TASA) — 코드 설계 기법 직접 이식 가능(E)
 - **ID**: arxiv:2604.07365v1
 - **Type**: preprint
 - **Published**: 2026-04-01

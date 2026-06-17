@@ -201,8 +201,8 @@
 
 ## Revolving NBP-Like Decoders for Cyclic and Quasi-Cyclic LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: cyclic/QC-LDPC용 NBP 디코더, min-sum/sum-product 비교·error floor — 직접 이식 가능한 신경망 디코더 알고리즘(C)
 - **ID**: ieee:11213512
 - **Type**: journal
 - **Published**: 2026
@@ -212,8 +212,8 @@
 
 ## Simultaneous Multi-Rate Threshold Optimization of Protograph-Based Raptor-Like LDPC Codes via Genetic Algorithm
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: PBRL/SC-LDPC 프로토그래프 임계값 최적화 코드설계(E) — rate-compatible LDPC 구성에 이식 가능
 - **ID**: ieee:11367752
 - **Type**: journal
 - **Published**: 2026
@@ -223,8 +223,8 @@
 
 ## Reduced Complexity Blind Recognition Method of LDPC Codes Over a Candidate Set
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: LDPC 블라인드 인식이 주제지만 OMSA(offset min-sum) 디코더 기법 언급 — C 이식 가능성 애매하여 살림
 - **ID**: ieee:11406886
 - **Type**: journal
 - **Published**: 2026
@@ -234,8 +234,8 @@
 
 ## 6G-Oriented LDPC-Coded Faster-Than-Nyquist Signaling: Code Design and Performance Analysis
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 5G LDPC base matrix masking 기법으로 FTN용 코드설계 — masking 연산·protograph 코드구성은 NAND LDPC 부호설계에 이식 가능(E)
 - **ID**: ieee:11316135
 - **Type**: journal
 - **Published**: 2026
@@ -245,8 +245,8 @@
 
 ## A High-Rate-Compatible Algebraic GC-LDPC Code for 3-D TLC NAND Flash Memory
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 3D TLC NAND 직접 대상의 rate-compatible 대수적 GC-LDPC 코드 설계(다중 코드레이트·열무게 구성) — A/E 정통 부합
 - **ID**: ieee:11475832
 - **Type**: journal
 - **Published**: 2026
@@ -256,8 +256,8 @@
 
 ## A Local Re-Decoding Algorithm for LDPC-Coded Modulation With CCDMs
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: LDPC trapping set 탈출용 local re-decoding 알고리즘 — UCN 더블익스텐션 기반 재디코딩은 NAND LDPC 디코더에 이식 가능(C)
 - **ID**: ieee:11329401
 - **Type**: journal
 - **Published**: 2026
@@ -267,8 +267,8 @@
 
 ## Neural Rate-Adaptive LDPC Decoding for the Slepian-Wolf Problem
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Slepian-Wolf 분산 소스코딩용 신경망 디코더 — 소스 코딩(압축)이며 채널 ECC가 아님, 제외 카테고리(소스코딩)에 명시적 해당
 - **ID**: ieee:11482822
 - **Type**: journal
 - **Published**: 2026
@@ -278,8 +278,8 @@
 
 ## Reduced-Complexity Belief Propagation Decoding for LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: QC-LDPC layered BP 디코딩 복잡도 감소(SPA/MSA 선택, LLR 임계) — 이식 가능 디코더 알고리즘(C) 직접 해당
 - **ID**: ieee:11433227
 - **Type**: journal
 - **Published**: 2026
@@ -289,8 +289,8 @@
 
 ## Pilotless Iterative Carrier Synchronization With LDPC Partial Decision Metrics in Satellite Communications at Low SNRs
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: LDPC 부분판정 메트릭을 위성통신 반송파 동기화에 활용 — LDPC는 부수 활용, 디코더/코드설계 자체를 떼어낼 기법 없음(무선 응용 특이적)
 - **ID**: ieee:11346452
 - **Type**: journal
 - **Published**: 2026
@@ -311,8 +311,8 @@
 
 ## Decoding of LDPC Codes Using Singularity of SNR Mismatch Over AWGN Channel
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 채널 파라미터 없이 동작하는 LDPC BP 디코더 알고리즘(C) — NAND 채널추정 난점에 직접 이식 가능
 - **ID**: ieee:11366946
 - **Type**: journal
 - **Published**: 2026
@@ -322,8 +322,8 @@
 
 ## A Markov Chain Monte Carlo Method for Efficient Finite-Length LDPC Code Design
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: protograph/SC-LDPC 유한길이 설계, short cycle 제거 MCMC 최적화 — 스토리지용 코드설계 직접(E), 명확 포함
 - **ID**: ieee:11313566
 - **Type**: journal
 - **Published**: 2026
@@ -333,8 +333,8 @@
 
 ## Low-Complexity Syndrome-Based Linear Programming Decoding of Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 양자 LDPC지만 SB min-sum 변형·error floor 저감·조기종료·OSD postprocessing은 LDPC 디코더로 직접 이식 가능(C)
 - **ID**: ieee:11278092
 - **Type**: journal
 - **Published**: 2026
@@ -355,8 +355,8 @@
 
 ## PEXIT Analysis and Design of Multilevel Coded Modulation With SPC-Aided SC-LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: SPC-aided SC-LDPC 코드설계와 PEXIT 분석·error floor 저감 — SC-LDPC 구성·SPC 제약은 NAND 부호설계에 이식 가능(E)
 - **ID**: ieee:11322535
 - **Type**: journal
 - **Published**: 2026
@@ -377,8 +377,8 @@
 
 ## Rate-Compatible Polar- and LDPC-Coded Hybrid ARQ Aided Reverse Reconciliation in CV-QKD
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: CV-QKD reconciliation용 rate-compatible IR-HARQ — puncturing/HARQ는 QKD 키조정 효율 목적, NAND ECC로 떼어낼 LDPC 부호/디코더 기법 미흡
 - **ID**: ieee:11328821
 - **Type**: journal
 - **Published**: 2026
@@ -388,8 +388,8 @@
 
 ## MrcPunc: Modulation and Rate Compatible Puncturing for Few-Iteration 5G LDPC Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 5G LDPC 응용이나 rate-compatible puncturing + PEXIT 임계값 분석은 LDPC 코드설계 기법으로 이식 가능(E), 애매하여 살림
 - **ID**: ieee:11455242
 - **Type**: journal
 - **Published**: 2026
@@ -410,8 +410,8 @@
 
 ## Soft-Information LLM Fusion for LDPC-Coded Text Over Visible-Light Links
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: LDPC-LLM-LDPC 수신기에서 LLM 신뢰도를 pseudo-LLR로 변환해 BP 디코딩에 융합 — LLR 도메인 BP 디코더 기법 이식 가능(C), 애매하므로 살림
 - **ID**: ieee:11498322
 - **Type**: journal
 - **Published**: 2026
@@ -421,8 +421,8 @@
 
 ## Learning to Decode: Graph Attention Network-Gated Recurrent Unit as Channel Decoder
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: GNN(GAT-GRU) 기반 채널 디코더, regular/5G LDPC에 적용 — 신경망 디코더 이식 가능(C)
 - **ID**: ieee:11500460
 - **Type**: journal
 - **Published**: 2026
@@ -432,8 +432,8 @@
 
 ## Iterative Joint Detection of Kalman Filter and Channel Decoder for Sensor-to-Controller Link in Wireless Networked Control Systems
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 무선제어시스템 Kalman+채널디코더 결합검출, LDPC 부수적이고 이식 가능 ECC 기법 없음 — 제외
 - **ID**: ieee:11303590
 - **Type**: journal
 - **Published**: 2026
@@ -454,8 +454,8 @@
 
 ## Design and Analysis of Protograph LDPC-Coded PD-NOMA Systems With Symmetric-Hamming Mapping
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: NOMA 응용이나 PLDPC 코드 구성(mutual-info threshold estimation)이 코드설계로 이식 가능(E), 애매하여 살림
 - **ID**: ieee:11456974
 - **Type**: journal
 - **Published**: 2026
@@ -465,8 +465,8 @@
 
 ## A Posteriori Probability Calculation for Composite-Symbol DNA Channels With Synchronization Errors
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: DNA 채널 APP 계산이 주제지만 비이진 LDPC 외부코드 사용 + 사이클 그래프 BCJR 메시지 스케줄링 — 이식 가능 디코더 기법(C) 애매하여 살림
 - **ID**: ieee:11426878
 - **Type**: journal
 - **Published**: 2026
@@ -487,8 +487,8 @@
 
 ## A New NB-LDPC Code Construction Method With Arbitrary Generalized Girth
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: NB-LDPC 코드 구성·generalized girth 분석(permutation graph) — 비이진 LDPC 코드설계 직접 해당(E)
 - **ID**: ieee:11493571
 - **Type**: journal
 - **Published**: 2026
@@ -498,8 +498,8 @@
 
 ## Offset Gradient Descent Bit-Flipping Decoding for Irregular Parity-Check Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 불규칙 parity-check 부호용 offset GDBF bit-flipping 디코더 — LDPC에 직접 이식 가능한 디코더 알고리즘(C)
 - **ID**: ieee:11460140
 - **Type**: journal
 - **Published**: 2026
@@ -509,8 +509,8 @@
 
 ## Analysis and Design of Irregular-Mapped BICM-ID System With Non-Uniform Sources
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비균일 소스용 BICM-ID 라벨링·shaping gain 설계 — 무선 변조 응용 특이적이고 소스 분포 의존, 떼어낼 LDPC ECC 기법 없음
 - **ID**: ieee:11475831
 - **Type**: journal
 - **Published**: 2026
@@ -520,8 +520,8 @@
 
 ## Belief Propagation-Based Polar Decoders With Schedule Diversity
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: polar를 LDPC-like 희소 그래프로 보고 BP 스케줄 다양성·IDS 디코더 제안 — 이식 가능 디코더 알고리즘(C)
 - **ID**: ieee:11300839
 - **Type**: journal
 - **Published**: 2026
@@ -531,8 +531,8 @@
 
 ## Modeling and Reliability Analysis of Delay-Based Physical Unclonable Functions Using Low-Density Parity-Check Codes for Dependable Security
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: PUF 보안용 표준 LDPC 적용 신뢰성 분석일 뿐, 떼어낼 디코더/HW/코드설계 기법 없음 — 응용 특이적
 - **ID**: ieee:11408174
 - **Type**: journal
 - **Published**: 2026
@@ -542,8 +542,8 @@
 
 ## Achievable Rate and Coding Principle for MIMO Multicarrier Systems With Cross-Domain MAMP Receiver Over Doubly Selective Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: MIMO 멀티캐리어 MAMP 수신기·달성률 분석 — LDPC는 성능 비교 베이스라인, 떼어낼 디코더/HW/코드설계 기법 없음(무선 응용 특이적)
 - **ID**: ieee:11357287
 - **Type**: journal
 - **Published**: 2026
@@ -553,8 +553,8 @@
 
 ## In-Memory Bit Error Rate Estimation Using Syndromes of LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: in-memory BER 추정용 nested bilayer LDPC 구성(degree-1 VN, check-degree 분포 설계, 신드롬 기반) — 코드설계(E) 및 메모리 신뢰성 ECC로 이식 가능
 - **ID**: ieee:11489022
 - **Type**: journal
 - **Published**: 2026
@@ -564,8 +564,8 @@
 
 ## Graph Neural Networks for Next-Generation-IoT: Recent Advances and Open Challenges
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: IoT용 GNN 서베이 — LDPC/BP는 개념적 유추, 떼어낼 구체 기법 없음
 - **ID**: ieee:11177505
 - **Type**: journal
 - **Published**: 2026
@@ -575,8 +575,8 @@
 
 ## Joint Sparse Graph for Enhanced MIMO-AFDM Receiver Design
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: MIMO-AFDM의 검출과 LDPC 디코딩을 joint sparse graph로 통합하는 BP/EP 메시지전달 디코더 기법(C) — 결합 그래프 디코딩 아키텍처 이식 가능성, 애매하여 살림
 - **ID**: ieee:11150613
 - **Type**: journal
 - **Published**: 2026
@@ -586,8 +586,8 @@
 
 ## A Survey on IEEE 802.11bn Wi-Fi 8: Advantages of Ultra High Reliability for Next-Generation Wireless LANs
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Wi-Fi 8(802.11bn) 표준 서베이, 2xLDPC는 부수 언급일 뿐 떼어낼 디코더·코드설계 기법 없음 — 제외
 - **ID**: ieee:11305042
 - **Type**: journal
 - **Published**: 2026
@@ -597,8 +597,8 @@
 
 ## Iterative Receiver and Code Design for Protograph-Coded Overloaded SCMA Systems
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 신규 protograph LDPC 부호설계 원리 및 고성능 코드 개발 — SCMA와 무관하게 떼어낼 수 있는 코드설계 기법(E)
 - **ID**: ieee:11208684
 - **Type**: journal
 - **Published**: 2026
@@ -608,8 +608,8 @@
 
 ## A Survey on the Coding for DNA Storage: Challenges, Algorithms, and Future Directions
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: DNA 스토리지용 ECC(LDPC 포함) 코딩 서베이 — 스토리지 ECC 일반(B)
 - **ID**: ieee:11456548
 - **Type**: journal
 - **Published**: 2026
@@ -619,8 +619,8 @@
 
 ## Ultra-Reliable Receiver for Asynchronous SCMA in Satellite–Terrestrial Communication
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비동기 SCMA 위성통신 수신기(A-MPA/A-EPA, S-OLD)로 LDPC는 베이스라인 비교군일 뿐 — 무선 응용 특이적, NAND로 이식할 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11475801
 - **Type**: journal
 - **Published**: 2026
@@ -630,8 +630,8 @@
 
 ## Intelligent Read Framework With Meta-Learning for NAND Flash Memory Under Process Variation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: NAND 플래시 LDPC SD 디코딩 LLR 양자화·RRV 비균일 양자화 직접(A)
 - **ID**: ieee:11396626
 - **Type**: journal
 - **Published**: 2026
@@ -641,8 +641,8 @@
 
 ## Interleaver Design for Parallel Concatenated Block Codes With Arbitrary Lengths
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 병렬연접 블록부호(turbo계열) 인터리버 설계 — LDPC 아니고 떼어낼 LDPC 디코더/구성 기법 없음
 - **ID**: ieee:11370712
 - **Type**: journal
 - **Published**: 2026
@@ -652,8 +652,8 @@
 
 ## Design of Parity-Check Polar Codes Under Belief Propagation List Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: PC-Polar 부호 BP-list 디코딩 설계 — polar 부호 전용, LDPC ECC로 이식 불가
 - **ID**: ieee:11204483
 - **Type**: journal
 - **Published**: 2026
@@ -674,8 +674,8 @@
 
 ## An Error Correction Technique for Product Codes Construction of PAC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: PAC/polar product code 구성·디코더로 polar 전용, 이식 가능한 LDPC 기법 없음
 - **ID**: ieee:11457030
 - **Type**: journal
 - **Published**: 2026
@@ -685,8 +685,8 @@
 
 ## Adaptation of Error Correction Procedures to the Time-Bin Quantum Key Distribution Protocol Implementation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: QKD 시간빈 프로토콜 특화 오류정정 — non-uniform binary channel 적응이 QKD HW 특이적이라 떼어낼 일반 LDPC 기법 없음
 - **ID**: ieee:11316506
 - **Type**: journal
 - **Published**: 2026
@@ -696,8 +696,8 @@
 
 ## Convolutional Coded Poisson Receivers
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: spatially-coupled 기법·density evolution·SIC을 Poisson 수신기에 적용 — SC-LDPC 코드설계(E)/디코더 분석에 이식 가능, 애매하여 살림
 - **ID**: ieee:11131501
 - **Type**: journal
 - **Published**: 2026
@@ -707,8 +707,8 @@
 
 ## Revisiting Distributed Source Coding for Expedited Downlink Transmission in Coded Edge Computing
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 코디드 엣지 컴퓨팅용 분산 소스 코딩(syndrome puncturing DSC); 채널코딩 ECC가 아닌 소스 코딩이라 제외
 - **ID**: ieee:11134706
 - **Type**: journal
 - **Published**: 2026
@@ -718,8 +718,8 @@
 
 ## Practical Short-Length Coding Schemes for Binary Distributed Hypothesis Testing
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 분산 가설검정용 quantize-binning 단부호 — 소스코딩 영역, 채널 ECC 기법 아님
 - **ID**: ieee:11396025
 - **Type**: journal
 - **Published**: 2026
@@ -729,8 +729,8 @@
 
 ## Low Complexity Early Termination HARQ for URLLC: Analysis and Neural Network Design
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: BP-NN 기반 조기종료/복호가능성 예측 기법은 LDPC 디코더 조기종료에 이식 가능(C), 애매하므로 살림
 - **ID**: ieee:11218912
 - **Type**: journal
 - **Published**: 2026
@@ -740,8 +740,8 @@
 
 ## A Weakly Hybrid Decoding Algorithm for Staircase Codes via Multi-Level Bit Marking
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: staircase code용 HD/SD 하이브리드 멀티레벨 비트마킹 디코딩, 신뢰도기반 비트플립·error floor 개선 — 이식 가능 디코더 기법(C)
 - **ID**: ieee:11313545
 - **Type**: journal
 - **Published**: 2026
@@ -751,8 +751,8 @@
 
 ## RIS-Assisted DF Relay System Based on PAC Codes for Short Packet Communication
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: RIS/PAC 코드 단패킷 통신, LDPC는 비교 베이스라인일 뿐 떼어낼 기법 없음
 - **ID**: ieee:11268280
 - **Type**: journal
 - **Published**: 2026
@@ -762,8 +762,8 @@
 
 ## Perturbed Derivative Decoding Based on Ordered Statistics for Cyclic Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: OSD 기반 derivative 디코딩 개선(perturbation)으로 이식 가능한 디코더 알고리즘(C)
 - **ID**: ieee:11455560
 - **Type**: journal
 - **Published**: 2026
@@ -773,8 +773,8 @@
 
 ## Revisiting the Interface Between Error and Erasure Correction in Wireless Standards
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 5G HARQ/ARQ를 네트워크 코딩 기반 forward erasure correction으로 대체하는 무선 프로토콜 연구 — LDPC ECC 기법 없음, 떼어낼 디코더/HW/코드설계 없음
 - **ID**: ieee:11333331
 - **Type**: journal
 - **Published**: 2026
@@ -784,8 +784,8 @@
 
 ## Spatially Coupled Convolutional Codes via Block-Oriented Accumulation: Analysis and Quantized Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: SC-convolutional codes 구성·양자화 Max-Log-MAP 디코더, SC-LDPC와 비교 — 양자화 디코더·SC 코드설계 이식 가능(C/E)
 - **ID**: ieee:11501959
 - **Type**: journal
 - **Published**: 2026
@@ -795,8 +795,8 @@
 
 ## Iterative Joint Channel Estimation and Detection for Coded Multi-RIS-Assisted Multi-Antenna Systems
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: multi-RIS 다중안테나 채널추정+검출+디코딩, LDPC 부호기반 파일럿 활용이나 무선 추정 특이적 — 떼어낼 ECC 기법 없음, 제외
 - **ID**: ieee:11313562
 - **Type**: journal
 - **Published**: 2026
@@ -806,8 +806,8 @@
 
 ## Optimization of the Bit Mapping for LDPC-Coded Faster-Than-Nyquist Systems
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: LDPC Tanner graph 비트 신뢰도 기반 비트매핑·EXIT 분석은 코드설계 기법으로 이식 가능(E)
 - **ID**: ieee:11278034
 - **Type**: journal
 - **Published**: 2026
@@ -817,8 +817,8 @@
 
 ## Codes for Identification via Channels: Tutorial for Communications Generalists
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 채널 식별(ID) 코드 튜토리얼; Reed-Solomon/Reed-Muller 기반, LDPC 디코더·HW·구성 이식 기법 없음
 - **ID**: ieee:11036769
 - **Type**: journal
 - **Published**: 2026
@@ -828,8 +828,8 @@
 
 ## Dual Graph Learning for Multivariate Time Series Anomaly Detection in IoUT
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: IoUT 시계열 이상탐지 그래프 학습; ECC/LDPC와 무관
 - **ID**: ieee:11123725
 - **Type**: journal
 - **Published**: 2026
@@ -839,8 +839,8 @@
 
 ## Semantic Communication for Cooperative Perception Using HARQ
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 협동 인지용 시맨틱 통신+HARQ; LDPC 무관, 떼어낼 ECC 기법 없음
 - **ID**: ieee:11036556
 - **Type**: journal
 - **Published**: 2026
@@ -850,8 +850,8 @@
 
 ## Token Communication in the Era of Large Models: An Information Bottleneck-Based Approach
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 토큰/시맨틱 통신+LLM 정보병목 — ECC 아님, 떼어낼 LDPC 기법 없음
 - **ID**: ieee:11215621
 - **Type**: journal
 - **Published**: 2026
@@ -861,8 +861,8 @@
 
 ## Realistic Quantum Network Simulation for Experimental BBM92 Key Distribution
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: BBM92 QKD 양자네트워크 시뮬레이션 — LDPC 디코더/코드설계 없음, 보안·양자 제외
 - **ID**: ieee:11373897
 - **Type**: journal
 - **Published**: 2026
@@ -872,8 +872,8 @@
 
 ## Generative Semantic Communication for AI Model Parameters
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: AI 모델 파라미터의 생성형 시맨틱 통신(GAN) — 시맨틱 통신 제외, LDPC 무관
 - **ID**: ieee:11493754
 - **Type**: journal
 - **Published**: 2026
@@ -883,8 +883,8 @@
 
 ## Optimal and Suboptimal Decoders Under Finite-Alphabet Interference: A Mismatched Decoding Perspective
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 간섭 하 mismatched decoding 정보이론 분석(GMI/MI), BICM 통신 특이적, 떼어낼 LDPC 디코더/HW/코드설계 없음 — 제외
 - **ID**: ieee:11301730
 - **Type**: journal
 - **Published**: 2026
@@ -894,8 +894,8 @@
 
 ## Symbol-Level Deep Learning-Based Decoders for Concatenated Codes Over Insertion/Deletion Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 삽입/삭제 채널용 심볼레벨 딥러닝 디코더 — DNA 데이터 스토리지·bit-patterned media recording 대상 스토리지 ECC 디코더 기법(B/C 이식 가능성), 애매하여 살림
 - **ID**: ieee:11358926
 - **Type**: journal
 - **Published**: 2026
@@ -905,8 +905,8 @@
 
 ## Decoding for Punctured Convolutional and Turbo Codes: A Deep Learning Solution for Protocols Compliance
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: LSTM 신경망 디코더 기법(puncturing-aware embedding, BER 균형 학습)이 NAND LDPC 신경망 디코더로 이식 가능(C)
 - **ID**: ieee:11218847
 - **Type**: journal
 - **Published**: 2026
@@ -916,8 +916,8 @@
 
 ## Comparative Analysis of Contemporary Quantum Computer Processors: Architectures, Performance, and Perspectives
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자컴퓨터 프로세서 아키텍처 비교 리뷰 — LDPC/ECC 기법 없음
 - **ID**: ieee:11421923
 - **Type**: journal
 - **Published**: 2026
@@ -927,8 +927,8 @@
 
 ## Rate–Distortion Theory for Task-Oriented Distributed Cross-Modal Source Coding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: task-oriented 분산 소스코딩 rate-distortion·Wyner-Ziv — 소스코딩 영역, 채널 ECC 기법 아님
 - **ID**: ieee:11404184
 - **Type**: journal
 - **Published**: 2026
@@ -938,8 +938,8 @@
 
 ## Design of Polar Subcodes for Permutation Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: polar subcode permutation decoding 디코더 알고리즘 — frozen set 구성·permutation decoding 기법이 이식 가능 후보(C), 애매하므로 살림
 - **ID**: ieee:11493559
 - **Type**: journal
 - **Published**: 2026
@@ -960,8 +960,8 @@
 
 ## Toward Privacy-Preserving and Error-Tolerant Wireless Federated Learning: Fixed-Point Model Aggregation With Differential Privacy Guarantees
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 무선 연합학습+차분프라이버시 fixed-point 변환, ECC/LDPC 디코더·코드설계 기법 없음 — 제외(무선응용 특이적)
 - **ID**: ieee:11291117
 - **Type**: journal
 - **Published**: 2026
@@ -993,8 +993,8 @@
 
 ## Power Efficient Joint Channel Coding and Frequency Modulation With Deep Learning
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비결맞음 FM용 딥러닝 결합 채널코딩-변조 — LDPC 아니고 IoT 응용 특이적
 - **ID**: ieee:11202278
 - **Type**: journal
 - **Published**: 2026
@@ -1015,8 +1015,8 @@
 
 ## Complexity-Constrained D-SCFlip Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: polar code D-SCFlip 디코딩 — LDPC 아님, segmented CRC 기법은 polar 특화
 - **ID**: ieee:11434493
 - **Type**: journal
 - **Published**: 2026
@@ -1026,8 +1026,8 @@
 
 ## Learning to Maximize Mutual Information for Read Threshold Design in Flash Memories
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: NAND 플래시 read threshold 설계·DNN 기반 LLR 양자화(MMI) — 카테고리 A(read-retry/LLR 양자화) 직접 해당
 - **ID**: ieee:11343807
 - **Type**: journal
 - **Published**: 2026
@@ -1048,8 +1048,8 @@
 
 ## Nonlinear Chirp Spread Spectrum: Performance Analysis and Optimization for LoRa Networks
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: LoRa 비선형 chirp 변조·전용 오류정정으로 LDPC 떼어낼 기법 없음
 - **ID**: ieee:11475680
 - **Type**: journal
 - **Published**: 2026
@@ -1059,8 +1059,8 @@
 
 ## Efficient OTFS-Based Free-Space Optical Satellite-to-Ground Communication System via Semantic Fusion
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: OTFS+시맨틱 통신 위성광통신 — LDPC ECC 기법 없음, 시맨틱 통신 제외
 - **ID**: ieee:11404165
 - **Type**: journal
 - **Published**: 2026
@@ -1070,8 +1070,8 @@
 
 ## BP-LCGCD: A Gaussian-Elimination-Free and High-Performance Decoder for Surface Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: BP+OSD 변형(GE-free LC-GCD, list-alpha) 디코더 — 표면코드 대상이나 BP-OSD/정규화·리스트 기법 NAND LDPC로 이식 가능(C)
 - **ID**: ieee:11309768
 - **Type**: journal
 - **Published**: 2026
@@ -1092,8 +1092,8 @@
 
 ## A Sensing-Assisted Environment Classification Technique for CF-mMIMO Enabled Non-Terrestrial Networks
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 센싱 기반 NTN 환경분류 프레임워크, coding diversity·BER 분류기는 부수 언급 — 떼어낼 LDPC 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11489050
 - **Type**: journal
 - **Published**: 2026
@@ -1103,8 +1103,8 @@
 
 ## Time-Domain Layered Division Multiplexing for Advanced ISDB-T: Design and Link-Level Evaluation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: ISDB-T 방송 시간영역 LDM 다중화·링크레벨 설계 — 무선 방송 응용 특이적, 떼어낼 LDPC 기법 없음
 - **ID**: ieee:11489009
 - **Type**: journal
 - **Published**: 2026
@@ -1136,8 +1136,8 @@
 
 ## Synchronizable Hybrid Subsystem Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 동기화 하이브리드 서브시스템 코드(CSS), 고전 cyclic code 기반이나 LDPC 부호설계 독립 추출 없음 — 양자 EC
 - **ID**: ieee:11430722
 - **Type**: journal
 - **Published**: 2026
@@ -1158,8 +1158,8 @@
 
 ## Improved Quantum Cryptanalysis of MD5 and SHA-1
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: MD5/SHA-1 양자 암호분석 회로로 LDPC ECC와 무관
 - **ID**: ieee:11474848
 - **Type**: journal
 - **Published**: 2026
@@ -1169,8 +1169,8 @@
 
 ## VQ-DeepVSC: A Dual-Stage Vector Quantization System for Video Semantic Communication
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비디오 시맨틱 통신용 벡터양자화(JSCC 대안), 소스코딩/시맨틱 통신으로 채널 LDPC ECC 기법 없음 — 제외
 - **ID**: ieee:11300794
 - **Type**: journal
 - **Published**: 2026
@@ -1180,8 +1180,8 @@
 
 ## DRL-Based Optimization for FSO-Based UAV Systems With XP-HARQ and Adaptive Rate/Power Control
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: FSO-UAV HARQ DRL 전력제어 통신 응용, LDPC 무관
 - **ID**: ieee:11271711
 - **Type**: journal
 - **Published**: 2026
@@ -1191,8 +1191,8 @@
 
 ## Peak-to-Average Power Ratio Control for Filter Bank Multi-Carrier Spread Spectrum System Based on Fountain Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Fountain code 기반 FBMC-SS PAPR 제어 — 무선 PAPR 응용 특이적, ECC 디코더/구성 기법 없음
 - **ID**: ieee:11320302
 - **Type**: journal
 - **Published**: 2026
@@ -1213,8 +1213,8 @@
 
 ## DiffMoECom: Diffusion Mixture of Experts for Channel-Adaptive Semantic Image Communications
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: DeepJSCC 기반 시맨틱 이미지 통신, LDPC 무관하고 떼어낼 ECC 기법 없음
 - **ID**: ieee:11250646
 - **Type**: journal
 - **Published**: 2026
@@ -1224,8 +1224,8 @@
 
 ## Coded Caching Design for D2D Networks With Reduced Subpacketizations
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: D2D coded caching subpacketization·PDA 설계로 LDPC ECC 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11455256
 - **Type**: journal
 - **Published**: 2026
@@ -1235,8 +1235,8 @@
 
 ## Deep-Learning-Based Waveform Design for Single-Carrier Satellite Communication Networks
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 단일캐리어 위성통신 딥러닝 파형설계(HPA/PAPR/BER), LDPC 무관 — ECC 기법 없음
 - **ID**: ieee:11414148
 - **Type**: journal
 - **Published**: 2026
@@ -1246,8 +1246,8 @@
 
 ## Blind Recognition of Polar Code Information Bits Based on Multi-Threshold Voting and Partial Orders
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Polar 코드 정보비트 블라인드 인식(비협조 시나리오) — LDPC 무관, 디코더/HW/부호설계 이식성 없음
 - **ID**: ieee:11333311
 - **Type**: journal
 - **Published**: 2026
@@ -1268,8 +1268,8 @@
 
 ## Diversity Alignment: A New Framework for Simultaneously Optimal Polar Coding Over AWGN and Block-Fading Channels
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Polar 코딩의 다이버시티 정렬·블록매핑 기법 — LDPC 부호설계/디코더와 무관, NAND 이식성 없음
 - **ID**: ieee:11316529
 - **Type**: journal
 - **Published**: 2026
@@ -1290,8 +1290,8 @@
 
 ## Impact of Integer Quantization on Polar-Coding Over 4096-QAM OFDM Systems
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Polar code SC 디코딩의 정수 양자화 — polar 전용 디코더로 LDPC BP/min-sum에 이식 불가, ECC 코드도 polar
 - **ID**: ieee:11359656
 - **Type**: journal
 - **Published**: 2026
@@ -1301,8 +1301,8 @@
 
 ## Improving DeepPolar Neural Codes via Reliability-Weighted FER-Centric Loss Functions
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: DeepPolar 신경 polar 부호의 FER 중심 손실함수 개선 — polar code 전용, LDPC 디코더로 이식 가능한 기법 아님
 - **ID**: ieee:11348988
 - **Type**: journal
 - **Published**: 2026
@@ -1356,8 +1356,8 @@
 
 ## Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 시맨틱 통신과 인간 의사결정 통합 프레임워크 — 채널코딩/LDPC ECC와 무관, 떼어낼 기법 없음
 - **ID**: ieee:11345478
 - **Type**: journal
 - **Published**: 2026
@@ -1367,8 +1367,8 @@
 
 ## Reliable Multimodal Semantic Communication for Audio-Visual Event Localization
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 멀티모달 시맨틱 통신, ECC가 시맨틱 인코더 보조 수준이며 떼어낼 LDPC 기법 없음
 - **ID**: ieee:11263788
 - **Type**: journal
 - **Published**: 2026
@@ -1378,8 +1378,8 @@
 
 ## Binary Deterministic Sensing Matrix Construction Using Manifold Optimization
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 압축센싱용 이진 결정론적 sensing matrix 구성(소스/희소신호 복원) — 채널코딩 ECC 아님, manifold 최적화는 sensing matrix 전용
 - **ID**: ieee:11503089
 - **Type**: journal
 - **Published**: 2026
@@ -1389,8 +1389,8 @@
 
 ## Justification for Performance Loss Caused by Round-Off Errors in Massive MIMO Detector Based on QR Decomposition
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: QR분해 기반 massive MIMO 검출기 round-off 오차 — LDPC 무관, 떼어낼 ECC 기법 없음
 - **ID**: ieee:11214234
 - **Type**: journal
 - **Published**: 2026
@@ -1411,8 +1411,8 @@
 
 ## Novel PAPR Reduction Method for OFDM Signals With Tone Reservation and Index Modulation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: OFDM PAPR 저감+인덱스변조 FEC — 무선 응용 특이적, LDPC 아니고 떼어낼 ECC 기법 없음
 - **ID**: ieee:11174095
 - **Type**: journal
 - **Published**: 2026
@@ -1422,8 +1422,8 @@
 
 ## Robust Information Bottleneck Guided Non-Autoregressive Semantic Communication With Synonymous Mapping
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 시맨틱 통신 정보병목 비자기회귀 디코더 — LDPC 무관, 떼어낼 ECC 기법 없음
 - **ID**: ieee:11476854
 - **Type**: journal
 - **Published**: 2026
@@ -1455,8 +1455,8 @@
 
 ## A Joint Decoding Scheme for Communication-Efficient NOMA-Empowered Federated Learning
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: NOMA 연합학습 joint MP 디코딩 — NB-LDPC가 베이스라인, NOMA중첩 전용이라 떼어낼 일반 디코더 기법 없음
 - **ID**: ieee:11175194
 - **Type**: journal
 - **Published**: 2026
@@ -1466,8 +1466,8 @@
 
 ## Restart Belief: A General Quantum LDPC Decoder
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: BP 기반 restart(branch-and-bound) 반복 디코더 — 양자LDPC지만 restart-BP 메커니즘 이식 가능성, 애매하여 Phase3 살림(C)
 - **ID**: ieee:11400562
 - **Type**: journal
 - **Published**: 2026
@@ -1477,8 +1477,8 @@
 
 ## FCBsP: Fixed-Constellation Belief-Selective Propagation Detection for MIMO Turbo Receivers
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: MIMO 터보 수신기용 FCBsP 검출기 — MIMO 검출 알고리즘, LDPC는 코딩 시스템 배경, 떼어낼 LDPC 디코더/코드 기법 없음
 - **ID**: ieee:11358997
 - **Type**: journal
 - **Published**: 2026
@@ -1488,8 +1488,8 @@
 
 ## Syndrome-Based Multi-Bit Error Correction With Chaotic Secure Check-Sequence Sharing for Quantum Key Distribution Systems
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: QKD용 신드롬 기반 다중비트 정정+카오스 마스킹 reconciliation — LDPC는 비교대상일 뿐, 독자기법은 QKD 키조정 특화
 - **ID**: ieee:11328059
 - **Type**: journal
 - **Published**: 2026
@@ -1499,8 +1499,8 @@
 
 ## Uplink MAC-Layer Scheduling for Voice Calls Over Non-Terrestrial Networks
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 위성 NTN 음성호 MAC 스케줄링 — LDPC는 링크시뮬 부수 언급, 떼어낼 ECC 기법 없음
 - **ID**: ieee:11318136
 - **Type**: journal
 - **Published**: 2026
@@ -1510,8 +1510,8 @@
 
 ## ST-VJSCC: Spatio-Temporal Video DeepJSCC Scheme for Adaptive Wireless Transmission
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 비디오 DeepJSCC 시맨틱 통신, LDPC는 비교 베이스라인일 뿐 떼어낼 ECC 기법 없음
 - **ID**: ieee:11282973
 - **Type**: journal
 - **Published**: 2026
@@ -1532,8 +1532,8 @@
 
 ## Belief Propagation Decoding of Primitive Rateless Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 4-cycle-free PCM 구성·Gaussian elimination 기반 다중 PCM BP 복호 기법은 코드설계(E)·디코더(C)로 이식 가능
 - **ID**: ieee:11263820
 - **Type**: journal
 - **Published**: 2026
@@ -1543,8 +1543,8 @@
 
 ## GRU-Based Sequence Detection for Faster-than-Nyquist Signaling
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: FTN 신호용 GRU 시퀀스 검출기 — 검출(detection) 기법, LDPC는 호환성 언급뿐, 떼어낼 ECC 디코더/코드설계 없음
 - **ID**: ieee:11352857
 - **Type**: journal
 - **Published**: 2026
@@ -1554,8 +1554,8 @@
 
 ## Jointly-Layered Iterative Detection and Decoding for Massive MIMO: An EP-SU Based Framework
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Massive MIMO용 EP-SU 결합층 IDD 검출·복호 — MIMO 검출기 중심, LDPC 복호 자체 개선 아님, 이식 가능 기법 없음
 - **ID**: ieee:11358866
 - **Type**: journal
 - **Published**: 2026
@@ -1565,8 +1565,8 @@
 
 ## Training-Free Multi-User Generative Semantic Communications via Null-Space Diffusion Sampling
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 생성형 확산모델 멀티유저 시맨틱 통신, LDPC는 비교 베이스라인일 뿐 — 이식 가능한 ECC 기법 없음
 - **ID**: ieee:11478271
 - **Type**: journal
 - **Published**: 2026
@@ -1576,8 +1576,8 @@
 
 ## Guest Editorial: Special Issue on Key Technologies Towards Standardization of 6G and NextG
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 6G 표준화 특집호 Guest Editorial — 초록 없음, 기술 내용 없음
 - **ID**: ieee:11494398
 - **Type**: journal
 - **Published**: 2026
@@ -1609,8 +1609,8 @@
 
 ## Reinforcement Learning for Enhanced Advanced QEC Architecture Decoding
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자오류정정(QEC) RL 디코더, 고전 LDPC 부호설계 독립 추출 없음 — 순수 양자 EC
 - **ID**: ieee:11420491
 - **Type**: conference
 - **Published**: 2026
@@ -1620,8 +1620,8 @@
 
 ## Framework for a Hybrid McEliece–HQC Cryptosystem for Compact Public Keys and Efficient Decapsulation
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 코드기반 암호(McEliece-HQC) 보안 논문 — QC-MDPC 언급은 암호 키 압축용이며 ECC 디코더/코드설계로 이식할 기법 없음(보안 제외)
 - **ID**: ieee:11493373
 - **Type**: conference
 - **Published**: 2026
@@ -1642,8 +1642,8 @@
 
 ## Low Power Fast Radix-2 Compare-Select-Add Based Adaptive Viterbi Decoder
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Viterbi 디코더 저전력 HW(컨볼루션 코드용 CSA/radix-2) — LDPC가 아닌 convolutional code 전용 아키텍처라 NAND LDPC 이식성 없음
 - **ID**: ieee:11489455
 - **Type**: conference
 - **Published**: 2026
@@ -1653,8 +1653,8 @@
 
 ## RSC: Robust Self-Correcting Watermark Model Based on Channel Control
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: AI 생성물 워터마킹 모델로 채널코딩 ECC가 아님
 - **ID**: ieee:11461646
 - **Type**: conference
 - **Published**: 2026
@@ -1675,8 +1675,8 @@
 
 ## Autocorrelation-based Fiducial Markers for Traceability
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 이미지 정류용 fiducial marker(컴퓨터 비전) 논문 — LDPC/ECC와 무관, 떼어낼 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11491946
 - **Type**: conference
 - **Published**: 2026
@@ -1697,8 +1697,8 @@
 
 ## From Connectivity Assurance to Experience Assurance: Paradigm Evolution and Technology Outlook for Aerospace Audio-visual Transmission
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 항공우주 시맨틱 통신/TSN 전송 패러다임 리뷰 — LDPC/ECC 기법 없음
 - **ID**: ieee:11452267
 - **Type**: conference
 - **Published**: 2026

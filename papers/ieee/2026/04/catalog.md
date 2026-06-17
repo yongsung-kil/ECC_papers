@@ -102,8 +102,8 @@
 
 ## BiBiEQ: Bivariate Bicycle Codes on Erasure Qubits
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: Bivariate Bicycle qLDPC + erasure qubit 양자EC 프레임워크 — 제외 카테고리(양자LDPC), 이식 가능한 고전 디코더/HW 없음
 - **ID**: ieee:11500360
 - **Type**: conference
 - **Published**: 6-8 April 

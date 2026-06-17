@@ -36,8 +36,8 @@
 
 ## Quantum non-demolition measurements as a practical primitive for fault-tolerant computation against biased noise
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 바이어스 노이즈 양자 fault-tolerant용 QND Z측정 프리미티브 — 양자EC, NAND LDPC로 이식할 기법 없음
 - **ID**: arxiv:2605.24262v1
 - **Type**: preprint
 - **Published**: 2026-05-22
@@ -168,8 +168,8 @@
 
 ## Scalable Mamba-Based Message-Passing Neural Decoder for Error-Correcting Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: Mamba 기반 메시지패싱 신경망 디코더(MMPD), (1056,880) LDPC에서 검증 — 이식 가능 디코더 알고리즘(C)
 - **ID**: arxiv:2605.10681v1
 - **Type**: preprint
 - **Published**: 2026-05-11
@@ -179,8 +179,8 @@
 
 ## Syndrome Adaptive Gain Control for Min-Sum Decoding of Quantum LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: Syndrome adaptive gain Min-Sum 디코더(SAGMS) — 양자LDPC 대상이나 온라인 게인 적응 MS 변형은 NAND LDPC로 이식 가능(C)
 - **ID**: arxiv:2605.10433v1
 - **Type**: preprint
 - **Published**: 2026-05-11
@@ -190,8 +190,8 @@
 
 ## A Global Coding Scheme for OFDM over Finite Fields
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: GF(2^s) QC-LDPC 구성 + 병렬 이진 소프트결정 반복 디코딩, error floor 없음 — 이식 가능 코드설계/디코더(E/C)
 - **ID**: arxiv:2605.09865v1
 - **Type**: preprint
 - **Published**: 2026-05-11
@@ -201,8 +201,8 @@
 
 ## On Codes with Support-Constrained Parity Checks
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 패리티체크 support 제약 하 최소거리 최대화 코드설계 — LDPC 설계에 직접 적용되는 구성 기법(E)
 - **ID**: arxiv:2605.08644v1
 - **Type**: preprint
 - **Published**: 2026-05-09
@@ -212,8 +212,8 @@
 
 ## Non-binary LDPC codes for Data Storage
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 데이터 스토리지용 비이진 LDPC 코드, 최소거리/이레이저 분석 — 스토리지 ECC + 비이진 코드설계(B/E)
 - **ID**: arxiv:2605.08500v2
 - **Type**: preprint
 - **Published**: 2026-05-08
@@ -223,8 +223,8 @@
 
 ## RFNoC-Based FPGA Offloading for Fully Programmable PHY Acceleration
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: FPGA 기반 LDPC 인코딩/디코딩·LLR 추정 HW 가속 — 이식 가능 HW 아키텍처(D)
 - **ID**: arxiv:2605.07704v1
 - **Type**: preprint
 - **Published**: 2026-05-08
@@ -234,8 +234,8 @@
 
 ## Affine Subcode Ensemble Decoding for Degeneracy-Aware Quantum Error Correction
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: Affine subcode ensemble BP 디코딩 + overcomplete 행렬 — 양자 대상이나 고전 BP 개선 기법으로 이식 가능(C)
 - **ID**: arxiv:2605.06547v2
 - **Type**: preprint
 - **Published**: 2026-05-07
@@ -245,8 +245,8 @@
 
 ## Design and Analysis of Quantum Dual-Containing CSS LDPC Codes based on Quasi-Dyadic Matrices
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: 양자 CSS LDPC(qLDPC) 부호 구성 — 양자 EC는 제외 카테고리. 떼어낼 이식형 디코더/HW 없음(표준 binary BP만 언급).
 - **ID**: arxiv:2605.03631v2
 - **Type**: preprint
 - **Published**: 2026-05-05
@@ -256,8 +256,8 @@
 
 ## Combinatorial Analysis of Dyadic and Quasi-Dyadic Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: QLDPC 동기이나 dyadic/quasi-dyadic 기반 짧은사이클 열거·제어, PEG식 girth 최대화, absorbing set/error-floor 분석 — 고전 LDPC 코드설계(E)에 직접 이식 가능.
 - **ID**: arxiv:2605.01942v1
 - **Type**: preprint
 - **Published**: 2026-05-03
@@ -267,8 +267,8 @@
 
 ## Improved Rate-versus-Distance Upper Bounds for LDPC Codes
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ❌
+- **Reason**: LDPC rate-distance 상한 순수 이론 bound — 디코더/HW/구성으로 안 이어짐, 제외.
 - **ID**: arxiv:2605.01213v1
 - **Type**: preprint
 - **Published**: 2026-05-02
@@ -278,8 +278,8 @@
 
 ## A Scalable FPGA Architecture for Real-Time Decoding of Quantum LDPC Codes Using GARI
 
-- **Status**: ⬜ 미선별
-- **Reason**: N/A
+- **Status**: ✅
+- **Reason**: 양자 LDPC용이나 message-passing 디코더 FPGA 아키텍처(자원재사용·병렬도·저지연) — HW 아키텍처(D) 이식 가능성 있어 애매하므로 살림.
 - **ID**: arxiv:2605.01035v1
 - **Type**: preprint
 - **Published**: 2026-05-01
