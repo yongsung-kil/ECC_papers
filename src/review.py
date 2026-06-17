@@ -1,18 +1,13 @@
-"""1차 선별(Phase 2) 도구 — LLM(Claude Code 세션)이 직접 구동.
+"""1차 선별(Phase 2) 도구 — 병렬 워크플로(select_workflow.js)와 짝.
 
-API를 호출하지 않는다. 대신:
-  1. `--pending [N]` 으로 미선별 논문(제목·초록)을 출력하면
-  2. 세션의 Claude가 각 논문의 NAND 플래시 관련성을 읽고 판단한 뒤
-  3. 판단 결과(JSON)를 `--apply` 로 DB(filter_results)에 기록한다.
+수집은 끝났고, 이 모듈은 미선별 논문을 다루는 3개 명령만 제공한다:
+  - `batch` : 미선별 논문을 최신연도부터 실행폴더(_work/{타임스탬프}/agent_NN.json)로 분할
+  - `apply` : 워크플로가 낸 판정 JSON을 DB(filter_results + papers.status)에 기록
+  - `stats` : 선별 현황 출력
 
-판단 JSON 형식 (리스트) — 점수 없이 포함/제외 이분법:
-  [
-    {"id": "arxiv:2401.12345", "decision": "in",
-     "reason": "NAND 플래시 LDPC 디코더 지연시간 개선 직접 관련"},
-    ...
-  ]
+판정 JSON 형식 (리스트) — 점수 없이 포함/제외 이분법:
+  [{"id": "arxiv:2401.12345", "decision": "in", "reason": "한 줄 근거"}, ...]
   - decision: "in"(포함) | "out"(제외)
-  - reason:   판단 근거 한 줄
 """
 
 import argparse
@@ -25,7 +20,6 @@ from pathlib import Path
 from src.db import get_conn, init_db, _now
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CRITERIA_PATH = PROJECT_ROOT / "criteria" / "selection_criteria.md"
 
 # Windows 콘솔(cp949)에서도 한글/유니코드가 깨지거나 크래시하지 않도록 UTF-8 강제
 try:
@@ -33,71 +27,6 @@ try:
     sys.stderr.reconfigure(encoding="utf-8")
 except Exception:
     pass
-
-# NAND 관련성 힌트용 키워드(판단 보조 표시. 자동 필터 아님)
-NAND_HINTS = [
-    "nand", "flash", "ssd", "solid-state", "solid state", "storage",
-    "memory", "read disturb", "retention", "wear", "error floor",
-    "soft decision", "soft information", "llr", "quantization",
-]
-
-
-def _highlight_hints(text: str) -> list[str]:
-    if not text:
-        return []
-    low = text.lower()
-    return [k for k in NAND_HINTS if k in low]
-
-
-def _print_criteria_header():
-    """선별 기준서를 출력 맨 앞에 붙여, 판단 주체(Claude)가 매번 같은 기준을 적용하도록 한다."""
-    if CRITERIA_PATH.exists():
-        print("<!-- 아래 논문을 판단하기 전에 반드시 이 기준을 적용하세요 -->")
-        print(CRITERIA_PATH.read_text(encoding="utf-8"))
-        print("\n---\n")
-    else:
-        print(f"<!-- 기준서 없음: {CRITERIA_PATH} (먼저 작성 필요) -->\n")
-
-
-def list_pending(limit: int | None = None, as_json: bool = False,
-                 with_criteria: bool = True):
-    conn = get_conn()
-    init_db(conn)
-    rows = conn.execute(
-        """
-        SELECT p.id, p.source, p.title, p.abstract, p.published
-        FROM papers p
-        LEFT JOIN filter_results f ON p.id = f.paper_id
-        WHERE f.paper_id IS NULL AND p.status = 'new'
-        ORDER BY p.source, p.collected_at
-        """
-    ).fetchall()
-    conn.close()
-
-    if limit:
-        rows = rows[:limit]
-
-    if as_json:
-        print(json.dumps([dict(r) for r in rows], ensure_ascii=False, indent=2))
-        return
-
-    if not rows:
-        print("미선별 논문이 없습니다.")
-        return
-
-    if with_criteria:
-        _print_criteria_header()
-
-    print(f"# 미선별 논문 {len(rows)}건\n")
-    for i, r in enumerate(rows, 1):
-        hints = _highlight_hints(f"{r['title']} {r['abstract']}")
-        print(f"## [{i}] {r['id']}  ({r['source']})")
-        print(f"- **제목**: {r['title']}")
-        print(f"- **발행**: {(r['published'] or 'N/A')[:10]}")
-        if hints:
-            print(f"- **NAND 힌트**: {', '.join(hints)}")
-        print(f"- **초록**: {r['abstract'] or 'N/A'}")
-        print()
 
 
 def apply_judgments(items: list[dict]) -> dict:
@@ -204,12 +133,6 @@ def main():
     parser = argparse.ArgumentParser(description="1차 선별(Phase 2) 도구")
     sub = parser.add_subparsers(dest="cmd")
 
-    p_pending = sub.add_parser("pending", help="미선별 논문 출력(기준서 포함)")
-    p_pending.add_argument("-n", type=int, default=None, help="최대 건수")
-    p_pending.add_argument("--json", action="store_true", help="JSON으로 출력")
-    p_pending.add_argument("--no-criteria", action="store_true",
-                           help="기준서 헤더 생략")
-
     p_apply = sub.add_parser("apply", help="판단 결과(JSON) 적용")
     p_apply.add_argument("file", nargs="?", help="JSON 파일 경로(없으면 stdin)")
 
@@ -223,10 +146,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.cmd == "pending":
-        list_pending(limit=args.n, as_json=args.json,
-                     with_criteria=not args.no_criteria)
-    elif args.cmd == "apply":
+    if args.cmd == "apply":
         raw = open(args.file, encoding="utf-8").read() if args.file else sys.stdin.read()
         apply_judgments(json.loads(raw))
     elif args.cmd == "stats":

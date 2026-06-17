@@ -62,8 +62,3 @@ def init_db(conn: sqlite3.Connection | None = None):
     conn.commit()
     if close:
         conn.close()
-
-
-def checkpoint(conn: sqlite3.Connection):
-    """WAL 내용을 본 DB 파일에 합쳐 -wal/-shm 없이 커밋 가능하게 함."""
-    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
