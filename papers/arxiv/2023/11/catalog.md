@@ -3,6 +3,8 @@
 
 ## Flexible polar encoding for information reconciliation in QKD
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2312.03100v1
 - **Type**: preprint
 - **Published**: 2023-11-30
@@ -12,6 +14,8 @@
 
 ## qSIEVE: Efficient qLDPC Memory via Systolic Movement in Atom Arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.16980v3
 - **Type**: preprint
 - **Published**: 2023-11-28
@@ -21,6 +25,8 @@
 
 ## NLTS Hamiltonians and Strongly-Explicit SoS Lower Bounds from Low-Rate Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.09503v1
 - **Type**: preprint
 - **Published**: 2023-11-16
@@ -30,6 +36,8 @@
 
 ## Quantum Locally Recoverable Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.08653v1
 - **Type**: preprint
 - **Published**: 2023-11-15
@@ -39,6 +47,8 @@
 
 ## Joint Design of Coding and Modulation for Digital Over-the-Air Computation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.06829v1
 - **Type**: preprint
 - **Published**: 2023-11-12
@@ -48,6 +58,8 @@
 
 ## A Spin-Optical Quantum Computing Architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.05605v5
 - **Type**: preprint
 - **Published**: 2023-11-09
@@ -57,6 +69,8 @@
 
 ## Improved Noisy Syndrome Decoding of Quantum LDPC Codes with Sliding Window
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.03307v1
 - **Type**: preprint
 - **Published**: 2023-11-06
@@ -66,6 +80,8 @@
 
 ## Analog information decoding of bosonic quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.01328v2
 - **Type**: preprint
 - **Published**: 2023-11-02
@@ -75,6 +91,8 @@
 
 ## Addressing Stopping Failures for Small Set Flip Decoding of Hypergraph Product Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2311.00877v1
 - **Type**: preprint
 - **Published**: 2023-11-01

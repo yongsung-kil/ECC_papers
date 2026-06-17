@@ -3,6 +3,8 @@
 
 ## Deep Learning-Based Quantization of L-Values for Gray-Coded Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1906.07849v2
 - **Type**: preprint
 - **Published**: 2019-06-18
@@ -12,6 +14,8 @@
 
 ## A Lattice Based Joint Encryption, Encoding and Modulation Scheme
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1906.06280v1
 - **Type**: preprint
 - **Published**: 2019-06-14
@@ -21,6 +25,8 @@
 
 ## The rank of sparse random matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1906.05757v4
 - **Type**: preprint
 - **Published**: 2019-06-13
@@ -30,6 +36,8 @@
 
 ## Symbol Message Passing Decoding of Nonbinary Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1906.02537v2
 - **Type**: preprint
 - **Published**: 2019-06-06

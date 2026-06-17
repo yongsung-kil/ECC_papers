@@ -3,6 +3,8 @@
 
 ## Tree-Based Construction of LDPC Codes Having Good Pseudocodeword Weights
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137889
 - **Type**: journal
 - **Published**: April 2007
@@ -12,6 +14,8 @@
 
 ## Construction of Irregular LDPC Codes by Quasi-Cyclic Extension
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137875
 - **Type**: journal
 - **Published**: April 2007
@@ -21,6 +25,8 @@
 
 ## A Memory Efficient Partially Parallel Decoder Architecture for Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4162517
 - **Type**: journal
 - **Published**: April 2007
@@ -30,6 +36,8 @@
 
 ## Decoding Algorithms for Nonbinary LDPC Codes Over GF$(q)$
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155118
 - **Type**: journal
 - **Published**: April 2007
@@ -39,6 +47,8 @@
 
 ## FFT-Based BP Decoding of General LDPC Codes Over Abelian Groups
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155120
 - **Type**: journal
 - **Published**: April 2007
@@ -48,6 +58,8 @@
 
 ## Approximately Lower Triangular Ensembles of LDPC Codes With Linear Encoding Complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137883
 - **Type**: journal
 - **Published**: April 2007
@@ -57,6 +69,8 @@
 
 ## High-Rate Quasi-Cyclic Low-Density Parity-Check Codes Derived From Finite Affine Planes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137888
 - **Type**: journal
 - **Published**: April 2007
@@ -66,6 +80,8 @@
 
 ## Accumulate-Repeat-Accumulate Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155107
 - **Type**: journal
 - **Published**: April 2007
@@ -75,6 +91,8 @@
 
 ## Results on the Improved Decoding Algorithm for Low-Density Parity-Check Codes Over the Binary Erasure Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137902
 - **Type**: journal
 - **Published**: April 2007
@@ -84,6 +102,8 @@
 
 ## A Measure of the Girth Histogram for Improved Girth-Conditioning Construction of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155636
 - **Type**: journal
 - **Published**: April 2007
@@ -93,6 +113,8 @@
 
 ## Determining and Approaching Achievable Rates of Binary Intersymbol Interference Channels Using Multistage Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137898
 - **Type**: journal
 - **Published**: April 2007
@@ -102,6 +124,8 @@
 
 ## Tightened Upper Bounds on the ML Decoding Error Probability of Binary Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137901
 - **Type**: journal
 - **Published**: April 2007
@@ -111,6 +135,8 @@
 
 ## Performance-Complexity Tradeoffs of Raptor Codes over Gaussian Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155637
 - **Type**: journal
 - **Published**: April 2007
@@ -120,6 +146,8 @@
 
 ## Performance Analysis for LDPC-Coded Modulation in MIMO Multiple-Access Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155111
 - **Type**: journal
 - **Published**: April 2007
@@ -129,6 +157,8 @@
 
 ## Low-density generator matrix codes for indoor and markov channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155683
 - **Type**: journal
 - **Published**: April 2007
@@ -138,6 +168,8 @@
 
 ## Rateless Codes With Unequal Error Protection Property
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4137897
 - **Type**: journal
 - **Published**: April 2007
@@ -147,6 +179,8 @@
 
 ## Design of Rate-Compatible Irregular Repeat-Accumulate Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155112
 - **Type**: journal
 - **Published**: April 2007
@@ -156,6 +190,8 @@
 
 ## A Balancing Method for PMEPR Reduction in OFDM Signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4155130
 - **Type**: journal
 - **Published**: April 2007
@@ -165,6 +201,8 @@
 
 ## A Power-Saved 1Gbps Irregular LDPC Decoder based on Simplified Min-Sum Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4239411
 - **Type**: conference
 - **Published**: 25-27 Apri
@@ -174,6 +212,8 @@
 
 ## Maximizing the Data Utility of a Data Archiving & Querying System through Joint Coding and Scheduling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4379684
 - **Type**: conference
 - **Published**: 25-27 Apri
@@ -183,6 +223,8 @@
 
 ## Weighted IS Method of Estimating FER of LDPC Codes in High SNR Region
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4196284
 - **Type**: conference
 - **Published**: 22-28 Apri
@@ -192,6 +234,8 @@
 
 ## Quantitative Evaluation of Low Density Parity Check Convolutional Code Encoder and Decoder Algorithms for the XInC MIMD Multithreaded Microprocessor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4233002
 - **Type**: conference
 - **Published**: 22-26 Apri
@@ -201,6 +245,8 @@
 
 ## Fixed-Rate Raptor Code Performance Over Correlated Rayleigh Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4232892
 - **Type**: conference
 - **Published**: 22-26 Apri
@@ -210,6 +256,8 @@
 
 ## vanDisk: An Exploration in Peer-To-Peer Collaborative Back-Up Storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4232719
 - **Type**: conference
 - **Published**: 22-26 Apri
@@ -219,6 +267,8 @@
 
 ## A Class of Structured LDPC Codes Over GF(q) for Efficient Encoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212886
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -228,6 +278,8 @@
 
 ## Rate-Compatible Schemes for Link Adapted LDPC Codes in IEEE 802.16e Standard
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4213074
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -237,6 +289,8 @@
 
 ## Amalgamated Generalized Low Density Parity Check and Luby Transform Codes for the Wireless Internet
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212931
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -246,6 +300,8 @@
 
 ## Effective Puncturing Schemes for Block-type Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212810
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -255,6 +311,8 @@
 
 ## A Stopping Criterion for Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212747
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -264,6 +322,8 @@
 
 ## On the Addition of an Input Buffer to an Iterative Decoder for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212841
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -273,6 +333,8 @@
 
 ## Low Complexity LDPC Decoding Techniques with Adaptive Selection of Edges
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212883
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -282,6 +344,8 @@
 
 ## A New Wireless Access Scheme: Novel Punctured LDPC Coded Ultra-wideband System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4213045
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -291,6 +355,8 @@
 
 ## A Survey on LDPC Codes and Decoders for OFDM-based UWB Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212751
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -300,6 +366,8 @@
 
 ## Modification on the IPEG Algorithm for Constructing LDPC Codes with Low Error Floor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212885
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -309,6 +377,8 @@
 
 ## Peak Power Reduction Method Based on Structure of Parity-Check Matrix for LDPC Coded OFDM Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4213011
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -318,6 +388,8 @@
 
 ## A Hardware Efficient LDPC Encoding Scheme for Exploiting Decoder Structure and Resources
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212932
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -327,6 +399,8 @@
 
 ## Adaptive Bit-Reliability Mapping for LDPCCoded High-Order Modulation Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212749
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -336,6 +410,8 @@
 
 ## Optimal Rate-Compatible Irregular Concatenated Zigzag Codes Using Puncturing and Pruning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212760
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -345,6 +421,8 @@
 
 ## Optimized LDPC Codes for OFDM and Spread OFDM in Correlated Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212898
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -354,6 +432,8 @@
 
 ## A Novel HARQ Scheme Utilizing the Iterative Soft-information Feedback in MIMO System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212526
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -363,6 +443,8 @@
 
 ## A Reliability-Aware LDPC Code Decoding Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212750
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -372,6 +454,8 @@
 
 ## Iterative EM Based LDPC CDMA Receiver under Time Varying Interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212839
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -381,6 +465,8 @@
 
 ## Analysis and Design of Dirty Paper Coding by Transformation of Noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212758
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -390,6 +476,8 @@
 
 ## Reduced Complexity and Improved Performance for Short Regular LDPC Codes Based on Select Updating Schedule
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212748
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -399,6 +487,8 @@
 
 ## Iterative List Subset Detectors for Turbo Product Coded MIMO Wireless Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212847
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -408,6 +498,8 @@
 
 ## A Novel Layered Space-Time-Frequency Architecture with Convolutional Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212805
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -417,6 +509,8 @@
 
 ## Non-fractional parallelism in LDPC Decoder implementations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4211819
 - **Type**: conference
 - **Published**: 16-20 Apri
@@ -426,6 +520,8 @@
 
 ## Pipelined Implementation of a Real Time Programmable Encoder for Low Density Parity Check Code on a Reconfigurable Instruction Cell Architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4211821
 - **Type**: conference
 - **Published**: 16-20 Apri
@@ -435,6 +531,8 @@
 
 ## Minimum-Energy LDPC Decoder for Real-Time Mobile Application
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4211820
 - **Type**: conference
 - **Published**: 16-20 Apri
@@ -444,6 +542,8 @@
 
 ## Low Complexity LDPC Code Decoders for Next Generation Standards
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4211818
 - **Type**: conference
 - **Published**: 16-20 Apri
@@ -453,6 +553,8 @@
 
 ## High-Throughput LDPC Decoders Using A Multiple Split-Row Method
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217333
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -462,6 +564,8 @@
 
 ## LDPC Code Design for Half-Duplex Relay Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217548
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -471,6 +575,8 @@
 
 ## Memory Efficient LDPC Code Design for High Throughput Software Defined Radio (SDR) systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217332
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -480,6 +586,8 @@
 
 ## Using Distributed Source Coding to Secure Fingerprint Biometrics
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217362
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -489,6 +597,8 @@
 
 ## Rate Allocation Algorithm for Pixel-Domain Distributed Video Coding Without Feedback Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217131
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -498,6 +608,8 @@
 
 ## Exit Functions of Soft Iterative MIMO Detectors and their Application to Capacity-Approaching Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217640
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -507,6 +619,8 @@
 
 ## MIMO-IDMA: Uplink Multiuser MIMO Communications using Interleave-Division Multiple Access and Low-Complexity Iterative Receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217687
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -516,6 +630,8 @@
 
 ## A Limited Feedback Scheme for Linear Dispersion Codes Over Correlated MIMO Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4217641
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -525,6 +641,8 @@
 
 ## EM-Based Channel Estimation Algorithms for MIMO Turbo Receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4287296
 - **Type**: conference
 - **Published**: 11-12 Apri

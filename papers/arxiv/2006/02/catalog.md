@@ -3,6 +3,8 @@
 
 ## Bounds on the Threshold of Linear Programming Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0602087v1
 - **Type**: preprint
 - **Published**: 2006-02-26
@@ -12,6 +14,8 @@
 
 ## On the Block Error Probability of LP Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0602086v1
 - **Type**: preprint
 - **Published**: 2006-02-26
@@ -21,6 +25,8 @@
 
 ## Low-Density Parity-Check Code with Fast Decoding Speed
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0602081v1
 - **Type**: preprint
 - **Published**: 2006-02-23
@@ -30,6 +36,8 @@
 
 ## Incremental Redundancy Cooperative Coding for Wireless Networks: Cooperative Diversity, Coding, and Transmission Energy Gain
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0602058v2
 - **Type**: preprint
 - **Published**: 2006-02-15
@@ -39,6 +47,8 @@
 
 ## Analysis of LDGM and compound codes for lossy compression and binning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0602046v1
 - **Type**: preprint
 - **Published**: 2006-02-13
@@ -48,6 +58,8 @@
 
 ## Analysis of Belief Propagation for Non-Linear Problems: The Example of CDMA (or: How to Prove Tanaka's Formula)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0602028v1
 - **Type**: preprint
 - **Published**: 2006-02-07

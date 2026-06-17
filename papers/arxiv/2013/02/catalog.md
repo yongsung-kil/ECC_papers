@@ -3,6 +3,8 @@
 
 ## Joint Physical Network Coding and LDPC decoding for Two Way Wireless Relaying
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1302.4840v1
 - **Type**: preprint
 - **Published**: 2013-02-20
@@ -12,6 +14,8 @@
 
 ## Low-power Secret-key Agreement over OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1302.4767v1
 - **Type**: preprint
 - **Published**: 2013-02-19
@@ -21,6 +25,8 @@
 
 ## Bilayer Protograph Codes for Half-Duplex Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1302.4516v1
 - **Type**: preprint
 - **Published**: 2013-02-19
@@ -30,6 +36,8 @@
 
 ## Linked-Cluster Technique for Finding the Distance of a Quantum LDPC Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1302.1845v1
 - **Type**: preprint
 - **Published**: 2013-02-07

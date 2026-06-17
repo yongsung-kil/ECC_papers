@@ -3,6 +3,8 @@
 
 ## Generalized IRA Erasure Correcting Codes for Hybrid Iterative/Maximum Likelihood Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4542779
 - **Type**: journal
 - **Published**: June 2008
@@ -12,6 +14,8 @@
 
 ## Configurable Multi-Rate Decoder Architecture for QC-LDPC Codes Based Broadband Broadcasting System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4425264
 - **Type**: journal
 - **Published**: June 2008
@@ -21,6 +25,8 @@
 
 ## Application of Nonbinary LDPC Cycle Codes to MIMO Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4543051
 - **Type**: journal
 - **Published**: June 2008
@@ -30,6 +36,8 @@
 
 ## Multi-Level Dirty Paper Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4542781
 - **Type**: journal
 - **Published**: June 2008
@@ -39,6 +47,8 @@
 
 ## Wireless Information-Theoretic Security
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4529264
 - **Type**: journal
 - **Published**: June 2008
@@ -48,6 +58,8 @@
 
 ## A necessary and sufficient condition for determining the girth of quasi-cyclic LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4542738
 - **Type**: journal
 - **Published**: June 2008
@@ -57,6 +69,8 @@
 
 ## Decoding with Early Termination for Raptor Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4542777
 - **Type**: journal
 - **Published**: June 2008
@@ -66,6 +80,8 @@
 
 ## Recovering Sparse Signals Using Sparse Measurement Matrices in Compressed DNA Microarrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4550564
 - **Type**: journal
 - **Published**: June 2008
@@ -75,6 +91,8 @@
 
 ## Binary de Bruijn on-chip network for a flexible multiprocessor LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4555856
 - **Type**: conference
 - **Published**: 8-13 June 
@@ -84,6 +102,8 @@
 
 ## TPCSPC decoding over coded partial-response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4582841
 - **Type**: conference
 - **Published**: 3-5 June 2
@@ -93,6 +113,8 @@
 
 ## Evaluation and implementation of quasi-cyclic LDPC codes for IEEE802.11n based MIMO-OFDM system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5045974
 - **Type**: conference
 - **Published**: 25-27 June
@@ -102,6 +124,8 @@
 
 ## Reliability of flat XOR-based erasure codes on heterogeneous devices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4630083
 - **Type**: conference
 - **Published**: 24-27 June
@@ -111,6 +135,8 @@
 
 ## Successive relaxation for decoding of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4563216
 - **Type**: conference
 - **Published**: 24-26 June
@@ -120,6 +146,8 @@
 
 ## Adaptive LDPC codes for MIMO transceiver with adaptive spectral efficiency
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4563219
 - **Type**: conference
 - **Published**: 24-26 June
@@ -129,6 +157,8 @@
 
 ## Fixed-complexity list-type iterative joint detection and decoding of LDPC-coded V-blast systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4563258
 - **Type**: conference
 - **Published**: 24-26 June
@@ -138,6 +168,8 @@
 
 ## FPGA implementation of variants of min-sum algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4563210
 - **Type**: conference
 - **Published**: 24-26 June
@@ -147,6 +179,8 @@
 
 ## Feature transformation of biometric templates for secure biometric systems based on error correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4563111
 - **Type**: conference
 - **Published**: 23-28 June
@@ -156,6 +190,8 @@
 
 ## Unsupervised feature selection via distributed coding for multi-view object recognition
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4587615
 - **Type**: conference
 - **Published**: 23-28 June
@@ -165,6 +201,8 @@
 
 ## High-speed design of adaptive LDPC codes for wireless networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4606368
 - **Type**: conference
 - **Published**: 22-25 June
@@ -174,6 +212,8 @@
 
 ## An effective algorithm for construction of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4608248
 - **Type**: conference
 - **Published**: 20-23 June
@@ -183,6 +223,8 @@
 
 ## Hybrid ARQ Based on Accumulated Reliabilities and Error Hamming Weights
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4603570
 - **Type**: conference
 - **Published**: 18-20 June
@@ -192,6 +234,8 @@
 
 ## Optimum joint decoding in a LDPC-coded CDMA multiuser system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4610864
 - **Type**: conference
 - **Published**: 17-19 June
@@ -201,6 +245,8 @@
 
 ## LDPC codes for binary asymmetric channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4652634
 - **Type**: conference
 - **Published**: 16-19 June

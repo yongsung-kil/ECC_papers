@@ -3,6 +3,8 @@
 
 ## A Two-Stage Decoding Algorithm to Lower the Error-Floors for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7036084
 - **Type**: journal
 - **Published**: April 2015
@@ -12,6 +14,8 @@
 
 ## Construction of block-LDPC codes based on quadratic permutation polynomials
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7104844
 - **Type**: journal
 - **Published**: April 2015
@@ -21,6 +25,8 @@
 
 ## Quasi-Cyclic Representation and Vector Representation of RS-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7029068
 - **Type**: journal
 - **Published**: April 2015
@@ -30,6 +36,8 @@
 
 ## High-Rate Quantum Low-Density Parity-Check Codes Assisted by Reliable Qubits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7027863
 - **Type**: journal
 - **Published**: April 2015
@@ -39,6 +47,8 @@
 
 ## Recoverability of Variable Nodes in Periodically Punctured LDPC Convolutional Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7042745
 - **Type**: journal
 - **Published**: April 2015
@@ -48,6 +58,8 @@
 
 ## Anytime Reliability of Spatially Coupled Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7047734
 - **Type**: journal
 - **Published**: April 2015
@@ -57,6 +69,8 @@
 
 ## A Matrix-Theoretic Approach to the Construction of Non-Binary Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7042290
 - **Type**: journal
 - **Published**: April 2015
@@ -66,6 +80,8 @@
 
 ## Linear Precoding for MIMO With LDPC Coding and Reduced Complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6998869
 - **Type**: journal
 - **Published**: April 2015
@@ -75,6 +91,8 @@
 
 ## Low-Density Lattice Codes for Full-Duplex Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6994267
 - **Type**: journal
 - **Published**: April 2015
@@ -84,6 +102,8 @@
 
 ## Design of Joint Sparse Graph for OFDM System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6964791
 - **Type**: journal
 - **Published**: April 2015
@@ -93,6 +113,8 @@
 
 ## Steepest-Descent Optimization of CDMA Signatures for Multiple Correlated Sources With Applications to Joint Source-Channel Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7050310
 - **Type**: journal
 - **Published**: April 2015
@@ -102,6 +124,8 @@
 
 ## Adaptive Modulation and Coding for Underwater Acoustic OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6840859
 - **Type**: journal
 - **Published**: April 2015
@@ -111,6 +135,8 @@
 
 ## FMTCP: A Fountain Code-Based Multipath Transmission Control Protocol
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6729115
 - **Type**: journal
 - **Published**: April 2015
@@ -120,6 +146,8 @@
 
 ## Differentially Coherent Multichannel Detection of Acoustic OFDM Signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6840861
 - **Type**: journal
 - **Published**: April 2015
@@ -129,6 +157,8 @@
 
 ## Performance Improvement of Iterative Multiuser Detection for Large Sparsely Spread CDMA Systems by Spatial Coupling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7031889
 - **Type**: journal
 - **Published**: April 2015
@@ -138,6 +168,8 @@
 
 ## Multicarrier Successive Predistortion for Nonlinear Satellite Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7041235
 - **Type**: journal
 - **Published**: April 2015
@@ -147,6 +179,8 @@
 
 ## Transmitter Design for Uplink MIMO Systems With Antenna Correlation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6963395
 - **Type**: journal
 - **Published**: April 2015
@@ -156,6 +190,8 @@
 
 ## Design of Low-Complexity 2-D SOVA Detector for Shingled Magnetic Recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6920058
 - **Type**: journal
 - **Published**: April 2015
@@ -165,6 +201,8 @@
 
 ## On the Capacity of Slotted Aloha With Ancillary Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7036076
 - **Type**: journal
 - **Published**: April 2015
@@ -174,6 +212,8 @@
 
 ## On the applicability of the most reliable basis algorithm for LDPC decoding in telecommand links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7103192
 - **Type**: conference
 - **Published**: 7-9 April 
@@ -183,6 +223,8 @@
 
 ## Design and Implementation of Low Bit Error Rate of LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7279944
 - **Type**: conference
 - **Published**: 4-6 April 
@@ -192,6 +234,8 @@
 
 ## Performance of polar codes with successive cancellation decoding over PLC channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7147584
 - **Type**: conference
 - **Published**: 29 March-1
@@ -201,6 +245,8 @@
 
 ## An algorithmic error-resilient scheme for robust LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7114527
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -210,6 +256,8 @@
 
 ## Spatial coupling of root-LDPC: Parity bits doping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124695
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -219,6 +267,8 @@
 
 ## Syndrome based check node processing of high order NB-LDPC decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124675
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -228,6 +278,8 @@
 
 ## Design of non-binary irregular repeat-accumulate codes for reliable physical-layer network coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124694
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -237,6 +289,8 @@
 
 ## Diversity of low-density lattices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124696
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -246,6 +300,8 @@
 
 ## On decoding algorithms for construction πA lattices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124693
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -255,6 +311,8 @@
 
 ## Algorithms and Implementation of Long Euclidean-Geometry LDPC Codes for Space Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7120571
 - **Type**: conference
 - **Published**: 24-26 Apri
@@ -264,6 +322,8 @@
 
 ## Improved quasi-cyclic LDPC codes based on Euclidean geometry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7426007
 - **Type**: conference
 - **Published**: 24-26 Apri
@@ -273,6 +333,8 @@
 
 ## Application of LT code technology in deep space communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7342800
 - **Type**: conference
 - **Published**: 23-24 Apri
@@ -282,6 +344,8 @@
 
 ## Design of low density parity check decoder using Min-Sum algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7322560
 - **Type**: conference
 - **Published**: 2-4 April 
@@ -291,6 +355,8 @@
 
 ## Separation of encrypted and compressed image with auxillary information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7322737
 - **Type**: conference
 - **Published**: 2-4 April 
@@ -300,6 +366,8 @@
 
 ## Accelerating and deceleratingmin-sum-based gear-shift LDPC decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7178522
 - **Type**: conference
 - **Published**: 19-24 Apri
@@ -309,6 +377,8 @@
 
 ## Approach to frame-misalignment in physical-layer network coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7178546
 - **Type**: conference
 - **Published**: 19-24 Apri
@@ -318,6 +388,8 @@
 
 ## Diversity combining in wireless relay networks with partial channel state information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7178549
 - **Type**: conference
 - **Published**: 19-24 Apri
@@ -327,6 +399,8 @@
 
 ## Enhancing LDPC code performance using pilot bits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7178520
 - **Type**: conference
 - **Published**: 19-24 Apri
@@ -336,6 +410,8 @@
 
 ## Deterministic constructions of binary measurement matrices with various sizes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7178650
 - **Type**: conference
 - **Published**: 19-24 Apri
@@ -345,6 +421,8 @@
 
 ## MIMO linear precoders with reduced complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7117243
 - **Type**: conference
 - **Published**: 15-17 Apri
@@ -354,6 +432,8 @@
 
 ## A high payload video steganography algorithm in DWT domain based on BCH codes (15, 11)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7117257
 - **Type**: conference
 - **Published**: 15-17 Apri
@@ -363,6 +443,8 @@
 
 ## Enhancing satellite system throughput using adaptive HARQ for delay tolerant services in mobile communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7117278
 - **Type**: conference
 - **Published**: 15-17 Apri

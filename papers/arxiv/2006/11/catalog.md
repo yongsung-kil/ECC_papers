@@ -3,6 +3,8 @@
 
 ## Zig-zag and Replacement Product Graphs and LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0611155v2
 - **Type**: preprint
 - **Published**: 2006-11-30
@@ -12,6 +14,8 @@
 
 ## Wireless Information-Theoretic Security - Part II: Practical Implementation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0611121v1
 - **Type**: preprint
 - **Published**: 2006-11-24

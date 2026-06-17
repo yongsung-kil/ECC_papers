@@ -3,6 +3,8 @@
 
 ## Structured LDPC codes for high-density recording: large girth and low error floor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580676
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -12,6 +14,8 @@
 
 ## Design and analysis of nonbinary LDPC codes for arbitrary discrete-memoryless channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580795
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -21,6 +25,8 @@
 
 ## Rate-compatible punctured low-density parity-check codes with short block lengths
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580808
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -30,6 +36,8 @@
 
 ## Tensor-product Parity codes: combination with constrained codes and application to perpendicular recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580677
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -39,6 +47,8 @@
 
 ## Low-density Parity-check codes with run length limited (RLL) constraints
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580704
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -48,6 +58,8 @@
 
 ## Iterative decoding of low-density Parity-check codes over compound channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1599604
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -57,6 +69,8 @@
 
 ## Low-density parity-check codes for space-time wireless transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1611055
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -66,6 +80,8 @@
 
 ## Constraining LDPC degree distributions for improved error floor performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1584380
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -75,6 +91,8 @@
 
 ## Field programmable gate array (FPGA) for iterative code evaluation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580679
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -84,6 +102,8 @@
 
 ## System perspectives for the application of structured LDPC codes to data storage devices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580675
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -93,6 +113,8 @@
 
 ## Scalable decoding on factor trees: a practical solution for wireless sensor networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1599601
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -102,6 +124,8 @@
 
 ## Algebraic construction of sparse matrices with large girth
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1580807
 - **Type**: journal
 - **Published**: Feb. 2006
@@ -111,6 +135,8 @@
 
 ## Codes for Half Duplex Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1649104
 - **Type**: conference
 - **Published**: 22-24 Feb.
@@ -120,6 +146,8 @@
 
 ## Improvement of Burst Error Correction Using a Look-Up Table with Low Density Parity Check Coding for Compressed Ultraspectral Sounder Data
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625785
 - **Type**: conference
 - **Published**: 20-22 Feb.
@@ -129,6 +157,8 @@
 
 ## Iteration based performance evaluation of LDPC coded MIMO-OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1626018
 - **Type**: conference
 - **Published**: 20-22 Feb.
@@ -138,6 +168,8 @@
 
 ## Trade-off between performance and complexity with various candidates in LDPC coded MIMO-OFDM iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625812
 - **Type**: conference
 - **Published**: 20-22 Feb.
@@ -147,6 +179,8 @@
 
 ## Novel techniques of a list sphere decoder for high throughput
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625940
 - **Type**: conference
 - **Published**: 20-22 Feb.
@@ -156,6 +190,8 @@
 
 ## Analysis of energy efficiency for low power transmission in WLAN with MIMO-OFDM and block ack mechanism
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625864
 - **Type**: conference
 - **Published**: 20-22 Feb.
@@ -165,6 +201,8 @@
 
 ## Erasure Codes for Increasing the Availability of Grid Data Storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1602318
 - **Type**: conference
 - **Published**: 19-25 Feb.
@@ -174,6 +212,8 @@
 
 ## Coding in the Block-Erasure Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625249
 - **Type**: conference
 - **Published**: 1-3 Feb. 2
@@ -183,6 +223,8 @@
 
 ## Weighted extrinsic feedback in the iterative multiuser decoding of coded CDMA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625256
 - **Type**: conference
 - **Published**: 1-3 Feb. 2
@@ -192,6 +234,8 @@
 
 ## Fixed Points of Exit Charts
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1625270
 - **Type**: conference
 - **Published**: 1-3 Feb. 2

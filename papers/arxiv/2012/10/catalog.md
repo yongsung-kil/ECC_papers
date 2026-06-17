@@ -3,6 +3,8 @@
 
 ## Error Estimation, Error Correction and Verification In Quantum Key Distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1210.6520v1
 - **Type**: preprint
 - **Published**: 2012-10-24
@@ -12,6 +14,8 @@
 
 ## Phase Noise Estimation for Uncoded/Coded SISO and MIMO Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1210.6267v1
 - **Type**: preprint
 - **Published**: 2012-10-23
@@ -21,6 +25,8 @@
 
 ## Multiple Hypotheses Iterative Decoding of LDPC in the Presence of Strong Phase Noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1210.5198v1
 - **Type**: preprint
 - **Published**: 2012-10-18
@@ -30,6 +36,8 @@
 
 ## New Generalizations of the Bethe Approximation via Asymptotic Expansion
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1210.2592v2
 - **Type**: preprint
 - **Published**: 2012-10-09

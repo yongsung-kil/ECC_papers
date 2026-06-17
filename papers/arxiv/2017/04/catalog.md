@@ -3,6 +3,8 @@
 
 ## Advances in Detection and Error Correction for Coherent Optical Communications: Regular, Irregular, and Spatially Coupled LDPC Code Designs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1704.04618v1
 - **Type**: preprint
 - **Published**: 2017-04-15
@@ -12,6 +14,8 @@
 
 ## A Message-Passing Algorithm for Graph Isomorphism
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1704.00395v1
 - **Type**: preprint
 - **Published**: 2017-04-03

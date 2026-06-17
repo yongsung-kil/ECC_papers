@@ -3,6 +3,8 @@
 
 ## On the Fault Tolerant Distributed Data Caching using LDPC Codes in Cellular Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.14781v3
 - **Type**: preprint
 - **Published**: 2020-10-28
@@ -12,6 +14,8 @@
 
 ## Multi-factor Physical Layer Security Authentication in Short Blocklength Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.14457v2
 - **Type**: preprint
 - **Published**: 2020-10-27
@@ -21,6 +25,8 @@
 
 ## Subsystem codes with high thresholds by gauge fixing and reduced qubit overhead
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.09626v2
 - **Type**: preprint
 - **Published**: 2020-10-19
@@ -30,6 +36,8 @@
 
 ## Proximal-ADMM Decoder for Nonbinary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.09534v1
 - **Type**: preprint
 - **Published**: 2020-10-19
@@ -39,6 +47,8 @@
 
 ## Protograph-Based Low-Density Parity-Check Hadamard Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.08285v2
 - **Type**: preprint
 - **Published**: 2020-10-16
@@ -48,6 +58,8 @@
 
 ## Matched Quantized Min-Sum Decoding of Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.07538v3
 - **Type**: preprint
 - **Published**: 2020-10-15
@@ -57,6 +69,8 @@
 
 ## Concentrated Stopping Set Design for Coded Merkle Tree: Improving Security Against Data Availability Attacks in Blockchain Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.07363v2
 - **Type**: preprint
 - **Published**: 2020-10-14
@@ -66,6 +80,8 @@
 
 ## Learning to Decode: Reinforcement Learning for Decoding of Sparse Graph-Based Channel Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2010.05637v2
 - **Type**: preprint
 - **Published**: 2020-10-12

@@ -3,6 +3,8 @@
 
 ## Design of LDPC Code Ensembles with Fast Convergence Properties
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1410.4086v2
 - **Type**: preprint
 - **Published**: 2014-10-15
@@ -12,6 +14,8 @@
 
 ## New Results on the Pseudoredundancy
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1410.1627v1
 - **Type**: preprint
 - **Published**: 2014-10-07
@@ -21,6 +25,8 @@
 
 ## Terminated and Tailbiting Spatially-Coupled Codes with Optimized Bit Mappings for Spectrally Efficient Fiber-Optical Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1410.0277v2
 - **Type**: preprint
 - **Published**: 2014-10-01

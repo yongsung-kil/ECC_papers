@@ -3,6 +3,8 @@
 
 ## Approaching Capacity at High-Rates with Iterative Hard-Decision Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.6095v4
 - **Type**: preprint
 - **Published**: 2012-02-28
@@ -12,6 +14,8 @@
 
 ## New constructions of CSS codes obtained by moving to higher alphabets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.3338v1
 - **Type**: preprint
 - **Published**: 2012-02-15
@@ -21,6 +25,8 @@
 
 ## Polymer Expansions for Cycle LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.2778v1
 - **Type**: preprint
 - **Published**: 2012-02-13
@@ -30,6 +36,8 @@
 
 ## Beyond the Bethe Free Energy of LDPC Codes via Polymer Expansions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.2774v1
 - **Type**: preprint
 - **Published**: 2012-02-13
@@ -39,6 +47,8 @@
 
 ## Selecting Two-Bit Bit Flipping Algorithms for Collective Error Correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.1348v2
 - **Type**: preprint
 - **Published**: 2012-02-07
@@ -48,6 +58,8 @@
 
 ## Enhancing the Error Correction of Finite Alphabet Iterative Decoders via Adaptive Decimation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.1337v2
 - **Type**: preprint
 - **Published**: 2012-02-07
@@ -57,6 +69,8 @@
 
 ## Mutual-Information Optimized Quantization for LDPC Decoding of Accurately Modeled Flash Data
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.1325v1
 - **Type**: preprint
 - **Published**: 2012-02-07
@@ -66,6 +80,8 @@
 
 ## A Non-Disjoint Group Shuffled Decoding for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.1060v1
 - **Type**: preprint
 - **Published**: 2012-02-06
@@ -75,6 +91,8 @@
 
 ## Spatially-Coupled Binary MacKay-Neal Codes for Channels with Non-Binary Inputs and Affine Subspace Outputs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.0979v2
 - **Type**: preprint
 - **Published**: 2012-02-05
@@ -84,6 +102,8 @@
 
 ## Improved quantum hypergraph-product LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.0928v3
 - **Type**: preprint
 - **Published**: 2012-02-05
@@ -93,6 +113,8 @@
 
 ## Low-Density Arrays of Circulant Matrices: Rank and Row-Redundancy Analysis, and Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1202.0702v1
 - **Type**: preprint
 - **Published**: 2012-02-03

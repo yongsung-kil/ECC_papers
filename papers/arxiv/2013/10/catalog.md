@@ -3,6 +3,8 @@
 
 ## Quantum error-correcting codes and 4-dimensional arithmetic hyperbolic manifolds
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.5555v1
 - **Type**: preprint
 - **Published**: 2013-10-21
@@ -12,6 +14,8 @@
 
 ## M-ary Detection and q-ary Decoding in Large-Scale MIMO: A Non-Binary Belief Propagation Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.4347v1
 - **Type**: preprint
 - **Published**: 2013-10-16
@@ -21,6 +25,8 @@
 
 ## Spatially Coupled Sparse Codes on Graphs - Theory and Practice
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.3724v1
 - **Type**: preprint
 - **Published**: 2013-10-14
@@ -30,6 +36,8 @@
 
 ## Fault-Tolerant Quantum Computation with Constant Overhead
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.2984v3
 - **Type**: preprint
 - **Published**: 2013-10-10
@@ -39,6 +47,8 @@
 
 ## Transmit Beamforming for MIMO Communication Systems with Low Precision ADC at the Receiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.1571v1
 - **Type**: preprint
 - **Published**: 2013-10-06
@@ -48,6 +58,8 @@
 
 ## Advanced channel coding for space mission telecommand links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.0744v1
 - **Type**: preprint
 - **Published**: 2013-10-02
@@ -57,6 +69,8 @@
 
 ## Advanced coding schemes against jamming in telecommand links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1310.0721v1
 - **Type**: preprint
 - **Published**: 2013-10-02

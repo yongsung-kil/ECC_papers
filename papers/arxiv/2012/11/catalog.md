@@ -3,6 +3,8 @@
 
 ## Optimal Rate Irregular LDPC Codes in Binary Erasure Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1211.6279v1
 - **Type**: preprint
 - **Published**: 2012-11-27
@@ -12,6 +14,8 @@
 
 ## Approaching the Capacity of Large-Scale MIMO Systems via Non-Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1211.5067v1
 - **Type**: preprint
 - **Published**: 2012-11-21

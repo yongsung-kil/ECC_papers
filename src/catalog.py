@@ -19,6 +19,19 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+_STATUS_LABEL = {
+    "new": "미선별",
+    "filtered_in": "in(포함)",
+    "filtered_out": "out(제외)",
+    "analyzed": "분석완료",
+    "archived": "보관",
+    "deleted": "삭제",
+}
+
+
+def _status_label(status: str | None) -> str:
+    return _STATUS_LABEL.get(status, status or "")
+
 
 def rebuild_catalog():
     """기존 papers/{arxiv,ieee}를 비우고 DB로부터 전체 재생성 → 항상 DB와 정확히 일치."""
@@ -32,9 +45,10 @@ def rebuild_catalog():
 def export_catalog():
     conn = get_conn()
     rows = conn.execute(
-        "SELECT id, source, title, authors, abstract, categories, "
-        "published, doi, pdf_url, content_type, status "
-        "FROM papers ORDER BY published DESC"
+        "SELECT p.id, p.source, p.title, p.authors, p.abstract, p.categories, "
+        "p.published, p.doi, p.pdf_url, p.content_type, p.status, f.reason "
+        "FROM papers p LEFT JOIN filter_results f ON p.id = f.paper_id "
+        "ORDER BY p.published DESC"
     ).fetchall()
     conn.close()
 
@@ -69,6 +83,8 @@ def _export_md(dir_path: Path, label: str, rows, year_month: str):
         if len(authors) > 3:
             author_str += f" +{len(authors)-3}"
         lines.append(f"## {r['title']}\n")
+        lines.append(f"- **Status**: {_status_label(r['status'])}")
+        lines.append(f"- **Reason**: {r['reason'] or 'N/A'}")
         lines.append(f"- **ID**: {r['id']}")
         lines.append(f"- **Type**: {r['content_type'] or 'N/A'}")
         lines.append(f"- **Published**: {r['published'][:10] if r['published'] else 'N/A'}")
@@ -88,17 +104,18 @@ def _export_csv(dir_path: Path, rows):
 
     with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["ID", "Type", "Title", "Authors", "Abstract",
-                         "Categories", "Published", "DOI", "PDF URL", "Status"])
+        writer.writerow(["ID", "Type", "Title", "Status", "Reason", "Authors",
+                         "Abstract", "Categories", "Published", "DOI", "PDF URL"])
         for r in rows:
             writer.writerow([
                 r["id"], r["content_type"] or "", r["title"],
+                _status_label(r["status"]), r["reason"] or "",
                 ", ".join(json.loads(r["authors"])),
                 r["abstract"],
                 ", ".join(json.loads(r["categories"])),
                 r["published"][:10] if r["published"] else "",
                 r["doi"] or "",
-                r["pdf_url"], r["status"],
+                r["pdf_url"],
             ])
     logger.info("%s/catalog.csv 갱신 (%d건)", dir_path.relative_to(PROJECT_ROOT), len(rows))
 

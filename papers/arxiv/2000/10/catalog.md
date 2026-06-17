@@ -3,6 +3,8 @@
 
 ## Statistical Mechanics of Low-Density Parity Check Error-Correcting Codes over Galois Fields
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cond-mat/0010073v1
 - **Type**: preprint
 - **Published**: 2000-10-05

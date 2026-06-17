@@ -3,6 +3,8 @@
 
 ## Bounds on the Pseudo-Weight of Minimal Pseudo-Codewords of Projective Geometry Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0510049v1
 - **Type**: preprint
 - **Published**: 2005-10-17

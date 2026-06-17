@@ -3,6 +3,8 @@
 
 ## Computation of Grobner basis for systematic encoding of generalized quasi-cyclic codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0811.4033v1
 - **Type**: preprint
 - **Published**: 2008-11-25

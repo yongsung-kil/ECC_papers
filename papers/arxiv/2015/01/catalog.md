@@ -3,6 +3,8 @@
 
 ## Design of a Unified Transport Triggered Processor for LDPC/Turbo Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1502.00076v1
 - **Type**: preprint
 - **Published**: 2015-01-31
@@ -12,6 +14,8 @@
 
 ## Generalized Simplified Variable-Scaled Min Sum LDPC decoder for irregular LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1501.07336v1
 - **Type**: preprint
 - **Published**: 2015-01-29
@@ -21,6 +25,8 @@
 
 ## Protograph-Based LDPC Code Design for Bit-Metric Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1501.05595v1
 - **Type**: preprint
 - **Published**: 2015-01-22
@@ -30,6 +36,8 @@
 
 ## Band Splitting Permutations for Spatially Coupled LDPC Codes Enhancing Burst Erasure Immunity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1501.04394v1
 - **Type**: preprint
 - **Published**: 2015-01-19
@@ -39,6 +47,8 @@
 
 ## Design of LDPC Codes Robust to Noisy Message-Passing Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1501.02483v3
 - **Type**: preprint
 - **Published**: 2015-01-11

@@ -3,6 +3,8 @@
 
 ## Variable-Node-Based Dynamic Scheduling Strategy for Belief-Propagation Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6994784
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -12,6 +14,8 @@
 
 ## Nonbinary LDPC Codes on Cages: Structural Property and Code Optimization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7001068
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -21,6 +25,8 @@
 
 ## On the Design of Fast Convergent LDPC Codes for the BEC: An Optimization Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6998058
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -30,6 +36,8 @@
 
 ## Implementing the Han–Kobayashi Scheme Using Low Density Parity Check Codes Over Gaussian Interference Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6998073
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -39,6 +47,8 @@
 
 ## Multi-Threshold Bit Flipping Algorithm for Decoding Structured LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6965573
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -48,6 +58,8 @@
 
 ## Design and Analysis of Root-Protograph LDPC Codes for Non-Ergodic Block-Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6905810
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -57,6 +69,8 @@
 
 ## Multinary-Signaling-Based Coded Modulation for Ultrahigh-Speed Optical Transport
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7024098
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -66,6 +80,8 @@
 
 ## Approaching the DT Bound Using Linear Codes in the Short Blocklength Regime
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6957577
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -75,6 +91,8 @@
 
 ## A Fully Parallel Nonbinary LDPC Decoder With Fine-Grained Dynamic Clock Gating
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955861
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -84,6 +102,8 @@
 
 ## A 7.92 Gb/s 437.2 mW Stochastic LDPC Decoder Chip for IEEE 802.15.3c Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6923493
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -93,6 +113,8 @@
 
 ## Bit-Level Soft-Decision Decoding of Double and Triple-Parity Reed-Solomon Codes Through Binary Hamming Code Constraints
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6994776
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -102,6 +124,8 @@
 
 ## Asynchronous Physical-Layer Network Coding With Quasi-Cyclic Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6991517
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -111,6 +135,8 @@
 
 ## Resource-Allocation Frameworks for Network-Coded Layered Multimedia Multicast Services
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6994250
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -120,6 +146,8 @@
 
 ## Heuristic Ternary Error-Correcting Output Codes Via Weight Optimization and Layered Clustering-Based Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6824185
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -129,6 +157,8 @@
 
 ## Coded-Seeking: A Simple HDD Speed-Up Concept
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6994828
 - **Type**: journal
 - **Published**: Feb. 2015
@@ -138,6 +168,8 @@
 
 ## Design of structured irregular LDPC codes from structured regular LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7060128
 - **Type**: conference
 - **Published**: 7-8 Feb. 2
@@ -147,6 +179,8 @@
 
 ## Post and pre-layout analysis of Low Density Parity Check (LDPC) decoder using 120nm technology Cadence Encounter Tool
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124921
 - **Type**: conference
 - **Published**: 26-27 Feb.
@@ -156,6 +190,8 @@
 
 ## Performance of MC-CDMA system thorough Turbo block codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7124964
 - **Type**: conference
 - **Published**: 26-27 Feb.
@@ -165,6 +201,8 @@
 
 ## A comparison between RS+TCM and LDPC for G.fast channel coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7250472
 - **Type**: conference
 - **Published**: 24-27 Feb.
@@ -174,6 +212,8 @@
 
 ## 7.7 Enterprise-grade 6x fast read and 5x highly reliable SSD with TLC NAND-flash memory for big-data storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7062965
 - **Type**: conference
 - **Published**: 22-26 Feb.
@@ -183,6 +223,8 @@
 
 ## Multi-Carrier Two-Way Relaying with Non-Binary Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7052143
 - **Type**: conference
 - **Published**: 2-5 Feb. 2
@@ -192,6 +234,8 @@
 
 ## Quantization Aspects in LDPC Key Reconciliation for Physical Layer Security
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7052129
 - **Type**: conference
 - **Published**: 2-5 Feb. 2
@@ -201,6 +245,8 @@
 
 ## Optimization of Variable Edge Degree Distributions to Compensate the Differential Penalty by LDPC Turbo Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7052081
 - **Type**: conference
 - **Published**: 2-5 Feb. 2
@@ -210,6 +256,8 @@
 
 ## On Error Correction for Physical Unclonable Functions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7052113
 - **Type**: conference
 - **Published**: 2-5 Feb. 2
@@ -219,6 +267,8 @@
 
 ## Mixed Generalized Gaussian Noise Channels: Capacity, Decoding, and Performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7052093
 - **Type**: conference
 - **Published**: 2-5 Feb. 2
@@ -228,6 +278,8 @@
 
 ## RS-LDPC product code for high SNR applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7095330
 - **Type**: conference
 - **Published**: 19-20 Feb.
@@ -237,6 +289,8 @@
 
 ## A PHY-layer framework of multirate transmission for ultra-dense networks in 5G
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7081296
 - **Type**: conference
 - **Published**: 17-19 Feb.
@@ -246,6 +300,8 @@
 
 ## Modified trellis-based Min-max decoder for non-binary LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7069415
 - **Type**: conference
 - **Published**: 16-19 Feb.
@@ -255,6 +311,8 @@
 
 ## A study of polar codes for MLC NAND flash memories
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7069414
 - **Type**: conference
 - **Published**: 16-19 Feb.
@@ -264,6 +322,8 @@
 
 ## Non iterative LDPC decoding by syndrome generation using Artificial Neural Network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7510219
 - **Type**: conference
 - **Published**: 13-15 Feb.
@@ -273,6 +333,8 @@
 
 ## Spatially-coupled low-density parity check codes: Zigzag-window decoding and code-family design considerations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7309001
 - **Type**: conference
 - **Published**: 1-6 Feb. 2
@@ -282,6 +344,8 @@
 
 ## An unnoticed strong connection between algebraic-based and protograph-based LDPC codes, Part I: Binary case and interpretation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7308964
 - **Type**: conference
 - **Published**: 1-6 Feb. 2
@@ -291,6 +355,8 @@
 
 ## Protograph-based Raptor-like LDPC codes for the binary erasure channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7308995
 - **Type**: conference
 - **Published**: 1-6 Feb. 2
@@ -300,6 +366,8 @@
 
 ## Symmetric product codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7309002
 - **Type**: conference
 - **Published**: 1-6 Feb. 2
@@ -309,6 +377,8 @@
 
 ## Fault-resilient decoders and memories made of unreliable components
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7308978
 - **Type**: conference
 - **Published**: 1-6 Feb. 2
@@ -318,6 +388,8 @@
 
 ## Analysis of Taylor-Kuznetsov memory using one-step majority logic decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7308965
 - **Type**: conference
 - **Published**: 1-6 Feb. 2
@@ -327,6 +399,8 @@
 
 ## Active stateful PCE with hitless LDPC code adaptation [Invited]
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7035536
 - **Type**: journal
 - **Published**: 1 February
@@ -336,6 +410,8 @@
 
 ## Superfilter technique in SDN-controlled elastic optical networks [Invited]
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7035538
 - **Type**: journal
 - **Published**: 1 February

@@ -3,6 +3,8 @@
 
 ## A Novel Stochastic Decoding of LDPC Codes with Quantitative Guarantees
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1405.6353v1
 - **Type**: preprint
 - **Published**: 2014-05-25
@@ -12,6 +14,8 @@
 
 ## Instantaneous Quantum Channel Estimation during Quantum Information Processing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1405.6267v1
 - **Type**: preprint
 - **Published**: 2014-05-24
@@ -21,6 +25,8 @@
 
 ## Quasi Cyclic LDPC Codes Based on Finite Set Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1405.3775v1
 - **Type**: preprint
 - **Published**: 2014-05-15
@@ -30,6 +36,8 @@
 
 ## Decoding and Computing Algorithms for Linear Superposition LDPC Coded Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1405.2597v2
 - **Type**: preprint
 - **Published**: 2014-05-11

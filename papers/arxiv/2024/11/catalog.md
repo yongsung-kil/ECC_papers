@@ -3,6 +3,8 @@
 
 ## Neural Window Decoder for SC-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.19092v2
 - **Type**: preprint
 - **Published**: 2024-11-28
@@ -12,6 +14,8 @@
 
 ## Iterative Gradient Descent Decoding for Real Number LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.16203v1
 - **Type**: preprint
 - **Published**: 2024-11-25
@@ -21,6 +25,8 @@
 
 ## Classifying Logical Gates in Quantum Codes via Cohomology Operations and Symmetry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.15848v3
 - **Type**: preprint
 - **Published**: 2024-11-24
@@ -30,6 +36,8 @@
 
 ## On fault tolerant single-shot logical state preparation and robust long-range entanglement
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.04405v1
 - **Type**: preprint
 - **Published**: 2024-11-07
@@ -39,6 +47,8 @@
 
 ## List Decodable Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.04306v1
 - **Type**: preprint
 - **Published**: 2024-11-06
@@ -48,6 +58,8 @@
 
 ## Soft Reverse Reconciliation for Discrete Modulations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.04063v2
 - **Type**: preprint
 - **Published**: 2024-11-06
@@ -57,6 +69,8 @@
 
 ## Polylog-time- and constant-space-overhead fault-tolerant quantum computation with quantum low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.03683v2
 - **Type**: preprint
 - **Published**: 2024-11-06
@@ -66,6 +80,8 @@
 
 ## Quantum LDPC Codes of Almost Linear Distance via Homological Products
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.03646v1
 - **Type**: preprint
 - **Published**: 2024-11-06
@@ -75,6 +91,8 @@
 
 ## Generalizing the matching decoder for the Chamon code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.03443v2
 - **Type**: preprint
 - **Published**: 2024-11-05
@@ -84,6 +102,8 @@
 
 ## LDPC stabilizer codes as gapped quantum phases: stability under graph-local perturbations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.02384v2
 - **Type**: preprint
 - **Published**: 2024-11-04
@@ -93,6 +113,8 @@
 
 ## Magic states are rarely the best resource to optimize: An analytical tool for qubit resource estimation in concatenated codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.01880v2
 - **Type**: preprint
 - **Published**: 2024-11-04
@@ -102,6 +124,8 @@
 
 ## Efficient Realization of Multi-channel Visible Light Communication System for Dynamic Cross-Water Surface Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.11866v1
 - **Type**: preprint
 - **Published**: 2024-11-03
@@ -111,6 +135,8 @@
 
 ## Study of Iterative Detection and Decoding for RIS-Aided Multiuser Multi-Antenna Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.01388v1
 - **Type**: preprint
 - **Published**: 2024-11-03
@@ -120,6 +146,8 @@
 
 ## Low-density parity-check codes as stable phases of quantum matter
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2411.01002v2
 - **Type**: preprint
 - **Published**: 2024-11-01

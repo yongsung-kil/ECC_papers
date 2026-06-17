@@ -3,6 +3,8 @@
 
 ## High-Girth Regular Quantum LDPC Codes from Square-Base Hypergraph Products via CPM Lifts
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.27817v1
 - **Type**: preprint
 - **Published**: 2026-04-30
@@ -12,6 +14,8 @@
 
 ## Enabling High Error Tolerance in Satellite Video Transmissions by Generative Semantic Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.25184v1
 - **Type**: preprint
 - **Published**: 2026-04-28
@@ -21,6 +25,8 @@
 
 ## Networked Realization of Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.25026v1
 - **Type**: preprint
 - **Published**: 2026-04-27
@@ -30,6 +36,8 @@
 
 ## Covariance-Aware Demapping on Fourier-Curve Constellations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.24918v1
 - **Type**: preprint
 - **Published**: 2026-04-27
@@ -39,6 +47,8 @@
 
 ## Optimization Using Locally-Quantum Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.24633v1
 - **Type**: preprint
 - **Published**: 2026-04-27
@@ -48,6 +58,8 @@
 
 ## Semantic Error Correction and Decoding for Short Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.22269v2
 - **Type**: preprint
 - **Published**: 2026-04-24
@@ -57,6 +69,8 @@
 
 ## High-Girth Regular Quantum LDPC Codes from Affine-Coset Structures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.20838v2
 - **Type**: preprint
 - **Published**: 2026-04-22
@@ -66,6 +80,8 @@
 
 ## Fault-Tolerant Quantum Computing with Trapped Ions: The Walking Cat Architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.19481v1
 - **Type**: preprint
 - **Published**: 2026-04-21
@@ -75,6 +91,8 @@
 
 ## Three-Module SC-VAMP for LDPC-Coded Nonlinear Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.19061v1
 - **Type**: preprint
 - **Published**: 2026-04-21
@@ -84,6 +102,8 @@
 
 ## Efficient Routing of Quantum LDPC Codes on Programmable 2D Toric Architectures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.18714v1
 - **Type**: preprint
 - **Published**: 2026-04-20
@@ -93,6 +113,8 @@
 
 ## E2E-WAVE: End-to-End Learned Waveform Generation for Underwater Video Multicasting
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.17047v1
 - **Type**: preprint
 - **Published**: 2026-04-18
@@ -102,6 +124,8 @@
 
 ## Towards Ultra-High-Rate Quantum Error Correction with Reconfigurable Atom Arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.16209v1
 - **Type**: preprint
 - **Published**: 2026-04-17
@@ -111,6 +135,8 @@
 
 ## Heuristic Search for Minimum-Distance Upper-Bound Witnesses in Quantum APM-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.15307v1
 - **Type**: preprint
 - **Published**: 2026-04-16
@@ -120,6 +146,8 @@
 
 ## Hidden Quantum Advantage near the Decoding Threshold of Decoded Quantum Interferometry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.15025v2
 - **Type**: preprint
 - **Published**: 2026-04-16
@@ -129,6 +157,8 @@
 
 ## Turán-Theoretic Bounds on Several Elementary Trapping Sets in LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.12332v2
 - **Type**: preprint
 - **Published**: 2026-04-14
@@ -138,6 +168,8 @@
 
 ## Quantum Message Passing for Factor Graphs over Finite Abelian Groups
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.12186v1
 - **Type**: preprint
 - **Published**: 2026-04-14
@@ -147,6 +179,8 @@
 
 ## SERC: LDPC-Inspired Semantic Error Correction for Retrieval-Augmented Generation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.28837v1
 - **Type**: preprint
 - **Published**: 2026-04-12
@@ -156,6 +190,8 @@
 
 ## Scalable Neural Decoders for Practical Fault-Tolerant Quantum Computation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.08358v1
 - **Type**: preprint
 - **Published**: 2026-04-09
@@ -165,6 +201,8 @@
 
 ## Belief Propagation Convergence Prediction for Bivariate Bicycle Quantum Error Correction Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.07995v1
 - **Type**: preprint
 - **Published**: 2026-04-09
@@ -174,6 +212,8 @@
 
 ## Channel Estimation and LDPC Decoding for Bursty Phase Noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.07004v1
 - **Type**: preprint
 - **Published**: 2026-04-08
@@ -183,6 +223,8 @@
 
 ## Affine Subcode Ensemble Decoding of Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.06889v1
 - **Type**: preprint
 - **Published**: 2026-04-08
@@ -192,6 +234,8 @@
 
 ## Would Learning Help? Adaptive CRC-QC-LDPC Selection for Integrity in 5G-NR V2X
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.04277v1
 - **Type**: preprint
 - **Published**: 2026-04-05
@@ -201,6 +245,8 @@
 
 ## Quasi-BP for BCH Codes and its Optimization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.04066v1
 - **Type**: preprint
 - **Published**: 2026-04-05
@@ -210,6 +256,8 @@
 
 ## Transversal non-Clifford gates on almost-good quantum LDPC and quantum locally testable codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.01874v1
 - **Type**: preprint
 - **Published**: 2026-04-02
@@ -219,6 +267,8 @@
 
 ## Tunneling-Augmented Simulated Annealing for Short-Block LDPC Code Construction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2604.07365v1
 - **Type**: preprint
 - **Published**: 2026-04-01

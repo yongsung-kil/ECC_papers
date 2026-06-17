@@ -3,6 +3,8 @@
 
 ## An Improved WBF Algorithm for Higher-Speed Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1206.3362v1
 - **Type**: preprint
 - **Published**: 2012-06-15

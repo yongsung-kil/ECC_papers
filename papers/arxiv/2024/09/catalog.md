@@ -3,6 +3,8 @@
 
 ## Fault-Tolerant Belief Propagation for Practical Quantum Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.18689v1
 - **Type**: preprint
 - **Published**: 2024-09-27
@@ -12,6 +14,8 @@
 
 ## Computational Ghost Imaging with Low-Density Parity-Check Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.15596v1
 - **Type**: preprint
 - **Published**: 2024-09-23
@@ -21,6 +25,8 @@
 
 ## LDPC Codes in Cooperative Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.15559v1
 - **Type**: preprint
 - **Published**: 2024-09-23
@@ -30,6 +36,8 @@
 
 ## Flag Proxy Networks: Tackling the Architectural, Scheduling, and Decoding Obstacles of Quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.14283v1
 - **Type**: preprint
 - **Published**: 2024-09-22
@@ -39,6 +47,8 @@
 
 ## Information Reconciliation for Continuous-Variable Quantum Key Distribution with $β> 1$ Using Short Blocklength Error Correction Codes: Proposal and Concerns
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.13667v2
 - **Type**: preprint
 - **Published**: 2024-09-20
@@ -48,6 +58,8 @@
 
 ## Mechanical Wannier-Stark Ladder of Diamond Spin-Mechanical Lamb Wave Resonators
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.12149v2
 - **Type**: preprint
 - **Published**: 2024-09-18
@@ -57,6 +69,8 @@
 
 ## Non-local resources for error correction in quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.05818v2
 - **Type**: preprint
 - **Published**: 2024-09-09
@@ -66,6 +80,8 @@
 
 ## Effective Distance of Higher Dimensional HGPs and Weight-Reduced Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.02193v5
 - **Type**: preprint
 - **Published**: 2024-09-03
@@ -75,6 +91,8 @@
 
 ## An almost-linear time decoding algorithm for quantum LDPC codes under circuit-level noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2409.01440v2
 - **Type**: preprint
 - **Published**: 2024-09-02

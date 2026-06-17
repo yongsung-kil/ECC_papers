@@ -3,6 +3,8 @@
 
 ## Improving convergence of Belief Propagation decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0607112v1
 - **Type**: preprint
 - **Published**: 2006-07-25
@@ -12,6 +14,8 @@
 
 ## How to Find Good Finite-Length Codes: From Art Towards Science
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0607064v1
 - **Type**: preprint
 - **Published**: 2006-07-13
@@ -21,6 +25,8 @@
 
 ## Iterative Decoding Performance Bounds for LDPC Codes on Noisy Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0607020v4
 - **Type**: preprint
 - **Published**: 2006-07-06

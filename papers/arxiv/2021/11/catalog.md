@@ -3,6 +3,8 @@
 
 ## Capacity Optimal Generalized Multi-User MIMO: A Theoretical and Practical Framework
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2111.11061v2
 - **Type**: preprint
 - **Published**: 2021-11-22
@@ -12,6 +14,8 @@
 
 ## Asymptotically Good Quantum and Locally Testable Classical LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2111.03654v2
 - **Type**: preprint
 - **Published**: 2021-11-05

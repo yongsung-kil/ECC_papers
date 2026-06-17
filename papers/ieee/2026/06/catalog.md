@@ -3,6 +3,8 @@
 
 ## eLDPC: An Elastic and Scalable LDPC-Decoder With Early Termination by Effectively Leveraging High-Level Synthesis
 
+- **Status**: in(포함)
+- **Reason**: FPGA LDPC 디코더 조기종료·확장성 아키텍처(스토리지 명시) - 이식 가능 HW(D)
 - **ID**: ieee:11217176
 - **Type**: journal
 - **Published**: June 2026
@@ -12,6 +14,8 @@
 
 ## AquaLink: A QR Code-Driven Optical Camera Communication Framework for Underwater Network Applications
 
+- **Status**: out(제외)
+- **Reason**: 수중 광카메라 QR통신, LDPC는 부수 오류정정 언급뿐 - 떼어낼 LDPC 기법 없음
 - **ID**: ieee:11296855
 - **Type**: journal
 - **Published**: June 2026
@@ -21,6 +25,8 @@
 
 ## QFEC: A 9.97 Gb/s Fully Configurable Quad-Mode Decoder for LDPC, Polar, Turbo, and Convolutional Codes
 
+- **Status**: in(포함)
+- **Reason**: QC-LDPC 포함 멀티모드 FEC 디코더 칩, 공유 메시지패싱 아키텍처 - 이식 가능 HW(D)
 - **ID**: ieee:11424013
 - **Type**: journal
 - **Published**: June 2026
@@ -30,6 +36,8 @@
 
 ## Capacities of Entanglement Distribution From a Central Source
 
+- **Status**: out(제외)
+- **Reason**: 양자 얽힘 분배 용량(EPR/GHZ) 정보이론 — 양자 EC, 이식 가능 고전 LDPC 기법 없음
 - **ID**: ieee:11482228
 - **Type**: journal
 - **Published**: June 2026
@@ -39,6 +47,8 @@
 
 ## Performance Measurements of ATSC 3.0 MIMO System in Brazil: Field Tests
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11363483
 - **Type**: journal
 - **Published**: June 2026
@@ -48,6 +58,8 @@
 
 ## A Combined Visible Light and Ultraviolet Communication Approach for Industrial Internet of Things
 
+- **Status**: out(제외)
+- **Reason**: VLC/UVC IIoT 통신 응용 + finite-blocklength 정보이론; LDPC ECC로 떼어낼 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11477091
 - **Type**: journal
 - **Published**: June 2026

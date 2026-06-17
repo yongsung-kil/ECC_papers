@@ -3,6 +3,8 @@
 
 ## High Performance Information Reconciliation for QKD with CASCADE
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1307.7829v1
 - **Type**: preprint
 - **Published**: 2013-07-30
@@ -12,6 +14,8 @@
 
 ## An application of Khovanov homology to quantum codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1307.4677v1
 - **Type**: preprint
 - **Published**: 2013-07-17
@@ -21,6 +25,8 @@
 
 ## On the Convergence Speed of Spatially Coupled LDPC Ensembles
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1307.3780v1
 - **Type**: preprint
 - **Published**: 2013-07-14

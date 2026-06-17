@@ -3,6 +3,8 @@
 
 ## Efficiently Using Polar Codes in 5G Base Stations to Enhance Rural Connectivity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2306.15476v1
 - **Type**: preprint
 - **Published**: 2023-06-27
@@ -12,6 +14,8 @@
 
 ## High-Speed Area-Efficient Hardware Architecture for the Efficient Detection of Faults in a Bit-Parallel Multiplier Utilizing the Polynomial Basis of GF(2m)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2306.13347v3
 - **Type**: preprint
 - **Published**: 2023-06-23
@@ -21,6 +25,8 @@
 
 ## Single-shot decoding of good quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2306.12470v2
 - **Type**: preprint
 - **Published**: 2023-06-21
@@ -30,6 +36,8 @@
 
 ## High Throughput Open-Source Implementation of Wi-Fi 6 and WiMAX LDPC Encoder and Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2306.12063v1
 - **Type**: preprint
 - **Published**: 2023-06-21

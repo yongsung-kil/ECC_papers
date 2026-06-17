@@ -3,6 +3,8 @@
 
 ## Coding Theory and Projective Spaces
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0805.3528v2
 - **Type**: preprint
 - **Published**: 2008-05-22
@@ -12,6 +14,8 @@
 
 ## Eliminating Trapping Sets in Low-Density Parity Check Codes by using Tanner Graph Covers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0805.1662v1
 - **Type**: preprint
 - **Published**: 2008-05-12

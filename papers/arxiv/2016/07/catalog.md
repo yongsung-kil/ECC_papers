@@ -3,6 +3,8 @@
 
 ## Design of LDPC Codes using Multipath EMD Strategies and Progressive Edge Growth
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1607.05647v2
 - **Type**: preprint
 - **Published**: 2016-07-19

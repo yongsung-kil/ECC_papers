@@ -3,6 +3,8 @@
 
 ## Generative Decoding for Quantum Error-correcting Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.21374v1
 - **Type**: preprint
 - **Published**: 2025-03-27
@@ -12,6 +14,8 @@
 
 ## Strongly regular generalized partial geometries and associated LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.14058v1
 - **Type**: preprint
 - **Published**: 2025-03-18
@@ -21,6 +25,8 @@
 
 ## Single Sparse Graph Enhanced Expectation Propagation Algorithm Design for Uplink MIMO-SCMA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.13681v1
 - **Type**: preprint
 - **Published**: 2025-03-17
@@ -30,6 +36,8 @@
 
 ## Goal-Oriented Source Coding using LDPC Codes for Compressed-Domain Image Classification
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.11954v1
 - **Type**: preprint
 - **Published**: 2025-03-15
@@ -39,6 +47,8 @@
 
 ## Fault-tolerant logical state construction based on cavity-QED network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.11500v2
 - **Type**: preprint
 - **Published**: 2025-03-14
@@ -48,6 +58,8 @@
 
 ## Extractors: QLDPC Architectures for Efficient Pauli-Based Computation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.10390v2
 - **Type**: preprint
 - **Published**: 2025-03-13
@@ -57,6 +69,8 @@
 
 ## On the Minimum Distances of Finite-Length Lifted Product Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.07567v1
 - **Type**: preprint
 - **Published**: 2025-03-10
@@ -66,6 +80,8 @@
 
 ## Parallel Logical Measurements via Quantum Code Surgery
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.05003v3
 - **Type**: preprint
 - **Published**: 2025-03-06
@@ -75,6 +91,8 @@
 
 ## Anyon Theory and Topological Frustration of High-Efficiency Quantum Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.04699v2
 - **Type**: preprint
 - **Published**: 2025-03-06
@@ -84,6 +102,8 @@
 
 ## Construction and Decoding of Quantum Margulis Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.03936v3
 - **Type**: preprint
 - **Published**: 2025-03-05
@@ -93,6 +113,8 @@
 
 ## Generalized toric codes on twisted tori for quantum error correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.03827v3
 - **Type**: preprint
 - **Published**: 2025-03-05
@@ -102,6 +124,8 @@
 
 ## Automorphism Ensemble Decoding of Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2503.01738v1
 - **Type**: preprint
 - **Published**: 2025-03-03

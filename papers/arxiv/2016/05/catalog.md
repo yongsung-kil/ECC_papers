@@ -3,6 +3,8 @@
 
 ## New Density Evolution Approximation for LDPC and Multi-Edge Type LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1605.04665v1
 - **Type**: preprint
 - **Published**: 2016-05-16
@@ -12,6 +14,8 @@
 
 ## A Joint Optimization Technique for Multi-Edge Type LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1605.04664v1
 - **Type**: preprint
 - **Published**: 2016-05-16
@@ -21,6 +25,8 @@
 
 ## Optimization of Graph Based Codes for Belief Propagation Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1605.04661v1
 - **Type**: preprint
 - **Published**: 2016-05-16
@@ -30,6 +36,8 @@
 
 ## Distance verification for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1605.02410v1
 - **Type**: preprint
 - **Published**: 2016-05-09
@@ -39,6 +47,8 @@
 
 ## Symmetric Unique Neighbor Expanders and Good LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1605.00240v1
 - **Type**: preprint
 - **Published**: 2016-05-01

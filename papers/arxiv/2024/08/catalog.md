@@ -3,6 +3,8 @@
 
 ## Long-Range $ZZ$ Interaction via Resonator-Induced Phase in Superconducting Qubits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.16617v2
 - **Type**: preprint
 - **Published**: 2024-08-29
@@ -12,6 +14,8 @@
 
 ## Performance of Cascade and LDPC-codes for Information Reconciliation on Industrial Quantum Key Distribution Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.15758v1
 - **Type**: preprint
 - **Published**: 2024-08-28
@@ -21,6 +25,8 @@
 
 ## Continuous Optimization for Decoding Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.14652v1
 - **Type**: preprint
 - **Published**: 2024-08-26
@@ -30,6 +36,8 @@
 
 ## Quantum Rainbow Codes: Achieving Linear Rate, Growing Distance and Transversal Non-Clifford Gates with Generalised Colour Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.13130v3
 - **Type**: preprint
 - **Published**: 2024-08-23
@@ -39,6 +47,8 @@
 
 ## Binary codes from subset inclusion matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.12154v1
 - **Type**: preprint
 - **Published**: 2024-08-22
@@ -48,6 +58,8 @@
 
 ## A Quantum Approximate Optimization Algorithm-based Decoder Architecture for NextG Wireless Channel Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.11726v1
 - **Type**: preprint
 - **Published**: 2024-08-21
@@ -57,6 +69,8 @@
 
 ## Multi-User SR-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.11165v1
 - **Type**: preprint
 - **Published**: 2024-08-20
@@ -66,6 +80,8 @@
 
 ## Effect of Correlated Errors on Quantum Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.08786v2
 - **Type**: preprint
 - **Published**: 2024-08-16
@@ -75,6 +91,8 @@
 
 ## Enhanced BICM Receivers for Ultra-Reliable Low-Latency Short Packet Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.08660v4
 - **Type**: preprint
 - **Published**: 2024-08-16
@@ -84,6 +102,8 @@
 
 ## Optimization by Decoded Quantum Interferometry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.08292v5
 - **Type**: preprint
 - **Published**: 2024-08-15
@@ -93,6 +113,8 @@
 
 ## Stabilizer Entanglement Distillation and Efficient Fault-Tolerant Encoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.06299v2
 - **Type**: preprint
 - **Published**: 2024-08-12
@@ -102,6 +124,8 @@
 
 ## Linear-optical quantum computation with arbitrary error-correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.04126v3
 - **Type**: preprint
 - **Published**: 2024-08-07
@@ -111,6 +135,8 @@
 
 ## Transform Arbitrary Good Quantum LDPC Codes into Good Geometrically Local Codes in Any Dimension
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.01769v1
 - **Type**: preprint
 - **Published**: 2024-08-03
@@ -120,6 +146,8 @@
 
 ## Time-Efficient Logical Operations on Quantum Low-Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2408.01339v3
 - **Type**: preprint
 - **Published**: 2024-08-02

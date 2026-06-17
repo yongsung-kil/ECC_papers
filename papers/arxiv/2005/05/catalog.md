@@ -3,6 +3,8 @@
 
 ## On the Parity-Check Density and Achievable Rates of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0505078v2
 - **Type**: preprint
 - **Published**: 2005-05-30
@@ -12,6 +14,8 @@
 
 ## Improved Bounds on the Parity-Check Density and Achievable Rates of Binary Linear Block Codes with Applications to LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0505057v1
 - **Type**: preprint
 - **Published**: 2005-05-23

@@ -3,6 +3,8 @@
 
 ## FUN Coding: Design and Analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7387794
 - **Type**: journal
 - **Published**: December 2
@@ -12,6 +14,8 @@
 
 ## Construction of Quasi-Cyclic LDPC Codes via Masking With Successive Cycle Elimination
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7565543
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -21,6 +25,8 @@
 
 ## Real Time LP Decoding of LDPC Codes for High Correction Performance Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7583642
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -30,6 +36,8 @@
 
 ## New Characterization and Efficient Exhaustive Search Algorithm for Leafless Elementary Trapping Sets of Variable-Regular LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7575635
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -39,6 +47,8 @@
 
 ## Parity-Check-Concatenated Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7563394
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -48,6 +58,8 @@
 
 ## Structural Analysis of Array-Based Non-Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7569103
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -57,6 +69,8 @@
 
 ## Time-Invariant Quasi-Cyclic Spatially Coupled LDPC Codes Based on Packings
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7592443
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -66,6 +80,8 @@
 
 ## Unified Scaling of Polar Codes: Error Exponent, Scaling Exponent, Moderate Deviations, and Error Floors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7589109
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -75,6 +91,8 @@
 
 ## A Fast Polar Code List Decoder Architecture Based on Sphere Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7742998
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -84,6 +102,8 @@
 
 ## Low Complexity Message Passing Algorithm for SCMA System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7567516
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -93,6 +113,8 @@
 
 ## A Novel Machine-to-Machine Communication Strategy Using Rateless Coding for the Internet of Things
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7384685
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -102,6 +124,8 @@
 
 ## Partially Block Markov Superposition Transmission of a Gaussian Source With Nested Lattice Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7572010
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -111,6 +135,8 @@
 
 ## A Novel Method for Soft Error Mitigation in FPGA Using Modified Matrix Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7553578
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -120,6 +146,8 @@
 
 ## Coded Network Function Virtualization: Fault Tolerance via In-Network Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7572035
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -129,6 +157,8 @@
 
 ## SHO-FA: Robust Compressive Sensing With Order-Optimal Complexity, Measurements, and Bits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7185441
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -138,6 +168,8 @@
 
 ## An Adaptive Process-Variation-Aware Technique for Power-Gating-Induced Power/Ground Noise Mitigation in MPSoC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7463494
 - **Type**: journal
 - **Published**: Dec. 2016
@@ -147,6 +179,8 @@
 
 ## Performance evaluation of Underwater Communication system using block codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7893242
 - **Type**: conference
 - **Published**: 8-9 Dec. 2
@@ -156,6 +190,8 @@
 
 ## Extrinsic Dispersion Transfer Chart for Finite Length LDPC Codes Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841834
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -165,6 +201,8 @@
 
 ## Reliable Quantum LDPC Codes over GF(4)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7849021
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -174,6 +212,8 @@
 
 ## A Comparison of Channel Coding Schemes for 5G Short Message Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7848804
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -183,6 +223,8 @@
 
 ## Generalized Belief Propagation Based Deliberate Bit Flipping Modulation Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841858
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -192,6 +234,8 @@
 
 ## Interlaced Column-Row Message-Passing Schedule for Decoding LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841913
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -201,6 +245,8 @@
 
 ## Bit Mapping Design for LDPC Coded BICM Schemes with Binary Physical-Layer Network Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841632
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -210,6 +256,8 @@
 
 ## A High Performance Joint Detection and Decoding Scheme for LDPC Coded SCMA System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7848813
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -219,6 +267,8 @@
 
 ## A Low Complexity SCMA Decoder Based on List Sphere Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841513
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -228,6 +278,8 @@
 
 ## Joint Source-Channel Decoding of Polar Codes for Language-Based Sources
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841934
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -237,6 +289,8 @@
 
 ## Low-Complexity List Successive-Cancellation Decoding of Polar Codes Using List Pruning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841969
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -246,6 +300,8 @@
 
 ## Experimental Throughput Analysis in Screen-Camera Visual MIMO Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841827
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -255,6 +311,8 @@
 
 ## Dynamics and Steady-State Behavior of Self-Healing Cyber-Physical Networks in Light of Cyber-Node Delays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7848886
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -264,6 +322,8 @@
 
 ## Second-Order Memory Based LT Encoder Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7849036
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -273,6 +333,8 @@
 
 ## An Analysis of Unified SU-MIMO Channel Model for mmWave Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7848832
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -282,6 +344,8 @@
 
 ## Throughput Enhancements on Cellular Downlink Channels Using Rateless Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7842327
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -291,6 +355,8 @@
 
 ## Hash Division Multiple Access
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841868
 - **Type**: conference
 - **Published**: 4-8 Dec. 2
@@ -300,6 +366,8 @@
 
 ## Flexible FPGA implementation of Min-Sum decoding algorithm for regular LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7822016
 - **Type**: conference
 - **Published**: 20-21 Dec.
@@ -309,6 +377,8 @@
 
 ## Narrowband interference mitigation with LRPC code and OFDM for smart grid applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7843300
 - **Type**: conference
 - **Published**: 19-21 Dec.
@@ -318,6 +388,8 @@
 
 ## Joint non-uniform detection and low-complexity decoding for multi-level cell NAND flash memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7849731
 - **Type**: conference
 - **Published**: 19-21 Dec.
@@ -327,6 +399,8 @@
 
 ## Implementation and performance study of the LDPC coding in the DVB-S2 link system using MATLAB
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7951982
 - **Type**: conference
 - **Published**: 19-21 Dec.
@@ -336,6 +410,8 @@
 
 ## An efficient algorithm for determining the girth and ACE distributions in LDPC code Tanner graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7843313
 - **Type**: conference
 - **Published**: 19-21 Dec.
@@ -345,6 +421,8 @@
 
 ## A New Parallel Instruction Model Based on Multi-Tasking Bluetooth Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7820545
 - **Type**: conference
 - **Published**: 16-19 Dec.
@@ -354,6 +432,8 @@
 
 ## An Improved Message Passing Schedule of BP-Based Decoding Algorithm for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7917141
 - **Type**: conference
 - **Published**: 15-18 Dec.
@@ -363,6 +443,8 @@
 
 ## Construction of QC-LDPC codes based on generalized RS codes with girth larger than 6
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7833579
 - **Type**: conference
 - **Published**: 14-16 Dec.
@@ -372,6 +454,8 @@
 
 ## Protograph LDPC-based distributed joint source-channel coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7833624
 - **Type**: conference
 - **Published**: 14-16 Dec.
@@ -381,6 +465,8 @@
 
 ## Spatially coupled repeat-accumulate codes over half-duplex relay channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7833556
 - **Type**: conference
 - **Published**: 14-16 Dec.
@@ -390,6 +476,8 @@
 
 ## Improving MLC Flash Performance with Workload-Aware Differentiated ECC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7823793
 - **Type**: conference
 - **Published**: 13-16 Dec.
@@ -399,6 +487,8 @@
 
 ## Reliability analysis of memory centric LDPC decoders under probabilistic storage failures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7841271
 - **Type**: conference
 - **Published**: 11-14 Dec.
@@ -408,6 +498,8 @@
 
 ## Integrating network coding and superposition coding in wireless broadcast networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8070216
 - **Type**: conference
 - **Published**: 10-11 Dec.
@@ -417,6 +509,8 @@
 
 ## Unified Designs for High Performance LDPC Decoding on GPGPU
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7442589
 - **Type**: journal
 - **Published**: 1 Dec. 201

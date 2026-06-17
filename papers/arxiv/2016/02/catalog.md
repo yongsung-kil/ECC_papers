@@ -3,6 +3,8 @@
 
 ## Information Reconciliation for Continuous-Variable Quantum Key Distribution using Non-Binary Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1602.09140v1
 - **Type**: preprint
 - **Published**: 2016-02-29
@@ -12,6 +14,8 @@
 
 ## Channel Models for Multi-Level Cell Flash Memories Based on Empirical Error Analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1602.07743v2
 - **Type**: preprint
 - **Published**: 2016-02-24
@@ -21,6 +25,8 @@
 
 ## Minimum Distances of the QC-LDPC Codes in IEEE 802 Communication Standards
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1602.02831v1
 - **Type**: preprint
 - **Published**: 2016-02-09
@@ -30,6 +36,8 @@
 
 ## New Coupled Codes Constructed by Overlapping Circular SC-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1602.01577v4
 - **Type**: preprint
 - **Published**: 2016-02-04

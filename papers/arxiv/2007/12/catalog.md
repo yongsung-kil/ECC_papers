@@ -3,6 +3,8 @@
 
 ## Distributed Arithmetic Coding for the Asymmetric Slepian-Wolf problem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0712.0271v2
 - **Type**: preprint
 - **Published**: 2007-12-03

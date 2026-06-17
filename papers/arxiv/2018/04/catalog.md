@@ -3,6 +3,8 @@
 
 ## Joint Quantizer Optimization based on Neural Quantizer for Sum-Product Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1804.06002v1
 - **Type**: preprint
 - **Published**: 2018-04-17
@@ -12,6 +14,8 @@
 
 ## Numerical and analytical bounds on threshold error rates for hypergraph-product codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1804.01950v2
 - **Type**: preprint
 - **Published**: 2018-04-05

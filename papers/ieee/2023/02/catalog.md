@@ -3,6 +3,8 @@
 
 ## Design of Implicit Partial Product-LDPC Codes and Low Complexity Decoding Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9987569
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -12,6 +14,8 @@
 
 ## Global Design of Double Protograph LDPC Codes for Joint Source-Channel Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9947085
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -21,6 +25,8 @@
 
 ## Efficient LDPC-Coded CCSK Links for Robust High Data Rates GNSS
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9831101
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -30,6 +36,8 @@
 
 ## Normalized Min-Sum Neural Network for LDPC Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9913203
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -39,6 +47,8 @@
 
 ## Minimum Repair Bandwidth LDPC Codes for Distributed Storage Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9991130
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -48,6 +58,8 @@
 
 ## Algorithmic Obfuscation for LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9774836
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -57,6 +69,8 @@
 
 ## Model-Driven Deep Learning ADMM Decoder for Irregular Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9954388
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -66,6 +80,8 @@
 
 ## Construction of Multiple-Rate Quantum LDPC Codes Sharing One Scalable Stabilizer Circuit
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9998546
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -75,6 +91,8 @@
 
 ## A Low-Complexity RS-SPC Product Coding Scheme for Optical Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9999449
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -84,6 +102,8 @@
 
 ## Construction of Cyclic Redundancy Check Codes for SDDC Decoding in DRAM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9774861
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -93,6 +113,8 @@
 
 ## Concatenated Codes for Multiple Reads of a DNA Sequence
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9889680
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -102,6 +124,8 @@
 
 ## Irregular-Mapped Protograph LDPC-Coded Modulation: A Bandwidth-Efficient Solution for 6G-Enabled Mobile Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9600574
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -111,6 +135,8 @@
 
 ## Coding Split and Adjustment to Defend OFDM-IM Against Jamming Attacks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9961189
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -120,6 +146,8 @@
 
 ## A New Polar Code Design Based on Reciprocal Channel Approximation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9973389
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -129,6 +157,8 @@
 
 ## Breaking the Computational Bottleneck: Probabilistic Optimization of High-Memory Spatially-Coupled Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9893853
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -138,6 +168,8 @@
 
 ## LDPC Coded Compressive Sensing for Joint Source-Channel Coding in Wireless Sensor Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9911692
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -147,6 +179,8 @@
 
 ## Symbol-Level Detection With Matched Non-Binary LDPC Codes for Position Errors in Racetrack Memories
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9919870
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -156,6 +190,8 @@
 
 ## Adaptive Decoding Algorithm With Variable Sliding Window for Double SC-LDPC Coding System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9953165
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -165,6 +201,8 @@
 
 ## A Low-Complexity Ordered Statistic Decoding of Short Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9954013
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -174,6 +212,8 @@
 
 ## Ambient LoRa Backscatter System With Chirp Interval Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9892694
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -183,6 +223,8 @@
 
 ## Exploiting Short Block and Concatenated Codes for Reliable Communications Within the Coexistence of 5G-NR-U and WiFi
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9963611
 - **Type**: journal
 - **Published**: Feb. 2023
@@ -192,6 +234,8 @@
 
 ## Full Diversity Low-Density Parity-Check (LDPC) Codes for Block-Fading Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10049965
 - **Type**: conference
 - **Published**: 5-8 Feb. 2
@@ -201,6 +245,8 @@
 
 ## Ensemble Belief Propagation Decoding for Short Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10104564
 - **Type**: conference
 - **Published**: 27-27 Feb.
@@ -210,6 +256,8 @@
 
 ## Model-Driven Deep Joint Source-Channel Coding over Time-Varying Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10104036
 - **Type**: conference
 - **Published**: 27-27 Feb.
@@ -219,6 +267,8 @@
 
 ## The Performance of Channel Code in OFDM Underwater Acoustic Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10145226
 - **Type**: conference
 - **Published**: 25-27 Feb.
@@ -228,6 +278,8 @@
 
 ## An Improved Min-Sum Polar Code Decoding Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10145352
 - **Type**: conference
 - **Published**: 25-27 Feb.
@@ -237,6 +289,8 @@
 
 ## Performance Analysis of Various FEC-coded OFDM Communication Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10145290
 - **Type**: conference
 - **Published**: 25-27 Feb.
@@ -246,6 +300,8 @@
 
 ## Various Channel Coding Schemes for 5G
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10062998
 - **Type**: conference
 - **Published**: 18-19 Feb.
@@ -255,6 +311,8 @@
 
 ## Boost Sum-Product Performance for Multiuser Detection in mMTC at Millimeter Wave
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9456076
 - **Type**: journal
 - **Published**: 1 Feb. 202

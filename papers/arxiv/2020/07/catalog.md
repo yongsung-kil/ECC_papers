@@ -3,6 +3,8 @@
 
 ## Super-simple $(v,5,2)$ directed designs and their smallest defining sets with its application in LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2007.13743v2
 - **Type**: preprint
 - **Published**: 2020-07-27
@@ -12,6 +14,8 @@
 
 ## Iterative List Detection and Decoding for mMTC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2007.12836v1
 - **Type**: preprint
 - **Published**: 2020-07-25
@@ -21,6 +25,8 @@
 
 ## Towards Quantum Belief Propagation for LDPC Decoding in Wireless Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2007.11069v2
 - **Type**: preprint
 - **Published**: 2020-07-21
@@ -30,6 +36,8 @@
 
 ## Maximum-Likelihood Channel Decoding with Quantum Annealing Machine
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2007.08689v2
 - **Type**: preprint
 - **Published**: 2020-07-16

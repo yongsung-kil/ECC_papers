@@ -3,6 +3,8 @@
 
 ## An Embedded Iris Recognition System Optimization using Dynamically ReconfigurableDecoder with LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2107.03688v1
 - **Type**: preprint
 - **Published**: 2021-07-08

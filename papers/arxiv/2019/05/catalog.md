@@ -3,6 +3,8 @@
 
 ## Cospectral Bipartite Graphs with the Same Degree Sequences but with Different Number of Large Cycles
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1905.13228v1
 - **Type**: preprint
 - **Published**: 2019-05-31
@@ -12,6 +14,8 @@
 
 ## MIST: A Novel Training Strategy for Low-latency Scalable Neural Net Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1905.08990v1
 - **Type**: preprint
 - **Published**: 2019-05-22

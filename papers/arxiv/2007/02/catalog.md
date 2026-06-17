@@ -3,6 +3,8 @@
 
 ## On the Complexity of Exact Maximum-Likelihood Decoding for Asymptotically Good Low Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0702147v1
 - **Type**: preprint
 - **Published**: 2007-02-25
@@ -12,6 +14,8 @@
 
 ## A Local Tree Structure is NOT Sufficient for the Local Optimality of Message-Passing Decoding in Low Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0702146v1
 - **Type**: preprint
 - **Published**: 2007-02-25
@@ -21,6 +25,8 @@
 
 ## Constructing CSS Codes with LDPC Codes for the BB84 Quantum Key Distribution Protocol
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:quant-ph/0702184v3
 - **Type**: preprint
 - **Published**: 2007-02-19
@@ -30,6 +36,8 @@
 
 ## Tradeoff between decoding complexity and rate for codes on graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0702073v1
 - **Type**: preprint
 - **Published**: 2007-02-13
@@ -39,6 +47,8 @@
 
 ## Finite size scaling for the core of large random hypergraphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:math/0702007v2
 - **Type**: preprint
 - **Published**: 2007-02-01

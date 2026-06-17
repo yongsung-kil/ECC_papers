@@ -3,6 +3,8 @@
 
 ## Graph-Cover Decoding and Finite-Length Analysis of Message-Passing Iterative Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0512078v1
 - **Type**: preprint
 - **Published**: 2005-12-20

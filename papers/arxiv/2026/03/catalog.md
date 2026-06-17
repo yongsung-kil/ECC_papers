@@ -3,6 +3,8 @@
 
 ## SAFT: Sensitivity-Aware Filtering and Transmission for Adaptive 3D Point Cloud Communication over Wireless Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.26197v1
 - **Type**: preprint
 - **Published**: 2026-03-27
@@ -12,6 +14,8 @@
 
 ## Theory of (Co)homological Invariants on Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.25831v1
 - **Type**: preprint
 - **Published**: 2026-03-26
@@ -21,6 +25,8 @@
 
 ## Exploiting the Degrees of Freedom: Multi-Dimensional Spatially-Coupled Codes Based on Gradient Descent
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.25824v1
 - **Type**: preprint
 - **Published**: 2026-03-26
@@ -30,6 +36,8 @@
 
 ## Clifford synthesis via generalized S and CZ gates
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.24731v1
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -39,6 +47,8 @@
 
 ## Finite-Degree Quantum LDPC Codes Reaching the Gilbert-Varshamov Bound
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.24588v2
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -48,6 +58,8 @@
 
 ## Benchmarking Techniques for Decoded Quantum Interferometry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.24441v1
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -57,6 +69,8 @@
 
 ## Unanticipated Adversarial Robustness of Semantic Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.24082v1
 - **Type**: preprint
 - **Published**: 2026-03-25
@@ -66,6 +80,8 @@
 
 ## Towards a Unified Coding Scheme for 6G
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.23123v1
 - **Type**: preprint
 - **Published**: 2026-03-24
@@ -75,6 +91,8 @@
 
 ## Distance-Finding Algorithms for Quantum Codes and Circuits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.22532v1
 - **Type**: preprint
 - **Published**: 2026-03-23
@@ -84,6 +102,8 @@
 
 ## Optimal Compilation of Syndrome Extraction Circuits for General Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.21499v1
 - **Type**: preprint
 - **Published**: 2026-03-23
@@ -93,6 +113,8 @@
 
 ## Independent Trivariate Bicycle Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.17703v1
 - **Type**: preprint
 - **Published**: 2026-03-18
@@ -102,6 +124,8 @@
 
 ## Optimizing Logical Mappings for Quantum Low-Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.17167v1
 - **Type**: preprint
 - **Published**: 2026-03-17
@@ -111,6 +135,8 @@
 
 ## AtlasRAN: Timing-Aware Evaluation of Open-source 5G Platforms for Integrated Wireless Testbeds
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.14661v3
 - **Type**: preprint
 - **Published**: 2026-03-15
@@ -120,6 +146,8 @@
 
 ## Quantum Process Realization of LDPC Code Dualities and Product Constructions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.13538v1
 - **Type**: preprint
 - **Published**: 2026-03-13
@@ -129,6 +157,8 @@
 
 ## Learning to Decode Quantum LDPC Codes Via Belief Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.10192v1
 - **Type**: preprint
 - **Published**: 2026-03-10
@@ -138,6 +168,8 @@
 
 ## Construction of a Family of Quantum Codes Using Sub-exceding Functions via the Hypergraph Product and the Generalized Shor Construction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.08213v1
 - **Type**: preprint
 - **Published**: 2026-03-09
@@ -147,6 +179,8 @@
 
 ## Mirror codes: High-threshold quantum LDPC codes beyond the CSS regime
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.05496v1
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -156,6 +190,8 @@
 
 ## QGPU: Parallel logic in quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.05398v1
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -165,6 +201,8 @@
 
 ## Simplified circuit-level decoding using Knill error correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.05320v2
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -174,6 +212,8 @@
 
 ## Parsimonious Quantum Low-Density Parity-Check Code Surgery
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.05082v1
 - **Type**: preprint
 - **Published**: 2026-03-05
@@ -183,6 +223,8 @@
 
 ## Linear-Time Encodable and Decodable Quantum Error-Correcting Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.04543v1
 - **Type**: preprint
 - **Published**: 2026-03-04
@@ -192,6 +234,8 @@
 
 ## Point Cloud Feature Coding for Object Detection over an Error-Prone Cloud-Edge Collaborative System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.03890v1
 - **Type**: preprint
 - **Published**: 2026-03-04
@@ -201,6 +245,8 @@
 
 ## Characterization of Blind Code Rate Recovery in Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2603.02031v1
 - **Type**: preprint
 - **Published**: 2026-03-02

@@ -3,6 +3,8 @@
 
 ## Distance Verification for Classical and Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7891006
 - **Type**: journal
 - **Published**: July 2017
@@ -12,6 +14,8 @@
 
 ## LDPC Codes Based on the Space of Symmetric Matrices Over Finite Fields
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7883834
 - **Type**: journal
 - **Published**: July 2017
@@ -21,6 +25,8 @@
 
 ## On Die Bit Error Rate Estimator for NAND Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7569094
 - **Type**: journal
 - **Published**: July 2017
@@ -30,6 +36,8 @@
 
 ## Reed–Muller Codes Achieve Capacity on Erasure Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7862912
 - **Type**: journal
 - **Published**: July 2017
@@ -39,6 +47,8 @@
 
 ## High-Throughput Non-Binary LDPC Decoder Based on Aggressive Overlap Scheduling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7880589
 - **Type**: journal
 - **Published**: July 2017
@@ -48,6 +58,8 @@
 
 ## FlexLevel NAND Flash Storage System Design to Reduce LDPC Latency
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7605542
 - **Type**: journal
 - **Published**: July 2017
@@ -57,6 +69,8 @@
 
 ## Density Evolution for Deterministic Generalized Product Codes on the Binary Erasure Channel at High Rates
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7890389
 - **Type**: journal
 - **Published**: July 2017
@@ -66,6 +80,8 @@
 
 ## Error Correction Coding Meets Cyber-Physical Systems: Message-Passing Analysis of Self-Healing Interdependent Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7913673
 - **Type**: journal
 - **Published**: July 2017
@@ -75,6 +91,8 @@
 
 ## Joint Source-Channel Coding of JPEG 2000 Image Transmission Over Two-Way Multi-Relay Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7918639
 - **Type**: journal
 - **Published**: July 2017
@@ -84,6 +102,8 @@
 
 ## Towards 100 Gbps wireless communication: Investigation of FEC interleavers for PSSS-15 spreading
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8011186
 - **Type**: conference
 - **Published**: 6-8 July 2
@@ -93,6 +113,8 @@
 
 ## A soft demapping technique using fuzzy logic for LDPC receiver in cooperative wireless networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8342724
 - **Type**: conference
 - **Published**: 6-7 July 2
@@ -102,6 +124,8 @@
 
 ## On irregular LDPC codes with quantized message passing decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8227780
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -111,6 +135,8 @@
 
 ## Polar coded probabilistic amplitude shaping for short packets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8227653
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -120,6 +146,8 @@
 
 ## Short codes with mismatched channel state information: A case study
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8227651
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -129,6 +157,8 @@
 
 ## A survey on decoding schedules of LDPC convolutional codes and associated hardware architectures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8024640
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -138,6 +168,8 @@
 
 ## A Multi-Gbps Fully Pipelined Layered Decoder for IEEE 802.11n/ac/ax LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7987518
 - **Type**: conference
 - **Published**: 3-5 July 2
@@ -147,6 +179,8 @@
 
 ## Analysis of error correcting capability of LDPC code over fading and non-fading channel under various parameters
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8203967
 - **Type**: conference
 - **Published**: 3-5 July 2
@@ -156,6 +190,8 @@
 
 ## Soft decision multi-stage threshold decoding with sum-product algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8204017
 - **Type**: conference
 - **Published**: 3-5 July 2
@@ -165,6 +201,8 @@
 
 ## Ultra High Throughput Unrolled Layered Architecture for QC-LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7987523
 - **Type**: conference
 - **Published**: 3-5 July 2
@@ -174,6 +212,8 @@
 
 ## Survey of modulation and coding schemes for application in CubeSat systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7997514
 - **Type**: conference
 - **Published**: 3-4 July 2
@@ -183,6 +223,8 @@
 
 ## An improved decoding algorithm based on min-max for NB-LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8029019
 - **Type**: conference
 - **Published**: 26-28 July
@@ -192,6 +234,8 @@
 
 ## IMWBF decoding algorithm with dynamic magnitude update for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8035302
 - **Type**: conference
 - **Published**: 21-23 July
@@ -201,6 +245,8 @@
 
 ## Novel Puncturing Strategy for Rate-Compatible Low-Density Parity-Check Codes with Diagonal Structure
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8110553
 - **Type**: conference
 - **Published**: 21-23 July
@@ -210,6 +256,8 @@
 
 ## An irregular row weight problem resolution for DVB-S2 LDPC short frame
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8076509
 - **Type**: conference
 - **Published**: 21-23 July
@@ -219,6 +267,8 @@
 
 ## Adaptive FEC Allocation Algorithm for Wireless Video Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8328321
 - **Type**: conference
 - **Published**: 21-23 July
@@ -228,6 +278,8 @@
 
 ## Design of LDPC decoder based on adaptive code length
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8076613
 - **Type**: conference
 - **Published**: 21-23 July
@@ -237,6 +289,8 @@
 
 ## FPGA-based rate-adaptive LDPC-coded modulation for the next generation of optical communication systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8024788
 - **Type**: conference
 - **Published**: 2-6 July 2
@@ -246,6 +300,8 @@
 
 ## Post-Quantum Cryptographic Schemes Based on Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8035182
 - **Type**: conference
 - **Published**: 17-21 July
@@ -255,6 +311,8 @@
 
 ## Early stopping criterion for LDPC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8023197
 - **Type**: conference
 - **Published**: 14-17 July
@@ -264,6 +322,8 @@
 
 ## Polar Code: The Channel Code contender for 5G scenarios
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8004055
 - **Type**: conference
 - **Published**: 1-2 July 2

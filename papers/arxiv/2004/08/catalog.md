@@ -3,6 +3,8 @@
 
 ## Iterative Quantization Using Codes On Graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0408008v1
 - **Type**: preprint
 - **Published**: 2004-08-02

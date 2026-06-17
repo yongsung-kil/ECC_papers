@@ -3,6 +3,8 @@
 
 ## Comparative Performance Evaluation of LDPC Coded OFDM-IM Under Jamming Attack
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9999530
 - **Type**: journal
 - **Published**: May 2023
@@ -12,6 +14,8 @@
 
 ## New Design of Blockwise Interleaved Ideal Low-Rank Parity-Check Codes for Fast Post-Quantum Cryptography
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10068546
 - **Type**: journal
 - **Published**: May 2023
@@ -21,6 +25,8 @@
 
 ## Beyond Turbo: An Integrated ADMM Receiver for URLLC MIMO Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10049426
 - **Type**: journal
 - **Published**: May 2023
@@ -30,6 +36,8 @@
 
 ## Gaussian and Fading Multiple Access Using Linear Physical-Layer Network Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9930671
 - **Type**: journal
 - **Published**: May 2023
@@ -39,6 +47,8 @@
 
 ## Index Modulation Multiple Access for Unsourced Random Access
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10042992
 - **Type**: journal
 - **Published**: May 2023
@@ -48,6 +58,8 @@
 
 ## LIAD: A Method for Extending the Effective Time of 3-D TLC NAND Flash Hard Decision
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9878117
 - **Type**: journal
 - **Published**: May 2023
@@ -57,6 +69,8 @@
 
 ## 3.8-Gbps Polar Belief Propagation Decoder on GPU
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10086485
 - **Type**: journal
 - **Published**: May 2023
@@ -66,6 +80,8 @@
 
 ## RESS: A Reliable and Effcient Storage Scheme for Bitcoin Blockchain Based on Raptor Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10124693
 - **Type**: journal
 - **Published**: May 2023
@@ -75,6 +91,8 @@
 
 ## BP-Based Sparse Graph List Decoding of Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10068527
 - **Type**: journal
 - **Published**: May 2023
@@ -84,6 +102,8 @@
 
 ## On OAMP: Impact of the Orthogonal Principle
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10082977
 - **Type**: journal
 - **Published**: May 2023
@@ -93,6 +113,8 @@
 
 ## Binary Modeling and Capacity-Approaching Coding for the IM/DD Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10078291
 - **Type**: journal
 - **Published**: May 2023
@@ -102,6 +124,8 @@
 
 ## A Simplified Soft-output MLSE Concatenated with LDPC Decoding in 112-Gb/s PAM-4 Transmissions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10260100
 - **Type**: conference
 - **Published**: 7-12 May 2
@@ -111,6 +135,8 @@
 
 ## Energy-time entangled and Einstein-Podolsky-Rosen steerable large-alphabet quantum key distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10259321
 - **Type**: conference
 - **Published**: 7-12 May 2
@@ -120,6 +146,8 @@
 
 ## Experimental symmetric private information retrieval with measurement-device-independent quantum network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10259085
 - **Type**: conference
 - **Published**: 7-12 May 2
@@ -129,6 +157,8 @@
 
 ## An Efficient Single and Double Error Correcting Block Codes with Low Redundancy for Digital Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10141727
 - **Type**: conference
 - **Published**: 5-6 May 20
@@ -138,6 +168,8 @@
 
 ## Estimate BLER for Coded Modulation Based on Finite Block Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10139402
 - **Type**: conference
 - **Published**: 5-6 May 20
@@ -147,6 +179,8 @@
 
 ## Data Encoding Techniques for Reducing Energy Consumption in Network-On-Chip
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10157433
 - **Type**: conference
 - **Published**: 5-6 May 20
@@ -156,6 +190,8 @@
 
 ## SPELS: Scalable and Programmable Testbed for Evaluating LEO Satellite Swarm Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10225764
 - **Type**: conference
 - **Published**: 20-20 May 
@@ -165,6 +201,8 @@
 
 ## Content-Aware Semantic Communication for Goal-Oriented Wireless Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10226153
 - **Type**: conference
 - **Published**: 20-20 May 
@@ -174,6 +212,8 @@
 
 ## Optimization Strategies for Low-Latency 5G NR LDPC Decoding on General Purpose Processor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10165378
 - **Type**: conference
 - **Published**: 19-21 May 
@@ -183,6 +223,8 @@
 
 ## A Survey on Various Decoding Algorithms for McEliece Cryptosystem Based on QC-MDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10152992
 - **Type**: conference
 - **Published**: 18-19 May 
@@ -192,6 +234,8 @@
 
 ## A Hybrid technique based on Zadoff-chu and Simplified Selective Mapping for PAPR Reduction in GFDM System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10152931
 - **Type**: conference
 - **Published**: 18-19 May 
@@ -201,6 +245,8 @@
 
 ## Realizing Uplink MU-MIMO Communication in mmWave WLANs: Bayesian Optimization and Asynchronous Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10228888
 - **Type**: conference
 - **Published**: 17-20 May 
@@ -210,6 +256,8 @@
 
 ## A Second Minimum Approximation Method for Layered Min-Sum Decoding of QC-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10154580
 - **Type**: conference
 - **Published**: 17-19 May 
@@ -219,6 +267,8 @@
 
 ## Construction and Performance Evaluation of QC-LDPC Codes With Low Error Floor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10154643
 - **Type**: conference
 - **Published**: 17-19 May 
@@ -228,6 +278,8 @@
 
 ## Rate-Compatible Joint Source-Channel Coding Scheme Based on 5GNR LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10154810
 - **Type**: conference
 - **Published**: 17-19 May 
@@ -237,6 +289,8 @@
 
 ## A Study on Accelerating SP decoding by Neural Network in SMR System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10228247
 - **Type**: conference
 - **Published**: 15-19 May 
@@ -246,6 +300,8 @@
 
 ## PAC Code Construction for Spin-Torque Transfer Magnetic Random Access Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10265017
 - **Type**: conference
 - **Published**: 15-19 May 
@@ -255,6 +311,8 @@
 
 ## PAC Code Construction for Spin-Torque Transfer Magnetic Random Access Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10228359
 - **Type**: conference
 - **Published**: 15-19 May 
@@ -264,6 +322,8 @@
 
 ## The Main Factors Influencing the Effectiveness of the Noise-Resistant Method of Information Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10139176
 - **Type**: conference
 - **Published**: 15-19 May 
@@ -273,6 +333,8 @@
 
 ## An adjustable decoding scheme for robust and efficient transmission in FTTR C-WAN architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10277087
 - **Type**: conference
 - **Published**: 14-17 May 
@@ -282,6 +344,8 @@
 
 ## Low Complexity Log Likelihood Ratio Estimation Algorithm Based on Neural Network in Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10211434
 - **Type**: conference
 - **Published**: 12-15 May 
@@ -291,6 +355,8 @@
 
 ## Quasi-cyclic Concatenated Spatially Coupled LDPC Codes Based Joint Source-Channel Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10217292
 - **Type**: conference
 - **Published**: 12-14 May 
@@ -300,6 +366,8 @@
 
 ## Optimization of Root-Protograph LDPC Codes for Joint Source Channel Coding System over Block Fading Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10217261
 - **Type**: conference
 - **Published**: 12-14 May 
@@ -309,6 +377,8 @@
 
 ## Protograph LDPC-Based Joint Source-Channel Coding for Markov Sources
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10217316
 - **Type**: conference
 - **Published**: 12-14 May 
@@ -318,6 +388,8 @@
 
 ## A code-assisted carrier synchronization algorithm based on Expectation-Maximum algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10176829
 - **Type**: conference
 - **Published**: 12-14 May 

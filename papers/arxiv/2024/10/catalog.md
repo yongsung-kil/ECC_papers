@@ -3,6 +3,8 @@
 
 ## A Comparative Study of Ensemble Decoding Methods for Short Length LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.23980v1
 - **Type**: preprint
 - **Published**: 2024-10-31
@@ -12,6 +14,8 @@
 
 ## KALAM: toolKit for Automating high-Level synthesis of Analog computing systeMs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.22946v1
 - **Type**: preprint
 - **Published**: 2024-10-30
@@ -21,6 +25,8 @@
 
 ## Testing Tensor Products of Algebraic Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.22606v2
 - **Type**: preprint
 - **Published**: 2024-10-30
@@ -30,6 +36,8 @@
 
 ## Quantum LDPC Codes with Transversal Non-Clifford Gates via Products of Algebraic Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.14662v1
 - **Type**: preprint
 - **Published**: 2024-10-18
@@ -39,6 +47,8 @@
 
 ## Transversal non-Clifford gates for quantum LDPC codes on sheaves
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.14631v1
 - **Type**: preprint
 - **Published**: 2024-10-18
@@ -48,6 +58,8 @@
 
 ## Study of Weighted Residual Layered Belief Propagation for Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.13131v1
 - **Type**: preprint
 - **Published**: 2024-10-17
@@ -57,6 +69,8 @@
 
 ## Operator algebra and algorithmic construction of boundaries and defects in (2+1)D topological Pauli stabilizer codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.11942v5
 - **Type**: preprint
 - **Published**: 2024-10-15
@@ -66,6 +80,8 @@
 
 ## A Combinatorial Approach to Avoiding Weak Keys in the BIKE Cryptosystem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.11111v2
 - **Type**: preprint
 - **Published**: 2024-10-14
@@ -75,6 +91,8 @@
 
 ## A Graphical Correlation-Based Method for Counting the Number of Global 8-Cycles on the SCRAM Three-Layer Tanner Graph
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.07998v1
 - **Type**: preprint
 - **Published**: 2024-10-10
@@ -84,6 +102,8 @@
 
 ## Collision Diversity SCRAM: Beyond the Sphere-Packing Bound
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.07887v1
 - **Type**: preprint
 - **Published**: 2024-10-10
@@ -93,6 +113,8 @@
 
 ## Spectrally Efficient LDPC Codes For IRIG-106 Waveforms via Random Puncturing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.05844v1
 - **Type**: preprint
 - **Published**: 2024-10-08
@@ -102,6 +124,8 @@
 
 ## Single-shot preparation of hypergraph product codes via dimension jump
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.05171v2
 - **Type**: preprint
 - **Published**: 2024-10-07
@@ -111,6 +135,8 @@
 
 ## Universal adapters between quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2410.03628v4
 - **Type**: preprint
 - **Published**: 2024-10-04

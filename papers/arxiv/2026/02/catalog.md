@@ -3,6 +3,8 @@
 
 ## The Distance Spectrum of IEEE 802.11 Binary Convolutional Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.23651v1
 - **Type**: preprint
 - **Published**: 2026-02-27
@@ -12,6 +14,8 @@
 
 ## Quantum Approximate Optimization for Decoding of Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.21124v1
 - **Type**: preprint
 - **Published**: 2026-02-24
@@ -21,6 +25,8 @@
 
 ## Generalized $\mathbb{Z}_p$ toric codes as qudit low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.20158v1
 - **Type**: preprint
 - **Published**: 2026-02-23
@@ -30,6 +36,8 @@
 
 ## Fault-tolerant interfaces for quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.16948v1
 - **Type**: preprint
 - **Published**: 2026-02-18
@@ -39,6 +47,8 @@
 
 ## Self-dual Stacked Quantum Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.15372v1
 - **Type**: preprint
 - **Published**: 2026-02-17
@@ -48,6 +58,8 @@
 
 ## Non-Abelian Quantum Low-Density Parity Check Codes and Non-Clifford Operations from Gauging Logical Gates via Measurements
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.12228v1
 - **Type**: preprint
 - **Published**: 2026-02-12
@@ -57,6 +69,8 @@
 
 ## Robust Composite DNA Storage under Sampling Randomness, Substitution, and Insertion-Deletion Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.11951v1
 - **Type**: preprint
 - **Published**: 2026-02-12
@@ -66,6 +80,8 @@
 
 ## The Pinnacle Architecture: Reducing the cost of breaking RSA-2048 to 100 000 physical qubits using quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.11457v2
 - **Type**: preprint
 - **Published**: 2026-02-12
@@ -75,6 +91,8 @@
 
 ## Six Times to Spare: Characterizing GPU-Accelerated 5G LDPC Decoding for Edge-RSU Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.04652v2
 - **Type**: preprint
 - **Published**: 2026-02-04
@@ -84,6 +102,8 @@
 
 ## Qudit Twisted-Torus Codes in the Bivariate Bicycle Framework
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.04443v1
 - **Type**: preprint
 - **Published**: 2026-02-04
@@ -93,6 +113,8 @@
 
 ## Design of Root Protograph LDPC Codes Simultaneously Achieving Full Diversity and High Coding Gain
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2602.01555v1
 - **Type**: preprint
 - **Published**: 2026-02-02

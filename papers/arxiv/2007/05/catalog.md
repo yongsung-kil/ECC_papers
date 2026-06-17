@@ -3,6 +3,8 @@
 
 ## Interior Point Decoding for Linear Vector Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0705.3990v2
 - **Type**: preprint
 - **Published**: 2007-05-28
@@ -12,6 +14,8 @@
 
 ## Statistical Mechanics Analysis of LDPC Coding in MIMO Gaussian Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0705.1644v1
 - **Type**: preprint
 - **Published**: 2007-05-11
@@ -21,6 +25,8 @@
 
 ## Degree Optimization and Stability Condition for the Min-Sum Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0705.1345v1
 - **Type**: preprint
 - **Published**: 2007-05-09
@@ -30,6 +36,8 @@
 
 ## The Design of Efficiently-Encodable Rate-Compatible LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0705.0543v1
 - **Type**: preprint
 - **Published**: 2007-05-03
@@ -39,6 +47,8 @@
 
 ## Reliable Memories Built from Unreliable Components Based on Expander Graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0705.0044v1
 - **Type**: preprint
 - **Published**: 2007-05-01

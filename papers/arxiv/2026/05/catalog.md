@@ -3,6 +3,8 @@
 
 ## SAT, MaxSAT, and SMT for QLDPC Distance Computation: A Large-Scale Empirical Study
 
+- **Status**: out(제외)
+- **Reason**: QLDPC distance 계산(SAT/MaxSAT); 양자 코드 검증 도구라 제외
 - **ID**: arxiv:2606.12445v1
 - **Type**: preprint
 - **Published**: 2026-05-29
@@ -12,6 +14,8 @@
 
 ## OTA Characterization of Dual-User IEEE 802.11be EHT-MU Under Transmit-Chain Imbalance
 
+- **Status**: out(제외)
+- **Reason**: IEEE 802.11be 무선 OTA 측정; LDPC vs BCC 부수 언급, 떼어낼 기법 없음
 - **ID**: arxiv:2605.26995v1
 - **Type**: preprint
 - **Published**: 2026-05-26
@@ -21,6 +25,8 @@
 
 ## Best-First Ordered Statistics Decoding of Quantum LDPC Codes
 
+- **Status**: in(포함)
+- **Reason**: Best-First OSD 디코더 알고리즘 개선(가능도순 탐색으로 query 1/100); OSD 변형은 NAND LDPC에 이식 가능(C)
 - **ID**: arxiv:2605.25777v1
 - **Type**: preprint
 - **Published**: 2026-05-25
@@ -30,6 +36,8 @@
 
 ## Quantum non-demolition measurements as a practical primitive for fault-tolerant computation against biased noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.24262v1
 - **Type**: preprint
 - **Published**: 2026-05-22
@@ -39,6 +47,8 @@
 
 ## A Two-Branch Finite-Field Construction for Regular CSS LDPC Bases
 
+- **Status**: in(포함)
+- **Reason**: 유한체 QC형 base 구성+girth≥8/4-cycle 제거+cyclic lift+log-domain BP; 코드설계(E)·디코더(C) 이식 가능
 - **ID**: arxiv:2605.23894v1
 - **Type**: preprint
 - **Published**: 2026-05-22
@@ -48,6 +58,8 @@
 
 ## Concatenating Algebraic Codes over High-Rate Quantum LDPC Codes
 
+- **Status**: out(제외)
+- **Reason**: 양자 EC 부호 연접·qudit 리스트 디코딩 — NAND로 이식할 고전 디코더/HW 없음
 - **ID**: arxiv:2605.21898v1
 - **Type**: preprint
 - **Published**: 2026-05-21
@@ -57,6 +69,8 @@
 
 ## Forced Gap Post-Selection for Quantum LDPC Codes and their Operations
 
+- **Status**: out(제외)
+- **Reason**: 양자 LDPC 후처리 post-selection 전략 — 양자 EC 전용, 이식 기법 없음
 - **ID**: arxiv:2605.20346v1
 - **Type**: preprint
 - **Published**: 2026-05-19
@@ -66,6 +80,8 @@
 
 ## Perception-Aware Video Semantic Communication
 
+- **Status**: out(제외)
+- **Reason**: 비디오 시맨틱 통신(소스코딩/코덱), LDPC는 베이스라인 언급뿐
 - **ID**: arxiv:2605.19397v1
 - **Type**: preprint
 - **Published**: 2026-05-19
@@ -75,6 +91,8 @@
 
 ## Translation-invariant quantum low-density parity-check codes from compactified fracton models
 
+- **Status**: out(제외)
+- **Reason**: fracton 기반 병진불변 양자 LDPC 순수 이론 — 채널 ECC 아님
 - **ID**: arxiv:2605.19298v1
 - **Type**: preprint
 - **Published**: 2026-05-19
@@ -84,6 +102,8 @@
 
 ## Existence and Counting Bounds for High-Memory Spatially-Coupled Codes via the Combinatorial Nullstellensatz
 
+- **Status**: in(포함)
+- **Reason**: 고전 SC-LDPC 단주기·girth 제거 설계공간 특성화 (E) — 비록 nonconstructive bound
 - **ID**: arxiv:2605.18323v1
 - **Type**: preprint
 - **Published**: 2026-05-18
@@ -93,6 +113,8 @@
 
 ## Maximum Likelihood Decoding of Quantum Error Correction Codes
 
+- **Status**: out(제외)
+- **Reason**: 양자 EC 최대우도복호 리뷰 — 양자 신드롬 디코딩 전용
 - **ID**: arxiv:2605.17230v1
 - **Type**: preprint
 - **Published**: 2026-05-17
@@ -102,6 +124,8 @@
 
 ## Clifford-deformed zero-rate LDPC codes with 50% biased noise thresholds
 
+- **Status**: out(제외)
+- **Reason**: Clifford-deformed 양자 LDPC 바이어스 노이즈 임계값 — 양자 EC
 - **ID**: arxiv:2605.15348v1
 - **Type**: preprint
 - **Published**: 2026-05-14
@@ -111,6 +135,8 @@
 
 ## Univariate Bicycle Quantum LDPC Codes: Explicit Logical Structure and Distance Bounds
 
+- **Status**: out(제외)
+- **Reason**: Univariate Bicycle 양자 LDPC 부호 구성·거리 한계 — 양자 EC
 - **ID**: arxiv:2605.14173v1
 - **Type**: preprint
 - **Published**: 2026-05-13
@@ -120,6 +146,8 @@
 
 ## Multiple-Bases Belief Propagation List Decoding for Quantum LDPC Codes
 
+- **Status**: in(포함)
+- **Reason**: MBBP 리스트 BP 디코더(사이클프리 서브트리 다양성)는 고전 LDPC로 이식 가능 (C)
 - **ID**: arxiv:2605.14170v1
 - **Type**: preprint
 - **Published**: 2026-05-13
@@ -129,6 +157,8 @@
 
 ## A Deep Learning-based Receiver for Asynchronous Grant-Free Random Access in Control-to-Control Networks
 
+- **Status**: out(제외)
+- **Reason**: 무선 그랜트프리 랜덤액세스 DL 수신기, LDPC는 부수적·이식 기법 없음
 - **ID**: arxiv:2605.12180v1
 - **Type**: preprint
 - **Published**: 2026-05-12
@@ -138,6 +168,8 @@
 
 ## Scalable Mamba-Based Message-Passing Neural Decoder for Error-Correcting Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.10681v1
 - **Type**: preprint
 - **Published**: 2026-05-11
@@ -147,6 +179,8 @@
 
 ## Syndrome Adaptive Gain Control for Min-Sum Decoding of Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.10433v1
 - **Type**: preprint
 - **Published**: 2026-05-11
@@ -156,6 +190,8 @@
 
 ## A Global Coding Scheme for OFDM over Finite Fields
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.09865v1
 - **Type**: preprint
 - **Published**: 2026-05-11
@@ -165,6 +201,8 @@
 
 ## On Codes with Support-Constrained Parity Checks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.08644v1
 - **Type**: preprint
 - **Published**: 2026-05-09
@@ -174,6 +212,8 @@
 
 ## Non-binary LDPC codes for Data Storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.08500v2
 - **Type**: preprint
 - **Published**: 2026-05-08
@@ -183,6 +223,8 @@
 
 ## RFNoC-Based FPGA Offloading for Fully Programmable PHY Acceleration
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.07704v1
 - **Type**: preprint
 - **Published**: 2026-05-08
@@ -192,6 +234,8 @@
 
 ## Affine Subcode Ensemble Decoding for Degeneracy-Aware Quantum Error Correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.06547v2
 - **Type**: preprint
 - **Published**: 2026-05-07
@@ -201,6 +245,8 @@
 
 ## Design and Analysis of Quantum Dual-Containing CSS LDPC Codes based on Quasi-Dyadic Matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.03631v2
 - **Type**: preprint
 - **Published**: 2026-05-05
@@ -210,6 +256,8 @@
 
 ## Combinatorial Analysis of Dyadic and Quasi-Dyadic Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.01942v1
 - **Type**: preprint
 - **Published**: 2026-05-03
@@ -219,6 +267,8 @@
 
 ## Improved Rate-versus-Distance Upper Bounds for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.01213v1
 - **Type**: preprint
 - **Published**: 2026-05-02
@@ -228,6 +278,8 @@
 
 ## A Scalable FPGA Architecture for Real-Time Decoding of Quantum LDPC Codes Using GARI
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2605.01035v1
 - **Type**: preprint
 - **Published**: 2026-05-01

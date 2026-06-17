@@ -3,6 +3,8 @@
 
 ## Fast magic state preparation by gauging higher-form transversal gates in parallel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.22939v1
 - **Type**: preprint
 - **Published**: 2026-01-30
@@ -12,6 +14,8 @@
 
 ## Structural Conditions for Native CCZ Magic-State Fountains in qLDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.22489v1
 - **Type**: preprint
 - **Published**: 2026-01-30
@@ -21,6 +25,8 @@
 
 ## 5G LDPC Codes as Root LDPC Codes via Diversity Alignment
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.22470v1
 - **Type**: preprint
 - **Published**: 2026-01-30
@@ -30,6 +36,8 @@
 
 ## Quantum bootstrap product codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.22363v1
 - **Type**: preprint
 - **Published**: 2026-01-29
@@ -39,6 +47,8 @@
 
 ## Belief Propagation with Quantum Messages for Symmetric Q-ary Pure-State Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.21330v1
 - **Type**: preprint
 - **Published**: 2026-01-29
@@ -48,6 +58,8 @@
 
 ## Bayesian Optimization for Quantum Error-Correcting Code Discovery
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.18562v1
 - **Type**: preprint
 - **Published**: 2026-01-26
@@ -57,6 +69,8 @@
 
 ## Analog-to-Stochastic Converter Using Magnetic Tunnel Junction Devices for Vision Chips
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.14640v1
 - **Type**: preprint
 - **Published**: 2026-01-21
@@ -66,6 +80,8 @@
 
 ## On Existence of Girth-8 QC-LDPC Code with Large Column Weight: Combining Mirror-sequence with Classification Modulo Ten
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.10170v1
 - **Type**: preprint
 - **Published**: 2026-01-15
@@ -75,6 +91,8 @@
 
 ## Time-Dynamic Circuits for Fault-Tolerant Shift Automorphisms in Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.09911v1
 - **Type**: preprint
 - **Published**: 2026-01-14
@@ -84,6 +102,8 @@
 
 ## Counting and Entropy Bounds for Structure-Avoiding Spatially-Coupled LDPC Constructions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.09674v2
 - **Type**: preprint
 - **Published**: 2026-01-14
@@ -93,6 +113,8 @@
 
 ## Two-dimensional Entanglement-assisted Quantum Quasi-cyclic Low-density Parity-check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.08927v2
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -102,6 +124,8 @@
 
 ## Breaking the Orthogonality Barrier in Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.08824v3
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -111,6 +135,8 @@
 
 ## Quantum CSS LDPC Codes based on Dyadic Matrices for Belief Propagation-based Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.08636v1
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -120,6 +146,8 @@
 
 ## An Efficient Algorithm to Sample Quantum Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.08387v2
 - **Type**: preprint
 - **Published**: 2026-01-13
@@ -129,6 +157,8 @@
 
 ## Land-then-transport: A Flow Matching-Based Generative Decoder for Wireless Image Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.07512v1
 - **Type**: preprint
 - **Published**: 2026-01-12
@@ -138,6 +168,8 @@
 
 ## Study of Adaptive Reliability-Driven Conditional Innovation Decoding for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.06732v1
 - **Type**: preprint
 - **Published**: 2026-01-11
@@ -147,6 +179,8 @@
 
 ## Coset Shaping: Constructions and Bounds
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.05652v3
 - **Type**: preprint
 - **Published**: 2026-01-09
@@ -156,6 +190,8 @@
 
 ## The Number of Cycles of Bi-regular Tanner Graphs in Terms of the Eigenvalues of the Adjacency Matrix
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.05340v1
 - **Type**: preprint
 - **Published**: 2026-01-08
@@ -165,6 +201,8 @@
 
 ## Achievable Rate and Coding Principle for MIMO Multicarrier Systems With Cross-Domain MAMP Receiver Over Doubly Selective Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.04433v1
 - **Type**: preprint
 - **Published**: 2026-01-07
@@ -174,6 +212,8 @@
 
 ## Single-Shot and Few-Shot Decoding via Stabilizer Redundancy in Bivariate Bicycle Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.01137v1
 - **Type**: preprint
 - **Published**: 2026-01-03
@@ -183,6 +223,8 @@
 
 ## Reinforcement-Learned Unequal Error Protection for Quantized Semantic Embeddings
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2601.00186v1
 - **Type**: preprint
 - **Published**: 2026-01-01

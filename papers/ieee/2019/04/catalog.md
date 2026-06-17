@@ -3,6 +3,8 @@
 
 ## Design of Irregular SC-LDPC Codes With Non-Uniform Degree Distributions by Linear Programming
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8590739
 - **Type**: journal
 - **Published**: April 2019
@@ -12,6 +14,8 @@
 
 ## Layered LDPC Decoders With Efficient Memory Access Scheduling and Mapping and Built-In Support for Pipeline Hazards Mitigation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8579225
 - **Type**: journal
 - **Published**: April 2019
@@ -21,6 +25,8 @@
 
 ## From Cages to Trapping Sets and Codewords: A Technique to Derive Tight Upper Bounds on the Minimum Size of Trapping Sets and Minimum Distance of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8525278
 - **Type**: journal
 - **Published**: April 2019
@@ -30,6 +36,8 @@
 
 ## Resource Allocation for LDPC-Coded OFDM Downlink Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8587191
 - **Type**: journal
 - **Published**: April 2019
@@ -39,6 +47,8 @@
 
 ## Protograph-Based Folded Spatially Coupled LDPC Codes for Burst Erasure Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8515101
 - **Type**: journal
 - **Published**: April 2019
@@ -48,6 +58,8 @@
 
 ## Additive, Structural, and Multiplicative Transformations for the Construction of Quasi-Cyclic LDPC Matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8594652
 - **Type**: journal
 - **Published**: April 2019
@@ -57,6 +69,8 @@
 
 ## A Combinatorial Methodology for Optimizing Non-Binary Graph-Based Codes: Theoretical Analysis and Applications in Data Storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8466851
 - **Type**: journal
 - **Published**: April 2019
@@ -66,6 +80,8 @@
 
 ## Unequal Error Protection SCMA Codebooks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8637721
 - **Type**: journal
 - **Published**: April 2019
@@ -75,6 +91,8 @@
 
 ## Energy-Adaptive Error Correcting for Dynamic and Heterogeneous Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8665995
 - **Type**: journal
 - **Published**: April 2019
@@ -84,6 +102,8 @@
 
 ## Error Performance Prediction of Randomly Shortened and Punctured LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8649667
 - **Type**: journal
 - **Published**: April 2019
@@ -93,6 +113,8 @@
 
 ## Repeat-Accumulate Signal Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8584892
 - **Type**: journal
 - **Published**: April 2019
@@ -102,6 +124,8 @@
 
 ## LDPC-Coded Generalized Frequency Division Multiplexing for Intensity-Modulated Direct-Detection Optical Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8657778
 - **Type**: journal
 - **Published**: April 2019
@@ -111,6 +135,8 @@
 
 ## Divergence-Optimal Fixed-to-Fixed Length Distribution Matching With Shell Mapping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8599055
 - **Type**: journal
 - **Published**: April 2019
@@ -120,6 +146,8 @@
 
 ## A Low Complexity Signal Detection Scheme Based on Improved Newton Iteration for Massive MIMO Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8638827
 - **Type**: journal
 - **Published**: April 2019
@@ -129,6 +157,8 @@
 
 ## Interleave-Division Multiple Access in High Rate Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8494711
 - **Type**: journal
 - **Published**: April 2019
@@ -138,6 +168,8 @@
 
 ## Outage Analysis and Finite SNR Diversity-Multiplexing Tradeoff of Hybrid-Duplex Systems for Aeronautical Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8663632
 - **Type**: journal
 - **Published**: April 2019
@@ -147,6 +179,8 @@
 
 ## Circular-Shift Linear Network Codes With Arbitrary Odd Block Lengths
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8594637
 - **Type**: journal
 - **Published**: April 2019
@@ -156,6 +190,8 @@
 
 ## A Systematic Approach to Incremental Redundancy With Application to Erasure Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8586906
 - **Type**: journal
 - **Published**: April 2019
@@ -165,6 +201,8 @@
 
 ## Coupling Information Transmission With Window Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8525313
 - **Type**: journal
 - **Published**: April 2019
@@ -174,6 +212,8 @@
 
 ## MRB Decoding of LT Codes Over AWGN Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8520872
 - **Type**: journal
 - **Published**: April 2019
@@ -183,6 +223,8 @@
 
 ## Optimization of Non Binary Parity Check Coefficients
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8536465
 - **Type**: journal
 - **Published**: April 2019
@@ -192,6 +234,8 @@
 
 ## Read Voltage Optimization in MLC NAND Flash Memory via the Density Evolution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8798808
 - **Type**: conference
 - **Published**: 8-10 April
@@ -201,6 +245,8 @@
 
 ## Sliding-Window Processing of Turbo Equalization for Partial Response Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8798835
 - **Type**: conference
 - **Published**: 8-10 April
@@ -210,6 +256,8 @@
 
 ## High Throughput and Low Complexity Implementation for Uplink Scheme of 5G Technology
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8798862
 - **Type**: conference
 - **Published**: 8-10 April
@@ -219,6 +267,8 @@
 
 ## Fast DSP Implementation of a Low Complexity LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8723838
 - **Type**: conference
 - **Published**: 3-4 April 
@@ -228,6 +278,8 @@
 
 ## New Memory Load Optimization Approach for Software Implementation of Irregular LDPC Encoder/Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8723841
 - **Type**: conference
 - **Published**: 3-4 April 
@@ -237,6 +289,8 @@
 
 ## Performance Analysis of Layered Normalized Min-Sum for LDPC Codes over Weibull Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8723865
 - **Type**: conference
 - **Published**: 3-4 April 
@@ -246,6 +300,8 @@
 
 ## Comparison between Different Decoding Algorithms For Low Density Parity Check
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9019379
 - **Type**: conference
 - **Published**: 29-30 Apri
@@ -255,6 +311,8 @@
 
 ## Performance Analysis of Elastic MIMO-RF/FSO Communication Over Lutz Model with LDPC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8770187
 - **Type**: conference
 - **Published**: 27-28 Apri
@@ -264,6 +322,8 @@
 
 ## Modeling and Design of a DVB-S2X system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8727700
 - **Type**: conference
 - **Published**: 25-26 Apri
@@ -273,6 +333,8 @@
 
 ## A Survey on Cognitive Radio Networks for Detecting Unwanted Access of Malicious Nodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8741455
 - **Type**: conference
 - **Published**: 25-26 Apri
@@ -282,6 +344,8 @@
 
 ## Channel Coding and Low Latency HARQ for Industrial Wireless Sensor Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8734232
 - **Type**: conference
 - **Published**: 24-26 Apri
@@ -291,6 +355,8 @@
 
 ## Improved MS LDPC Decoder Based on Jacobian Logarithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8834961
 - **Type**: conference
 - **Published**: 24-26 Apri
@@ -300,6 +366,8 @@
 
 ## Binary Multilevel Coding over Eisenstein Integers for MIMO Broadcast Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8727219
 - **Type**: conference
 - **Published**: 24-26 Apri
@@ -309,6 +377,8 @@
 
 ## Approximate Message Passing for Joint Activity Detection and Decoding in Non-orthogonal CDMA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8727194
 - **Type**: conference
 - **Published**: 24-26 Apri
@@ -318,6 +388,8 @@
 
 ## Design and Implementation of Parallel Branches for Concatenated BCH and LDPC Coding on FPGA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8734628
 - **Type**: conference
 - **Published**: 16-18 Apri
@@ -327,6 +399,8 @@
 
 ## Inspection of Error Performance and Interference Avoidance Technique for Cooperative Relay in Underlay D2D Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8734671
 - **Type**: conference
 - **Published**: 16-18 Apri
@@ -336,6 +410,8 @@
 
 ## Robust and Simple Log-Likelihood Approximation for Receiver Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8886114
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -345,6 +421,8 @@
 
 ## Achievability Bounds for T-Fold Irregular Repetition Slotted ALOHA Scheme in the Gaussian MAC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8885472
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -354,6 +432,8 @@
 
 ## Construction and Decoding of Product Codes with Non-Systematic Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8886100
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -363,6 +443,8 @@
 
 ## Implementation of Network Coding with Recoding for Unequal-sized and Header Compressed Traffic
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8885446
 - **Type**: conference
 - **Published**: 15-18 Apri

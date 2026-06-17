@@ -3,6 +3,8 @@
 
 ## A Phenomenological Study on Threshold Improvement via Spatial Coupling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1102.3056v2
 - **Type**: preprint
 - **Published**: 2011-02-15
@@ -12,6 +14,8 @@
 
 ## Spatially Coupled Codes over the Multiple Access Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1102.2856v1
 - **Type**: preprint
 - **Published**: 2011-02-14

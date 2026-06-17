@@ -3,6 +3,8 @@
 
 ## Applications of correlation inequalities to low density graphical codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0509098v1
 - **Type**: preprint
 - **Published**: 2005-09-30
@@ -12,6 +14,8 @@
 
 ## Capacity-Achieving Codes with Bounded Graphical Complexity on Noisy Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0509062v3
 - **Type**: preprint
 - **Published**: 2005-09-19
@@ -21,6 +25,8 @@
 
 ## Accumulate-Repeat-Accumulate Codes: Systematic Codes Achieving the Binary Erasure Channel Capacity with Bounded Complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0509044v1
 - **Type**: preprint
 - **Published**: 2005-09-15
@@ -30,6 +36,8 @@
 
 ## Efficient Reconciliation of Correlated Continuous Random Variables using LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0509041v1
 - **Type**: preprint
 - **Published**: 2005-09-14
@@ -39,6 +47,8 @@
 
 ## Minimum Mean-Square-Error Equalization using Priors for Two-Dimensional Intersymbol Interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0509010v1
 - **Type**: preprint
 - **Published**: 2005-09-05

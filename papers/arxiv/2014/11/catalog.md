@@ -3,6 +3,8 @@
 
 ## Impact of redundant checks on the LP decoding thresholds of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1411.7554v3
 - **Type**: preprint
 - **Published**: 2014-11-27
@@ -12,6 +14,8 @@
 
 ## Optical Time-Frequency Packing: Principles, Design, Implementation, and Experimental Demonstration
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1411.6892v2
 - **Type**: preprint
 - **Published**: 2014-11-25
@@ -21,6 +25,8 @@
 
 ## Design of Spatially Coupled LDPC Codes over GF(q) for Windowed Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1411.4373v1
 - **Type**: preprint
 - **Published**: 2014-11-17
@@ -30,6 +36,8 @@
 
 ## Novel LDPC Decoder via MLP Neural Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1411.3425v1
 - **Type**: preprint
 - **Published**: 2014-11-13
@@ -39,6 +47,8 @@
 
 ## Four-Dimensional Coded Modulation with Bit-wise Decoders for Future Optical Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1411.0401v2
 - **Type**: preprint
 - **Published**: 2014-11-03

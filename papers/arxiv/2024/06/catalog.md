@@ -3,6 +3,8 @@
 
 ## Recent Advances in Deep Learning for Channel Coding: A Survey
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.19664v1
 - **Type**: preprint
 - **Published**: 2024-06-28
@@ -12,6 +14,8 @@
 
 ## Localized statistics decoding for quantum low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.18655v2
 - **Type**: preprint
 - **Published**: 2024-06-26
@@ -21,6 +25,8 @@
 
 ## Decentralized and Centralized IDD Schemes for Cell-Free Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.16675v1
 - **Type**: preprint
 - **Published**: 2024-06-24
@@ -30,6 +36,8 @@
 
 ## Perturbative stability and error correction thresholds of quantum codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.15757v3
 - **Type**: preprint
 - **Published**: 2024-06-22
@@ -39,6 +47,8 @@
 
 ## High-threshold, low-overhead and single-shot decodable fault-tolerant quantum memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.14445v2
 - **Type**: preprint
 - **Published**: 2024-06-20
@@ -48,6 +58,8 @@
 
 ## Factor Graph Optimization of Error-Correcting Codes for Belief Propagation Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.12900v2
 - **Type**: preprint
 - **Published**: 2024-06-09
@@ -57,6 +69,8 @@
 
 ## Entangling four logical qubits beyond break-even in a nonlocal code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.02666v2
 - **Type**: preprint
 - **Published**: 2024-06-04
@@ -66,6 +80,8 @@
 
 ## Improved Generalized Automorphism Belief Propagation Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.02012v2
 - **Type**: preprint
 - **Published**: 2024-06-04
@@ -75,6 +91,8 @@
 
 ## High Throughput Polar Code Decoders with Information Bottleneck Quantization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2406.01426v1
 - **Type**: preprint
 - **Published**: 2024-06-03

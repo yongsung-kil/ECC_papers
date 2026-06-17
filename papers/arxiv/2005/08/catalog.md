@@ -3,6 +3,8 @@
 
 ## Survey propagation at finite temperature: application to a Sourlas code as a toy model
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cond-mat/0508586v1
 - **Type**: preprint
 - **Published**: 2005-08-24
@@ -12,6 +14,8 @@
 
 ## On Achievable Rates and Complexity of LDPC Codes for Parallel Channels with Application to Puncturing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0508072v1
 - **Type**: preprint
 - **Published**: 2005-08-16
@@ -21,6 +25,8 @@
 
 ## Characterizations of Pseudo-Codewords of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0508049v3
 - **Type**: preprint
 - **Published**: 2005-08-09

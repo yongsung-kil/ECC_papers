@@ -3,6 +3,8 @@
 
 ## Constructing an LDPC Code Containing a Given Vector
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1703.07973v2
 - **Type**: preprint
 - **Published**: 2017-03-23
@@ -12,6 +14,8 @@
 
 ## Efficient rate-adaptive reconciliation for continuous-variable quantum key distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1703.04916v2
 - **Type**: preprint
 - **Published**: 2017-03-15

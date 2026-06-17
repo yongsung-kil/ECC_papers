@@ -3,6 +3,8 @@
 
 ## Simple Constructions of Unique Neighbor Expanders from Error-correcting Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.19149v2
 - **Type**: preprint
 - **Published**: 2023-10-29
@@ -12,6 +14,8 @@
 
 ## Low-Complexity and Information-Theoretic Optimal Memory AMP for Coded Generalized MIMO
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.17943v1
 - **Type**: preprint
 - **Published**: 2023-10-27
@@ -21,6 +25,8 @@
 
 ## Non-Clifford and parallelizable fault-tolerant logical gates on constant and almost-constant rate homological quantum LDPC codes via higher symmetries
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.16982v3
 - **Type**: preprint
 - **Published**: 2023-10-25
@@ -30,6 +36,8 @@
 
 ## The Physics of (good) LDPC Codes I. Gauging and dualities
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.16032v1
 - **Type**: preprint
 - **Published**: 2023-10-24
@@ -39,6 +47,8 @@
 
 ## Check-Agnosia based Post-Processor for Message-Passing Decoding of Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.15000v3
 - **Type**: preprint
 - **Published**: 2023-10-23
@@ -48,6 +58,8 @@
 
 ## 4-Cycle Free Spatially Coupled LDPC Codes with an Explicit Construction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.12657v1
 - **Type**: preprint
 - **Published**: 2023-10-19
@@ -57,6 +69,8 @@
 
 ## An Efficient Algorithm for Counting Cycles in QC and APM LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.12556v1
 - **Type**: preprint
 - **Published**: 2023-10-19
@@ -66,6 +80,8 @@
 
 ## Viderman's algorithm for quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.07868v1
 - **Type**: preprint
 - **Published**: 2023-10-11
@@ -75,6 +91,8 @@
 
 ## Symmetry-enforced many-body separability transitions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.07286v2
 - **Type**: preprint
 - **Published**: 2023-10-11
@@ -84,6 +102,8 @@
 
 ## Boosting Learning for LDPC Codes to Improve the Error-Floor Performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.07194v2
 - **Type**: preprint
 - **Published**: 2023-10-11
@@ -93,6 +113,8 @@
 
 ## The impact when neural min-sum variant meets ordered statistics decoding of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.07129v2
 - **Type**: preprint
 - **Published**: 2023-10-11
@@ -102,6 +124,8 @@
 
 ## An Optimal Unequal Error Protection LDPC Coded Recording System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2310.04923v2
 - **Type**: preprint
 - **Published**: 2023-10-07

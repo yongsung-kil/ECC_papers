@@ -3,6 +3,8 @@
 
 ## A Proposed Quantum Low Density Parity Check Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:quant-ph/0108131v1
 - **Type**: preprint
 - **Published**: 2001-08-29

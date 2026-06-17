@@ -3,6 +3,8 @@
 
 ## Low-overhead fault-tolerant quantum computing using long-range connectivity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2110.10794v2
 - **Type**: preprint
 - **Published**: 2021-10-20
@@ -12,6 +14,8 @@
 
 ## Scheduling Improves the Performance of Belief Propagation for Noisy Group Testing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2110.10110v1
 - **Type**: preprint
 - **Published**: 2021-10-19
@@ -21,6 +25,8 @@
 
 ## Deployment of Polar Codes for Mission-Critical Machine-Type Communication Over Wireless Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2110.02938v1
 - **Type**: preprint
 - **Published**: 2021-10-06

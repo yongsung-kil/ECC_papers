@@ -3,6 +3,8 @@
 
 ## On the Minimum Distance of Array-Based Spatially-Coupled Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1504.06416v1
 - **Type**: preprint
 - **Published**: 2015-04-24
@@ -12,6 +14,8 @@
 
 ## On the Girth of (3,L) Quasi-Cyclic LDPC Codes based on Complete Protographs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1504.04975v2
 - **Type**: preprint
 - **Published**: 2015-04-20
@@ -21,6 +25,8 @@
 
 ## Quantum Expander Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1504.00822v1
 - **Type**: preprint
 - **Published**: 2015-04-03

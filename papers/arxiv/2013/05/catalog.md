@@ -3,6 +3,8 @@
 
 ## Easily Implemented Rate Compatible Reconciliation Protocol for Quantum Key Distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1305.6244v1
 - **Type**: preprint
 - **Published**: 2013-05-27
@@ -12,6 +14,8 @@
 
 ## Resource Efficient LDPC Decoders for Multimedia Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1305.6216v2
 - **Type**: preprint
 - **Published**: 2013-05-27
@@ -21,6 +25,8 @@
 
 ## Memory Efficient Decoders using Spatially Coupled Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1305.5625v2
 - **Type**: preprint
 - **Published**: 2013-05-24

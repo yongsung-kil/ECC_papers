@@ -3,6 +3,8 @@
 
 ## Reconstruction-Computation-Quantization (RCQ): A Paradigm for Low Bit Width LDPC Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9706474
 - **Type**: journal
 - **Published**: April 2022
@@ -12,6 +14,8 @@
 
 ## Memory Efficient Mutual Information-Maximizing Quantized Min-Sum Decoding for Rate-Compatible LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9684364
 - **Type**: journal
 - **Published**: April 2022
@@ -21,6 +25,8 @@
 
 ## Node-Wise Scheduling Algorithm of ADMM Decoding Based on Line Segment Projection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9681710
 - **Type**: journal
 - **Published**: April 2022
@@ -30,6 +36,8 @@
 
 ## Construction D’ Lattices for Power-Constrained Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9695410
 - **Type**: journal
 - **Published**: April 2022
@@ -39,6 +47,8 @@
 
 ## Unsourced Random Access With Coded Compressed Sensing: Integrating AMP and Belief Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9654225
 - **Type**: journal
 - **Published**: April 2022
@@ -48,6 +58,8 @@
 
 ## Nonbinary I-Polar Coded Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9673781
 - **Type**: journal
 - **Published**: April 2022
@@ -57,6 +69,8 @@
 
 ## Turbo-Detection for Multilayer Magnetic Recording Using Deep Neural Network-Based Equalizer and Media Noise Predictor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9584891
 - **Type**: journal
 - **Published**: April 2022
@@ -66,6 +80,8 @@
 
 ## Analysis and Design of QC-LDPC Coded BICM Ensembles Based on RCA Density Evolution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9691350
 - **Type**: journal
 - **Published**: April 2022
@@ -75,6 +91,8 @@
 
 ## Enhanced Irregular Repetition Slotted ALOHA Under SIC Limitation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9696350
 - **Type**: journal
 - **Published**: April 2022
@@ -84,6 +102,8 @@
 
 ## Rate-Compatible Punctured Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9686685
 - **Type**: journal
 - **Published**: April 2022
@@ -93,6 +113,8 @@
 
 ## Belief Propagation Based Joint Detection and Decoding for Resistive Random Access Memories
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9726199
 - **Type**: journal
 - **Published**: April 2022
@@ -102,6 +124,8 @@
 
 ## ALOHA Receivers: A Network Calculus Approach for Analyzing Coded Multiple Access With SIC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9604910
 - **Type**: journal
 - **Published**: April 2022
@@ -111,6 +135,8 @@
 
 ## Improved Bounds for Noisy Group Testing With Constant Tests per Item
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9663174
 - **Type**: journal
 - **Published**: April 2022
@@ -120,6 +146,8 @@
 
 ## Evaluation of Sputtered Tape Media With Hard Disk Drive Components
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9543681
 - **Type**: journal
 - **Published**: April 2022
@@ -129,6 +157,8 @@
 
 ## Data Guardian: A Data Protection Scheme for Industrial Monitoring Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9511196
 - **Type**: journal
 - **Published**: April 2022
@@ -138,6 +168,8 @@
 
 ## Improved Recording Performance With Writer Design and Joint Learning-Based Neural Network for Heat-Assisted Interlaced Magnetic Recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9536734
 - **Type**: journal
 - **Published**: April 2022
@@ -147,6 +179,8 @@
 
 ## Low-Complexity and Low-Latency SVC Decoding Architecture Using Modified MAP-SP Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9665250
 - **Type**: journal
 - **Published**: April 2022
@@ -156,6 +190,8 @@
 
 ## Rate Compatible Gaussian Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9691349
 - **Type**: journal
 - **Published**: April 2022
@@ -165,6 +201,8 @@
 
 ## A Study on Performance Evaluation With Neural Network Detector in SMR System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9546790
 - **Type**: journal
 - **Published**: April 2022
@@ -174,6 +212,8 @@
 
 ## High throughput FPGA implementation of Min-Sum LDPC Decoder Architecture for Wireless Communication Standards
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9790744
 - **Type**: conference
 - **Published**: 30 March-1
@@ -183,6 +223,8 @@
 
 ## An Architecture for Efficient encoding of Quasi cyclic LDPC codes and its implementation in FPGA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9787597
 - **Type**: conference
 - **Published**: 23-24 Apri
@@ -192,6 +234,8 @@
 
 ## EMS Decoding Algorithm that Introduced Shuffled Strategy and Improved Variable Node Update
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9846351
 - **Type**: conference
 - **Published**: 22-25 Apri
@@ -201,6 +245,8 @@
 
 ## Designing Multi-CRC Polar Codes with Good Low-Weight Spectra
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9849737
 - **Type**: conference
 - **Published**: 22-24 Apri
@@ -210,6 +256,8 @@
 
 ## Layered Bit-Flipping Algorithms for Decoding LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9778904
 - **Type**: conference
 - **Published**: 22-24 Apri
@@ -219,6 +267,8 @@
 
 ## Parallel LDPC Decoder Based on Low-Complexity Corrected Min Sum Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9849693
 - **Type**: conference
 - **Published**: 22-24 Apri
@@ -228,6 +278,8 @@
 
 ## FH-Sequence Change For Frequency-HOP HARQ Communication Systems Subject To Partial-Band Interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9849756
 - **Type**: conference
 - **Published**: 22-24 Apri
@@ -237,6 +289,8 @@
 
 ## Secret Key Generation Using Polar Code-Based Reconciliation Method in 5G
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10013106
 - **Type**: conference
 - **Published**: 21-22 Apri
@@ -246,6 +300,8 @@
 
 ## Joint blind frame synchronization and encoder identification of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9778836
 - **Type**: conference
 - **Published**: 15-17 Apri
@@ -255,6 +311,8 @@
 
 ## Correlation Analysis of Wind Generator Wide Band Oscillation modes and influencing factors based on FP-Growth Method
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10048287
 - **Type**: conference
 - **Published**: 15-17 Apri
@@ -264,6 +322,8 @@
 
 ## Security Transmission Design Based on Concatenated LT and LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9777547
 - **Type**: conference
 - **Published**: 14-16 Apri
@@ -273,6 +333,8 @@
 
 ## Implicit Globally-Coupled LDPC Codes Using Free-Ride Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771931
 - **Type**: conference
 - **Published**: 10-13 Apri
@@ -282,6 +344,8 @@
 
 ## Reducing Age of Extra Data by Free Riding on Coded Transmission in Multiaccess Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771945
 - **Type**: conference
 - **Published**: 10-13 Apri
@@ -291,6 +355,8 @@
 
 ## Joint estimation and decoding algorithm for LDPC code in different impulsive noise channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771567
 - **Type**: conference
 - **Published**: 10-13 Apri
@@ -300,6 +366,8 @@
 
 ## A Semi-Blind Decision Directed Iterative Channel Estimation and Decoding for LDPC Coded OFDM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771751
 - **Type**: conference
 - **Published**: 10-13 Apri
@@ -309,6 +377,8 @@
 
 ## Unsupervised Log-Likelihood Ratio Estimation for Short Packets in Impulsive Noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771897
 - **Type**: conference
 - **Published**: 10-13 Apri
@@ -318,6 +388,8 @@
 
 ## Simple Gray Coding and LLR Calculation for MDS Modulation Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771960
 - **Type**: conference
 - **Published**: 10-13 Apri
@@ -327,6 +399,8 @@
 
 ## Joint MIMO Detection and LDPC Decoding Via Enhanced Belief Propagation for 5G-NR
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9771941
 - **Type**: conference
 - **Published**: 10-13 Apri

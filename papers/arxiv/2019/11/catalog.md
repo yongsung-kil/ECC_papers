@@ -3,6 +3,8 @@
 
 ## Neural Turbo Equalization: Deep Learning for Fiber-Optic Nonlinearity Compensation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1911.10131v1
 - **Type**: preprint
 - **Published**: 2019-11-22

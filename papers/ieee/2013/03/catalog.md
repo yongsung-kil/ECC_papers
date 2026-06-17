@@ -3,6 +3,8 @@
 
 ## Check Node Reliability-Based Scheduling for BP Decoding of Non-Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6415954
 - **Type**: journal
 - **Published**: March 2013
@@ -12,6 +14,8 @@
 
 ## Two Informed Dynamic Scheduling Strategies for Iterative LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6427624
 - **Type**: journal
 - **Published**: March 2013
@@ -21,6 +25,8 @@
 
 ## Stochastic Decoding of LDPC Codes over GF(q)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6451069
 - **Type**: journal
 - **Published**: March 2013
@@ -30,6 +36,8 @@
 
 ## A Newly Designed Quarter-Rate QC-LDPC Code for the Cloud Transmission System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6459544
 - **Type**: journal
 - **Published**: March 2013
@@ -39,6 +47,8 @@
 
 ## Multi-Layer Iterative LDPC Decoding for Broadband Wireless Access Networks: A Recursive Shortening Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6416890
 - **Type**: journal
 - **Published**: March 2013
@@ -48,6 +58,8 @@
 
 ## An Efficient Multi-Standard LDPC Decoder Design Using Hardware-Friendly Shuffled Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6459554
 - **Type**: journal
 - **Published**: March 2013
@@ -57,6 +69,8 @@
 
 ## Design of Irregular Repeat-Accumulate Coded Physical-Layer Network Coding for Gaussian Two-Way Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6450163
 - **Type**: journal
 - **Published**: March 2013
@@ -66,6 +80,8 @@
 
 ## The Bethe Permanent of a Nonnegative Matrix
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6352911
 - **Type**: journal
 - **Published**: March 2013
@@ -75,6 +91,8 @@
 
 ## EXIT-Chart-Matching-Aided Near-Capacity Coded Modulation Design and a BICM-ID Design Example for Both Gaussian and Rayleigh Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6359874
 - **Type**: journal
 - **Published**: March 2013
@@ -84,6 +102,8 @@
 
 ## Approximate Bayesian Probabilistic-Data-Association-Aided Iterative Detection for MIMO Systems Using Arbitrary $M$-ary Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6353994
 - **Type**: journal
 - **Published**: March 2013
@@ -93,6 +113,8 @@
 
 ## Iterative Coding for Network Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6397614
 - **Type**: journal
 - **Published**: March 2013
@@ -102,6 +124,8 @@
 
 ## Practical Methods for Wireless Network Coding With Multiple Unicast Transmissions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6415950
 - **Type**: journal
 - **Published**: March 2013
@@ -111,6 +135,8 @@
 
 ## Algebraic Design and Implementation of Protograph Codes using Non-Commuting Permutation Matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6427619
 - **Type**: journal
 - **Published**: March 2013
@@ -120,6 +146,8 @@
 
 ## On Decoding of the (89, 45, 17) Quadratic Residue Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6403878
 - **Type**: journal
 - **Published**: March 2013
@@ -129,6 +157,8 @@
 
 ## Belief Propagation for Large-Variable-Domain Optimization on Factor Graphs: An Application to Decentralized Weather-Radar Coordination
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6301748
 - **Type**: journal
 - **Published**: March 2013
@@ -138,6 +168,8 @@
 
 ## Short LDPC codes for NB-PLC channel with a differential evolution construction method
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6525856
 - **Type**: conference
 - **Published**: 24-27 Marc
@@ -147,6 +179,8 @@
 
 ## Robust turbo decoding in impulse noise channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6525855
 - **Type**: conference
 - **Published**: 24-27 Marc
@@ -156,6 +190,8 @@
 
 ## An efficient LDPC encoder based on block-row-cycle structure for CMMB
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6747811
 - **Type**: conference
 - **Published**: 23-25 Marc
@@ -165,6 +201,8 @@
 
 ## Linear LLR approximation for LDPC decoding using a Gaussian approximation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6747759
 - **Type**: conference
 - **Published**: 23-25 Marc
@@ -174,6 +212,8 @@
 
 ## Design of improved LDPC encoder for CMMB based on SIMD architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6747774
 - **Type**: conference
 - **Published**: 23-25 Marc
@@ -183,6 +223,8 @@
 
 ## LDPC code design for OOK modulated Poisson optical channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6552291
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -192,6 +234,8 @@
 
 ## A scaling method for stochastic LDPC decoding over the binary symmetric channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6552331
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -201,6 +245,8 @@
 
 ## Cooperative communication using protograph-based low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6552308
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -210,6 +256,8 @@
 
 ## A Binning Design for Wyner-Ziv Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6543108
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -219,6 +267,8 @@
 
 ## Distributed reception with coarsely-quantized observation exchanges
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6624254
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -228,6 +278,8 @@
 
 ## A modified bethe free energy approximation for codeword quantization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6552316
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -237,6 +289,8 @@
 
 ## Genome Sequence Compression with Distributed Source Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6543135
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -246,6 +300,8 @@
 
 ## Variable Coded Modulation software simulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6497354
 - **Type**: conference
 - **Published**: 2-9 March 
@@ -255,6 +311,8 @@
 
 ## Performance of decoder-based algorithms for signal synchronization for DSSS waveforms
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6497140
 - **Type**: conference
 - **Published**: 2-9 March 
@@ -264,6 +322,8 @@
 
 ## Multi-service data dissemination for space-based augmentation systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6496948
 - **Type**: conference
 - **Published**: 2-9 March 
@@ -273,6 +333,8 @@
 
 ## Radio science measurements with suppressed carrier
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6497156
 - **Type**: conference
 - **Published**: 2-9 March 
@@ -282,6 +344,8 @@
 
 ## Space and frequency multiplexing for MM-wave multi-gigabit point-to-point transmission links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6496822
 - **Type**: conference
 - **Published**: 2-9 March 
@@ -291,6 +355,8 @@
 
 ## Error correcting codes for next generation spacecraft telecommand
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6496915
 - **Type**: conference
 - **Published**: 2-9 March 
@@ -300,6 +366,8 @@
 
 ## A spatially-coupled type LDPC Code with an NCG of 12 dB for optical transmission beyond 100 Gb/s
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6532740
 - **Type**: conference
 - **Published**: 17-21 Marc
@@ -309,6 +377,8 @@
 
 ## Impact of interleaving on SD-FEC operating in highly non-linear XPM-limited regime
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6533103
 - **Type**: conference
 - **Published**: 17-21 Marc
@@ -318,6 +388,8 @@
 
 ## Real-time DSP for 100+ Gb/s
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6533098
 - **Type**: conference
 - **Published**: 17-21 Marc
@@ -327,6 +399,8 @@
 
 ## 1-Tbit/s dual-carrier DP 64QAM transmission at 64Gbaud with 40% overhead soft-FEC over 320km SSMF
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6532955
 - **Type**: conference
 - **Published**: 17-21 Marc
@@ -336,6 +410,8 @@
 
 ## Collaborative signal processing with FEC in digital coherent systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6532739
 - **Type**: conference
 - **Published**: 17-21 Marc
@@ -345,6 +421,8 @@
 
 ## Performance evaluation of coded optical subcarrier index modulation OFDM format
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6532621
 - **Type**: conference
 - **Published**: 17-21 Marc
@@ -354,6 +432,8 @@
 
 ## Design of optimum physical layer architecture for a high data rate LTE uplink transceiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6533926
 - **Type**: conference
 - **Published**: 14-15 Marc

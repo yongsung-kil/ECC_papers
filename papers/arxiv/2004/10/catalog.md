@@ -3,6 +3,8 @@
 
 ## Life Above Threshold: From List Decoding to Area Theorem and MSE
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0410028v2
 - **Type**: preprint
 - **Published**: 2004-10-13
@@ -12,6 +14,8 @@
 
 ## Finite-Length Scaling and Finite-Length Shift for Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0410019v1
 - **Type**: preprint
 - **Published**: 2004-10-10

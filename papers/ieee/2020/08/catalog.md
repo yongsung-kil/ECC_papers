@@ -3,6 +3,8 @@
 
 ## A Joint Encryption, Channel Coding and Modulation Scheme Using QC-LDPC Lattice-Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9098947
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -12,6 +14,8 @@
 
 ## Two Effective Scheduling Schemes for Layered Belief Propagation of 5G LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9082643
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -21,6 +25,8 @@
 
 ## Analysis of the Error Correction Capability of LDPC and MDPC Codes Under Parallel Bit-Flipping Decoding and Application to Cryptography
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9067006
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -30,6 +36,8 @@
 
 ## A Novel Iterative Reliability-Based Majority-Logic Decoder for NB-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8821412
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -39,6 +47,8 @@
 
 ## Doubly-Recursive Block Markov Superposition Transmission: A Low-Complexity and Flexible Coding Scheme
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9093860
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -48,6 +58,8 @@
 
 ## Refined Belief Propagation Decoding of Sparse-Graph Quantum Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9146916
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -57,6 +69,8 @@
 
 ## A Channel-Aware Combinatorial Approach to Design High Performance Spatially-Coupled Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9032092
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -66,6 +80,8 @@
 
 ## Learning to Denoise and Decode: A Novel Residual Neural Network Decoder for Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9109744
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -75,6 +91,8 @@
 
 ## A Reduced-Complexity Projection Algorithm for ADMM-Based LP Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9050709
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -84,6 +102,8 @@
 
 ## End-to-End Simulations of Coded Transmissions in Space Links Affected by Solar Scintillation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8977360
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -93,6 +113,8 @@
 
 ## Reliability in Internet of Things: Current Status and Future Perspectives
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9089244
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -102,6 +124,8 @@
 
 ## Resolvable Designs for Speeding Up Distributed Computing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9103948
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -111,6 +135,8 @@
 
 ## Optimal Rate-Diverse Wireless Network Coding Over Parallel Subchannels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9097253
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -120,6 +146,8 @@
 
 ## Construction and Optimization for Adaptive Polar Coded Cooperation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9052681
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -129,6 +157,8 @@
 
 ## Bidirectional Soft-Decision Feedback Equalization for OFDM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9072108
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -138,6 +168,8 @@
 
 ## Distributed Error Correction Coding Scheme for Low Storage Blockchain Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9042862
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -147,6 +179,8 @@
 
 ## HSLTP—An LTP Variant for High-Speed Links and Memory Constrained Nodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8954819
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -156,6 +190,8 @@
 
 ## A 25Gbaud PAM-4 Linear Burst-Mode Receiver With Analog Gain- and Offset Control in 0.25μm SiGe:C BiCMOS
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9080551
 - **Type**: journal
 - **Published**: Aug. 2020
@@ -165,6 +201,8 @@
 
 ## LLR Calculation for On-Off Keying in Screen to Camera Communication Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9184521
 - **Type**: conference
 - **Published**: 9-12 Aug. 
@@ -174,6 +212,8 @@
 
 ## A Parallel and Memory-Efficient Decoding for Spatially-Coupled LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9238855
 - **Type**: conference
 - **Published**: 9-11 Aug. 
@@ -183,6 +223,8 @@
 
 ## Probabilistic Shaping Combined With Spatially-Coupled LDPC Code in FTN System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9238962
 - **Type**: conference
 - **Published**: 9-11 Aug. 
@@ -192,6 +234,8 @@
 
 ## BLDnet: Robust Learning-Based Detection for High-Order QAM With Nonlinear Distortion
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9238959
 - **Type**: conference
 - **Published**: 9-11 Aug. 
@@ -201,6 +245,8 @@
 
 ## Low Density Superposition Modulation using DCT for 5G NOMA scheme
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9238920
 - **Type**: conference
 - **Published**: 9-11 Aug. 
@@ -210,6 +256,8 @@
 
 ## Comparison Between the Joint and Successive Decoding Schemes for the Binary CEO Problem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9260575
 - **Type**: conference
 - **Published**: 4-6 Aug. 2
@@ -219,6 +267,8 @@
 
 ## Implementation and Performance Analysis of Multiuser Detector for Massive MIMO OFDM System over Rayleigh Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9198538
 - **Type**: conference
 - **Published**: 4-6 Aug. 2
@@ -228,6 +278,8 @@
 
 ## A Simplified Multiset-Partition Distribution Matching for PS-16QAM Optical Fiber Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9255945
 - **Type**: conference
 - **Published**: 2-6 Aug. 2
@@ -237,6 +289,8 @@
 
 ## A Low Complexity Decoding Algorithm Design Based on Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9231083
 - **Type**: conference
 - **Published**: 17-18 Aug.

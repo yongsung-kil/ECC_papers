@@ -3,6 +3,8 @@
 
 ## The solution space geometry of random linear equations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1107.5550v2
 - **Type**: preprint
 - **Published**: 2011-07-27
@@ -12,6 +14,8 @@
 
 ## Spatially-Coupled Codes and Threshold Saturation on Intersymbol-Interference Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1107.3253v2
 - **Type**: preprint
 - **Published**: 2011-07-16
@@ -21,6 +25,8 @@
 
 ## A Two Stage Selective Averaging LDPC Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1107.2867v1
 - **Type**: preprint
 - **Published**: 2011-07-14
@@ -30,6 +36,8 @@
 
 ## On fuzzy syndrome hashing with LDPC coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1107.1600v2
 - **Type**: preprint
 - **Published**: 2011-07-08

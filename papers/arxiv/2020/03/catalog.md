@@ -3,6 +3,8 @@
 
 ## Neural Enhanced Belief Propagation on Factor Graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2003.01998v5
 - **Type**: preprint
 - **Published**: 2020-03-04
@@ -12,6 +14,8 @@
 
 ## Binary Representaion for Non-binary LDPC Code with Decoder Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2003.00734v1
 - **Type**: preprint
 - **Published**: 2020-03-02

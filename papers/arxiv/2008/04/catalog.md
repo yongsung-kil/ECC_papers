@@ -3,6 +3,8 @@
 
 ## Free Distance Bounds for Protograph-Based Regular LDPC Convolutional Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0804.4466v1
 - **Type**: preprint
 - **Published**: 2008-04-28
@@ -12,6 +14,8 @@
 
 ## Lower Bounds on the Rate-Distortion Function of Individual LDGM Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0804.1697v1
 - **Type**: preprint
 - **Published**: 2008-04-10
@@ -21,6 +25,8 @@
 
 ## Cryptanalysis of Two McEliece Cryptosystems Based on Quasi-Cyclic Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0804.0409v3
 - **Type**: preprint
 - **Published**: 2008-04-02

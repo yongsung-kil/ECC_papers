@@ -3,6 +3,8 @@
 
 ## Error-correcting codes on scale-free networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cond-mat/0401170v1
 - **Type**: preprint
 - **Published**: 2004-01-12

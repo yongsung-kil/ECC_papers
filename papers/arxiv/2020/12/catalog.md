@@ -3,6 +3,8 @@
 
 ## Trapping Sets of Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2012.15297v2
 - **Type**: preprint
 - **Published**: 2020-12-30
@@ -12,6 +14,8 @@
 
 ## Performance and Complexity of the Sequential Successive Cancellation Decoding Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2012.08139v1
 - **Type**: preprint
 - **Published**: 2020-12-15

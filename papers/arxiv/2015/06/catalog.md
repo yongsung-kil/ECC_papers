@@ -3,6 +3,8 @@
 
 ## On the Construction of Polar Codes for Channels with Moderate Input Alphabet Sizes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1506.08370v1
 - **Type**: preprint
 - **Published**: 2015-06-28
@@ -12,6 +14,8 @@
 
 ## Peeling Algorithm on Random Hypergraphs with Superlinear Number of Hyperedges
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1506.00718v1
 - **Type**: preprint
 - **Published**: 2015-06-02

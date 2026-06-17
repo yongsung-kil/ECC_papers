@@ -3,6 +3,8 @@
 
 ## $\ell_p$-Spread and Restricted Isometry Properties of Sparse Random Matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2108.13578v2
 - **Type**: preprint
 - **Published**: 2021-08-31
@@ -12,6 +14,8 @@
 
 ## KO codes: Inventing Nonlinear Encoding and Decoding for Reliable Wireless Communication via Deep-learning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2108.12920v1
 - **Type**: preprint
 - **Published**: 2021-08-29
@@ -21,6 +25,8 @@
 
 ## Reliable Spread Spectrum Communication Systems by Using Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2108.09627v1
 - **Type**: preprint
 - **Published**: 2021-08-22
@@ -30,6 +36,8 @@
 
 ## NB QC-LDPC Coded QAM Signals with Optimized Mapping: Bounds and Simulation Results
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2108.08716v2
 - **Type**: preprint
 - **Published**: 2021-08-19

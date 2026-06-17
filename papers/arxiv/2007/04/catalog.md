@@ -3,6 +3,8 @@
 
 ## On the Hardness of Approximating Stopping and Trapping Sets in LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0704.2258v2
 - **Type**: preprint
 - **Published**: 2007-04-18
@@ -12,6 +14,8 @@
 
 ## Low-density graph codes that are optimal for source/channel coding and binning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0704.1818v1
 - **Type**: preprint
 - **Published**: 2007-04-13
@@ -21,6 +25,8 @@
 
 ## Optimal Routing for Decode-and-Forward based Cooperation in Wireless Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0704.0499v1
 - **Type**: preprint
 - **Published**: 2007-04-04

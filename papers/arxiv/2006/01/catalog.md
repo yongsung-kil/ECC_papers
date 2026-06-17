@@ -3,6 +3,8 @@
 
 ## Bounding Picard numbers of surfaces using p-adic cohomology
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:math/0601508v2
 - **Type**: preprint
 - **Published**: 2006-01-20
@@ -12,6 +14,8 @@
 
 ## Exploring high performance distributed file storage using LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0601078v1
 - **Type**: preprint
 - **Published**: 2006-01-17
@@ -21,6 +25,8 @@
 
 ## Instanton analysis of Low-Density-Parity-Check codes in the error-floor regime
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cs/0601070v1
 - **Type**: preprint
 - **Published**: 2006-01-16

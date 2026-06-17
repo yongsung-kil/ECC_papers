@@ -3,6 +3,8 @@
 
 ## Improved low-density parity-check codes using irregular graphs and belief propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708706
 - **Type**: conference
 - **Published**: 1998
@@ -12,6 +14,8 @@
 
 ## Probability propagation and decoding in analog VLSI
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708739
 - **Type**: conference
 - **Published**: 1998
@@ -21,6 +25,8 @@
 
 ## Iterative decoding of generalized low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708742
 - **Type**: conference
 - **Published**: 1998
@@ -30,6 +36,8 @@
 
 ## Skewness and pseudocodewords in iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708741
 - **Type**: conference
 - **Published**: 1998
@@ -39,6 +47,8 @@
 
 ## Cycling test of commercial nickel-metal hydride (Ni-MH) cells
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:653901
 - **Type**: conference
 - **Published**: 1998
@@ -48,6 +58,8 @@
 
 ## On bandwidth efficiency of BCM applied to non-square M-QAM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:713081
 - **Type**: conference
 - **Published**: 1998
@@ -57,6 +69,8 @@
 
 ## On Tanner graphs of lattices and codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708704
 - **Type**: conference
 - **Published**: 1998
@@ -66,6 +80,8 @@
 
 ## Gallager codes for CDMA applications: generalizations, constructions and performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:706373
 - **Type**: conference
 - **Published**: 1998
@@ -75,6 +91,8 @@
 
 ## Memory dependence prediction using store sets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:694770
 - **Type**: conference
 - **Published**: 1998
@@ -84,6 +102,8 @@
 
 ## Iterative decoding of multi-dimensional concatenated single parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:682600
 - **Type**: conference
 - **Published**: 1998
@@ -93,6 +113,8 @@
 
 ## Error protection for progressive image transmission over memoryless and fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:723484
 - **Type**: conference
 - **Published**: 1998
@@ -102,6 +124,8 @@
 
 ## Parallel concatenated coding schemes for wireless application
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:733626
 - **Type**: conference
 - **Published**: 1998
@@ -111,6 +135,8 @@
 
 ## Innovative coding scheme for spread-spectrum communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:731445
 - **Type**: conference
 - **Published**: 1998
@@ -120,6 +146,8 @@
 
 ## Multistage decoding of block multidimensional M-PSK modulation codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:718438
 - **Type**: conference
 - **Published**: 1998
@@ -129,6 +157,8 @@
 
 ## A ubiquitous secure and reliable digital data depository system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:725717
 - **Type**: conference
 - **Published**: 1998
@@ -138,6 +168,8 @@
 
 ## Low density parity check codes over GF(q)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:706440
 - **Type**: conference
 - **Published**: 1998
@@ -147,6 +179,8 @@
 
 ## Turbo decoding as an instance of Pearl's "belief propagation" algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:661103
 - **Type**: journal
 - **Published**: 1998
@@ -156,6 +190,8 @@
 
 ## Iterative decoding of compound codes by probability propagation in graphical models
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:661110
 - **Type**: journal
 - **Published**: 1998
@@ -165,6 +201,8 @@
 
 ## Early detection and trellis splicing: reduced-complexity iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:661104
 - **Type**: journal
 - **Published**: 1998
@@ -174,6 +212,8 @@
 
 ## Array codes correcting a two-dimensional cluster of errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:705587
 - **Type**: journal
 - **Published**: 1998
@@ -183,6 +223,8 @@
 
 ## A simple taboo-based soft-decision decoding algorithm for expander codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:703905
 - **Type**: journal
 - **Published**: 1998
@@ -192,6 +234,8 @@
 
 ## Serial concatenation of interleaved codes: performance analysis, design, and iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:669119
 - **Type**: journal
 - **Published**: 1998
@@ -201,6 +245,8 @@
 
 ## Modulation and coding for linear Gaussian channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:720542
 - **Type**: journal
 - **Published**: 1998
@@ -210,6 +256,8 @@
 
 ## Error protection for progressive image transmission over memoryless and fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:737389
 - **Type**: journal
 - **Published**: 1998
@@ -219,6 +267,8 @@
 
 ## On iterative soft-decision decoding of linear binary block codes and product codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:661116
 - **Type**: journal
 - **Published**: 1998
@@ -228,6 +278,8 @@
 
 ## Symbol-by-symbol MAP decoding algorithm for high-rate convolutional codes that use reciprocal dual codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:661106
 - **Type**: journal
 - **Published**: 1998
@@ -237,6 +289,8 @@
 
 ## Multiple-phase codes for detection without carrier phase reference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:681323
 - **Type**: journal
 - **Published**: 1998
@@ -246,6 +300,8 @@
 
 ## Periodic time-varying convolutional codes with low-density parity-check matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708910
 - **Type**: conference
 - **Published**: 1998
@@ -255,6 +311,8 @@
 
 ## Decoding low-density generator matrix codes with the aid of comma-free source codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:706442
 - **Type**: conference
 - **Published**: 1998
@@ -264,6 +322,8 @@
 
 ## Low density MDS codes and factors of complete graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:708599
 - **Type**: conference
 - **Published**: 1998
@@ -273,6 +333,8 @@
 
 ## Low-density parity check codes over GF(q)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:681360
 - **Type**: journal
 - **Published**: 1998

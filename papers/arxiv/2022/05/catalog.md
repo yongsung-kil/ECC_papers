@@ -3,6 +3,8 @@
 
 ## SPANSE: combining sparsity with density for efficient one-time code-based digital signatures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2205.12887v1
 - **Type**: preprint
 - **Published**: 2022-05-25
@@ -12,6 +14,8 @@
 
 ## Data post-processing for the one-way heterodyne protocol under composable finite-size security
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2205.10142v2
 - **Type**: preprint
 - **Published**: 2022-05-20
@@ -21,6 +25,8 @@
 
 ## A Novel K-Repetition Design for SCMA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2205.08149v1
 - **Type**: preprint
 - **Published**: 2022-05-17
@@ -30,6 +36,8 @@
 
 ## Stabilizer Inactivation for Message-Passing Decoding of Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2205.06125v3
 - **Type**: preprint
 - **Published**: 2022-05-12
@@ -39,6 +47,8 @@
 
 ## Soft Syndrome Decoding of Quantum LDPC Codes for Joint Correction of Data and Syndrome Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2205.02341v1
 - **Type**: preprint
 - **Published**: 2022-05-04
@@ -48,6 +58,8 @@
 
 ## A recipe of training neural network-based LDPC decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2205.00481v2
 - **Type**: preprint
 - **Published**: 2022-05-01

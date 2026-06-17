@@ -3,6 +3,8 @@
 
 ## Cutsize Distributions of Balanced Hypergraph Bipartitions for Random Hypergraphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1606.01660v1
 - **Type**: preprint
 - **Published**: 2016-06-06

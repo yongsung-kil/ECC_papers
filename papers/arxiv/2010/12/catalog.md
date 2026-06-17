@@ -3,6 +3,8 @@
 
 ## Cyclic and Quasi-Cyclic LDPC Codes on Row and Column Constrained Parity-Check Matrices and Their Trapping Sets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1012.3201v1
 - **Type**: preprint
 - **Published**: 2010-12-15

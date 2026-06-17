@@ -3,6 +3,8 @@
 
 ## Worst case QC-MDPC decoder for McEliece cryptosystem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1608.06080v1
 - **Type**: preprint
 - **Published**: 2016-08-22

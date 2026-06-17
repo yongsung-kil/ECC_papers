@@ -3,6 +3,8 @@
 
 ## The polynomial error probability for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:cond-mat/0310177v1
 - **Type**: preprint
 - **Published**: 2003-10-08

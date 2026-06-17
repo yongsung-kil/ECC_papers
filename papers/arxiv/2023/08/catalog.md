@@ -3,6 +3,8 @@
 
 ## New Codes on High Dimensional Expanders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2308.15563v1
 - **Type**: preprint
 - **Published**: 2023-08-29
@@ -12,6 +14,8 @@
 
 ## QDistRnd: A GAP package for computing the distance of quantum error-correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2308.15140v1
 - **Type**: preprint
 - **Published**: 2023-08-29
@@ -21,6 +25,8 @@
 
 ## Simulating LDPC code Hamiltonians on 2D lattices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2308.13277v1
 - **Type**: preprint
 - **Published**: 2023-08-25
@@ -30,6 +36,8 @@
 
 ## High-threshold and low-overhead fault-tolerant quantum memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2308.07915v2
 - **Type**: preprint
 - **Published**: 2023-08-15
@@ -39,6 +47,8 @@
 
 ## A Spatially Coupled LDPC Coding Scheme with Scalable Decoders for Space Division Multiplexing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2308.01249v2
 - **Type**: preprint
 - **Published**: 2023-08-02

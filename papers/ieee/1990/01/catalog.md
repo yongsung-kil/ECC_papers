@@ -3,6 +3,8 @@
 
 ## Concurrent error detection and correction in real-time systolic sorting arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:89398
 - **Type**: conference
 - **Published**: 1990
@@ -12,6 +14,8 @@
 
 ## Error detecting runlength-limited sequences
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:114355
 - **Type**: conference
 - **Published**: 1990
@@ -21,6 +25,8 @@
 
 ## Error protection for low rate speech transmission over a mobile satellite channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:116795
 - **Type**: conference
 - **Published**: 1990
@@ -30,6 +36,8 @@
 
 ## Signal Shaping for Bit-Interleaved Coded Modulation on the AWGN Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:128695
 - **Type**: conference
 - **Published**: 1990
@@ -39,6 +47,8 @@
 
 ## Modeling sound generation in stenosed coronary arteries
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:61034
 - **Type**: journal
 - **Published**: 1990
@@ -48,6 +58,8 @@
 
 ## A systematic (12,8) code for correcting single errors and detecting adjacent errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:61052
 - **Type**: journal
 - **Published**: 1990
@@ -57,6 +69,8 @@
 
 ## Design and performance of block-coded modulation for digital microwave radio systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:54987
 - **Type**: journal
 - **Published**: 1990

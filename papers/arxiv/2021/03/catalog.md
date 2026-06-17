@@ -3,6 +3,8 @@
 
 ## Composably secure data processing for Gaussian-modulated continuous variable quantum key distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2103.16589v3
 - **Type**: preprint
 - **Published**: 2021-03-30
@@ -12,6 +14,8 @@
 
 ## Rate-Diverse Gaussian Multiple Access: Efficient Encoder and Decoder Designs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2103.11873v1
 - **Type**: preprint
 - **Published**: 2021-03-22
@@ -21,6 +25,8 @@
 
 ## Quantum Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2103.06309v2
 - **Type**: preprint
 - **Published**: 2021-03-10
@@ -30,6 +36,8 @@
 
 ## Efficient Encoding Algorithm of Binary and Non-Binary LDPC Codes Using Block Triangulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2103.01560v1
 - **Type**: preprint
 - **Published**: 2021-03-02

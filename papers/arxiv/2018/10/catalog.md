@@ -3,6 +3,8 @@
 
 ## Implementation and Security Analysis of Practical Quantum Secure Direct Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.11806v1
 - **Type**: preprint
 - **Published**: 2018-10-28
@@ -12,6 +14,8 @@
 
 ## A belief propagation algorithm based on domain decomposition
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.10005v1
 - **Type**: preprint
 - **Published**: 2018-10-23
@@ -21,6 +25,8 @@
 
 ## Decoding of Non-Binary LDPC Codes Using the Information Bottleneck Method
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.08921v3
 - **Type**: preprint
 - **Published**: 2018-10-21
@@ -30,6 +36,8 @@
 
 ## The rank of random matrices over finite fields
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.07390v1
 - **Type**: preprint
 - **Published**: 2018-10-17
@@ -39,6 +47,8 @@
 
 ## Error estimation at the information reconciliation stage of quantum key distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.05841v2
 - **Type**: preprint
 - **Published**: 2018-10-13
@@ -48,6 +58,8 @@
 
 ## Numerical study of hypergraph product codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.03681v2
 - **Type**: preprint
 - **Published**: 2018-10-08
@@ -57,6 +69,8 @@
 
 ## Construction D$^\prime$ Lattices from Quasi-Cyclic Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.02163v1
 - **Type**: preprint
 - **Published**: 2018-10-04
@@ -66,6 +80,8 @@
 
 ## Stabilizer Slicing: Coherent Error Cancellations in LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1810.01040v3
 - **Type**: preprint
 - **Published**: 2018-10-02

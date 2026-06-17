@@ -3,6 +3,8 @@
 
 ## Topologically Driven Methods for Construction Of Multi-Edge Type (Multigraph with nodes puncturing) Quasi-Cyclic Low-density Parity-check Codes for Wireless Channel, WDM Long-Haul and Archival Holographic Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2011.14753v3
 - **Type**: preprint
 - **Published**: 2020-11-30
@@ -12,6 +14,8 @@
 
 ## Quantum XYZ Product Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2011.09746v3
 - **Type**: preprint
 - **Published**: 2020-11-19
@@ -21,6 +25,8 @@
 
 ## Learned Decimation for Neural Belief Propagation Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2011.02161v1
 - **Type**: preprint
 - **Published**: 2020-11-04
@@ -30,6 +36,8 @@
 
 ## Circuit lower bounds for low-energy states of quantum code Hamiltonians
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2011.02044v5
 - **Type**: preprint
 - **Published**: 2020-11-03

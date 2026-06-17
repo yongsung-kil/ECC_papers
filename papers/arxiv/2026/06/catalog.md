@@ -3,6 +3,8 @@
 
 ## Quantum Logic Codes: Complete Transversal Logical Clifford Instruction Sets for High-Rate Stabilizer Quantum Error Correcting Codes
 
+- **Status**: out(제외)
+- **Reason**: 안정자 양자오류정정 코드(transversal Clifford)로 양자EC, 명시적으로 non-LDPC이며 제외 대상
 - **ID**: arxiv:2606.13521v1
 - **Type**: preprint
 - **Published**: 2026-06-11
@@ -12,6 +14,8 @@
 
 ## Optimizing Encoder Circuits of Entanglement-Assisted Quantum LDPC Codes via Beam Search
 
+- **Status**: out(제외)
+- **Reason**: 얽힘보조 양자 QC-LDPC 인코더 회로 최적화로 양자 EC 영역, NAND로 이식할 고전 디코더/HW 기법 아님
 - **ID**: arxiv:2606.11468v1
 - **Type**: preprint
 - **Published**: 2026-06-09
@@ -21,6 +25,8 @@
 
 ## Lifted Gabidulin Construction for LDPC Representations of Finite Geometry Codes
 
+- **Status**: in(포함)
+- **Reason**: 유한기하 LDPC의 희소 패리티검사행렬 구성(짧은사이클 제거·error floor 개선)으로 이식 가능 코드설계(E)
 - **ID**: arxiv:2606.11454v1
 - **Type**: preprint
 - **Published**: 2026-06-09
@@ -30,6 +36,8 @@
 
 ## Affine Filtering Measurements and Their Applications to Quantum Decoding
 
+- **Status**: out(제외)
+- **Reason**: 양자 디코딩(pure-state classical-quantum 채널 USD 측정) 특이 기법; LDPC는 예시일 뿐 이식 가능 고전 디코더/HW 없음
 - **ID**: arxiv:2606.07852v1
 - **Type**: preprint
 - **Published**: 2026-06-05
@@ -39,6 +47,8 @@
 
 ## Breakeven demonstration of quantum low-density parity-check codes
 
+- **Status**: out(제외)
+- **Reason**: qLDPC 양자오류정정 실증(trapped-ion); 양자 EC라 제외
 - **ID**: arxiv:2606.06455v1
 - **Type**: preprint
 - **Published**: 2026-06-04
@@ -48,6 +58,8 @@
 
 ## Toward a Generalized Defense Across Sparse, Continuous, and Structured Parameter Attacks
 
+- **Status**: out(제외)
+- **Reason**: DNN 파라미터 공격 방어; QC-LDPC는 부수적 ECC 활용이며 떼어낼 디코더/HW/코드설계 기법 없음(보안)
 - **ID**: arxiv:2606.04317v1
 - **Type**: preprint
 - **Published**: 2026-06-03
@@ -57,6 +69,8 @@
 
 ## Evolutionary Discovery of Bivariate Bicycle Codes with LLM-Guided Search
 
+- **Status**: out(제외)
+- **Reason**: qLDPC(bivariate bicycle) 코드 탐색; 양자 코드 발견이라 제외
 - **ID**: arxiv:2606.02418v1
 - **Type**: preprint
 - **Published**: 2026-06-01
@@ -66,6 +80,8 @@
 
 ## Multidimensional Reconciliation in Continuous-Variable QKD: Review, Coding Schemes, and Open Source Simulation
 
+- **Status**: out(제외)
+- **Reason**: CV-QKD reconciliation; LDPC 평가는 QKD 보안 응용 특이적
 - **ID**: arxiv:2606.02323v2
 - **Type**: preprint
 - **Published**: 2026-06-01

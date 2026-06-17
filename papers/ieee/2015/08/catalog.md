@@ -3,6 +3,8 @@
 
 ## Improving the Belief-Propagation Convergence of Irregular LDPC Codes Using Column-Weight Based Scheduling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7122232
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -12,6 +14,8 @@
 
 ## Rate-compatible LDPC codes based on the PEG algorithm for relay communication systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7265216
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -21,6 +25,8 @@
 
 ## Approximate Algorithms for Identifying Minima on Min-Sum LDPC Decoders and Their Hardware Implementation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7108020
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -30,6 +36,8 @@
 
 ## On Coset Leader Graphs of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7114293
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -39,6 +47,8 @@
 
 ## New decoding scheme for LDPC codes based on simple product code structure
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7265217
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -48,6 +58,8 @@
 
 ## Challenges and some new directions in channel coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7265214
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -57,6 +69,8 @@
 
 ## Iterative reliability-based modified majority-logic decoding for structured binary LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7265215
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -66,6 +80,8 @@
 
 ## On Fault Tolerance of the Gallager B Decoder Under Data-Dependent Gate Failures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7120101
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -75,6 +91,8 @@
 
 ## Special issue on advances in channel coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7265232
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -84,6 +102,8 @@
 
 ## Marker Codes on BPMR Write Channel With Data-Dependent Written-in Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7081771
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -93,6 +113,8 @@
 
 ## Raptor-Coded Noncoherent Cooperative Schemes Based on Distributed Unitary Space–Time Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7128373
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -102,6 +124,8 @@
 
 ## Performance Analysis of Quality-Based Channel State Feedback Scheme for Wireless Multicast Systems With Greedy Scheduling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7113812
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -111,6 +135,8 @@
 
 ## Efficient Soft-Input Soft-Output MIMO Chase Detectors for Arbitrary Number of Streams
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6997989
 - **Type**: journal
 - **Published**: Aug. 2015
@@ -120,6 +146,8 @@
 
 ## Performance simulation of using non-binary LDPC codes to against rain fade in Ka-band
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7279788
 - **Type**: conference
 - **Published**: 8-10 Aug. 
@@ -129,6 +157,8 @@
 
 ## Parallel LDPC decoding on a GPU using OpenCL and global memory for accelerators
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7255228
 - **Type**: conference
 - **Published**: 6-7 Aug. 2
@@ -138,6 +168,8 @@
 
 ## Cost-effectively improving life endurance of MLC NAND flash SSDs via hierarchical data redundancy and heterogeneous flash memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7255200
 - **Type**: conference
 - **Published**: 6-7 Aug. 2
@@ -147,6 +179,8 @@
 
 ## Design of polar codes for Rayleigh fading channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7454357
 - **Type**: conference
 - **Published**: 25-28 Aug.
@@ -156,6 +190,8 @@
 
 ## Phase noise compensation for dually-polarized systems with independent transmission streams
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7454339
 - **Type**: conference
 - **Published**: 25-28 Aug.
@@ -165,6 +201,8 @@
 
 ## Block sequential decoding of polar codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7454356
 - **Type**: conference
 - **Published**: 25-28 Aug.
@@ -174,6 +212,8 @@
 
 ## Near capacity LDPC coded MU-BICM-ID for 5G
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7289290
 - **Type**: conference
 - **Published**: 24-28 Aug.
@@ -183,6 +223,8 @@
 
 ## Genie-aided adaptive normalized min-sum algorithm for LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7289086
 - **Type**: conference
 - **Published**: 24-28 Aug.
@@ -192,6 +234,8 @@
 
 ## Performance analysis and alternative proposals for DTMB system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7289085
 - **Type**: conference
 - **Published**: 24-28 Aug.
@@ -201,6 +245,8 @@
 
 ## Comparative simulation for physical layer key generation methods
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7289068
 - **Type**: conference
 - **Published**: 24-28 Aug.
@@ -210,6 +256,8 @@
 
 ## Adaptive Modulation and Coding based error resilience for transmission of compressed video
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7289241
 - **Type**: conference
 - **Published**: 24-28 Aug.
@@ -219,6 +267,8 @@
 
 ## Memory 4 triple-binary turbo codes of rate 0.6
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7283981
 - **Type**: conference
 - **Published**: 24-27 Aug.
@@ -228,6 +278,8 @@
 
 ## A New Solution Based on Multi-rate LDPC for Flash Memory to Reduce ECC Redundancy
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7345373
 - **Type**: conference
 - **Published**: 20-22 Aug.
@@ -237,6 +289,8 @@
 
 ## Reliable gold code generators for GPS receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7282164
 - **Type**: conference
 - **Published**: 2-5 Aug. 2
@@ -246,6 +300,8 @@
 
 ## Streaming data transmission by using spatially coupled LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7332557
 - **Type**: conference
 - **Published**: 19-20 Aug.
@@ -255,6 +311,8 @@
 
 ## Adaptive coded modulation based on LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7498017
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -264,6 +322,8 @@
 
 ## LDPC codes for low-complexity analog decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7497931
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -273,6 +333,8 @@
 
 ## Improved decoding of LDPC codes by variable-to-check residual belief propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7497930
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -282,6 +344,8 @@
 
 ## Signaling transmission schemes for next generation broadcast wireless systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7498023
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -291,6 +355,8 @@
 
 ## Joint LDPC and Physical Layer Network Coding for Two-way Relay Channels with different frequency offsets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7498026
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -300,6 +366,8 @@
 
 ## Performance evaluation of next generation broadcast wireless systems in the UHF TV band
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7498024
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -309,6 +377,8 @@
 
 ## Reduction of physical layer signaling overhead in DVB-NGH systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7498031
 - **Type**: conference
 - **Published**: 15-17 Aug.
@@ -318,6 +388,8 @@
 
 ## Comparison between LDPC codes and QC-LDPC codes in term of PAPR in OFDM system with different encoding techniques
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7412458
 - **Type**: conference
 - **Published**: 10-11 Aug.
@@ -327,6 +399,8 @@
 
 ## Ant Colony Optimization-Based Adaptive Network-on-Chip Routing Framework Using Network Information Region
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6945251
 - **Type**: journal
 - **Published**: 1 Aug. 201

@@ -3,6 +3,8 @@
 
 ## Quantum key distribution over 25 km with an all-fiber continuous-variable system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0706.4255v2
 - **Type**: preprint
 - **Published**: 2007-06-28

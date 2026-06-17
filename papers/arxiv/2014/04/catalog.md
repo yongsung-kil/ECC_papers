@@ -3,6 +3,8 @@
 
 ## Simplified Variable-Scaled Min Sum LDPC decoder for irregular LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1404.7151v1
 - **Type**: preprint
 - **Published**: 2014-04-28
@@ -12,6 +14,8 @@
 
 ## A note on the minimum distance of quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1404.6441v1
 - **Type**: preprint
 - **Published**: 2014-04-25
@@ -21,6 +25,8 @@
 
 ## Practical LDPC coded modulation schemes for the fading broadcast channel with confidential messages
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1404.3075v1
 - **Type**: preprint
 - **Published**: 2014-04-11
@@ -30,6 +36,8 @@
 
 ## Spatially Coupled Turbo Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1404.2393v2
 - **Type**: preprint
 - **Published**: 2014-04-09
@@ -39,6 +47,8 @@
 
 ## Improving soft FEC performance for higher-order modulations via optimized bit channel mappings
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1404.2269v2
 - **Type**: preprint
 - **Published**: 2014-04-08
@@ -48,6 +58,8 @@
 
 ## Iterative Detection and LDPC Decoding Algorithms for MIMO Systems in Block-Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1404.1981v1
 - **Type**: preprint
 - **Published**: 2014-04-08

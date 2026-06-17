@@ -3,6 +3,8 @@
 
 ## Neural-Model-Augmented Hybrid NMS-OSD Decoders for Near-ML in Short Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.25580v2
 - **Type**: preprint
 - **Published**: 2025-09-29
@@ -12,6 +14,8 @@
 
 ## Decoding quantum low density parity check codes with diffusion
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.22347v1
 - **Type**: preprint
 - **Published**: 2025-09-26
@@ -21,6 +25,8 @@
 
 ## Hidden Markov Model Decoding for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.21872v1
 - **Type**: preprint
 - **Published**: 2025-09-26
@@ -30,6 +36,8 @@
 
 ## From Indexing to Coding: A New Paradigm for Data Availability Sampling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.21586v2
 - **Type**: preprint
 - **Published**: 2025-09-25
@@ -39,6 +47,8 @@
 
 ## Adapt or Regress: Rate-Memory-Compatible Spatially-Coupled Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.21112v3
 - **Type**: preprint
 - **Published**: 2025-09-25
@@ -48,6 +58,8 @@
 
 ## Sparse Regression LDPC Codes for the Block-Fading Non-Coherent SIMO Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.16376v1
 - **Type**: preprint
 - **Published**: 2025-09-19
@@ -57,6 +69,8 @@
 
 ## Decoded Quantum Interferometry Requires Structure
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.14509v1
 - **Type**: preprint
 - **Published**: 2025-09-18
@@ -66,6 +80,8 @@
 
 ## Linear Complexity Computation of Code Distance and Minimum Size of Trapping Sets for LDPC Codes with Bounded Treewidth
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.13040v2
 - **Type**: preprint
 - **Published**: 2025-09-16
@@ -75,6 +91,8 @@
 
 ## Towards solving industrial integer linear programs with Decoded Quantum Interferometry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.08328v2
 - **Type**: preprint
 - **Published**: 2025-09-10
@@ -84,6 +102,8 @@
 
 ## Compressing Syndrome Measurement Sequences
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.07288v1
 - **Type**: preprint
 - **Published**: 2025-09-08
@@ -93,6 +113,8 @@
 
 ## Study of Iterative Detection, Decoding and Channel Estimation for RIS-Aided MIMO Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.05875v1
 - **Type**: preprint
 - **Published**: 2025-09-07
@@ -102,6 +124,8 @@
 
 ## List Decoding Expander-Based Codes via Fast Approximation of Expanding CSPs: I
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.05203v1
 - **Type**: preprint
 - **Published**: 2025-09-05
@@ -111,6 +135,8 @@
 
 ## Nexus: Efficient and Scalable Multi-Cell mmWave Baseband Processing with Heterogeneous Compute
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2509.04625v2
 - **Type**: preprint
 - **Published**: 2025-09-04

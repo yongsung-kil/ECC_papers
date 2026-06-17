@@ -3,6 +3,8 @@
 
 ## Algebraic Constructions of Graph-Based Nested Codes from Protographs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1006.2977v1
 - **Type**: preprint
 - **Published**: 2010-06-15
@@ -12,6 +14,8 @@
 
 ## Tree-structure Expectation Propagation for Decoding LDPC codes over Binary Erasure Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1006.1535v1
 - **Type**: preprint
 - **Published**: 2010-06-08
@@ -21,6 +25,8 @@
 
 ## A Low-Complexity Joint Detection-Decoding Algorithm for Nonbinary LDPC-Coded Modulation Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1006.1024v1
 - **Type**: preprint
 - **Published**: 2010-06-05
@@ -30,6 +36,8 @@
 
 ## Channel Decoding with a Bayesian Equalizer
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1006.0795v1
 - **Type**: preprint
 - **Published**: 2010-06-04
@@ -39,6 +47,8 @@
 
 ## EXIT Chart Approximations using the Role Model Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1006.0659v1
 - **Type**: preprint
 - **Published**: 2010-06-03

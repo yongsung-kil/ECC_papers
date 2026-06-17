@@ -3,6 +3,8 @@
 
 ## Enhanced LDPC Coding for 3-D TLC NAND Flash Memory: Leveraging RBER Difference From Intralayer Variation
 
+- **Status**: in(포함)
+- **Reason**: 3D TLC NAND 플래시 LDPC 코딩, RBER 인지 read-retry 감소 — NAND 직접(A)
 - **ID**: ieee:11124560
 - **Type**: journal
 - **Published**: March 2026
@@ -12,6 +14,8 @@
 
 ## HFMLLR: Heterogeneous Feature Mining for Low-Overhead Latency Reduction Scheme of LDPC Codes in 3-D TLC nand Flash Memory
 
+- **Status**: in(포함)
+- **Reason**: 3D TLC NAND LDPC 디코딩 지연감소(LLR/반복) - NAND 플래시 직접(A)
 - **ID**: ieee:11373055
 - **Type**: journal
 - **Published**: March 2026
@@ -21,6 +25,8 @@
 
 ## Across-Array LDPC Codes Design for Resistive Random-Access Memories
 
+- **Status**: in(포함)
+- **Reason**: ReRAM용 비균일 LDPC 코드 설계+밀도진화+HW 단순화 — 스토리지 ECC, 코드설계 이식 가능(B/E)
 - **ID**: ieee:11123581
 - **Type**: journal
 - **Published**: March 2026
@@ -30,6 +36,8 @@
 
 ## A Study on the Fitness of GA for Improving SP Decoding Performance
 
+- **Status**: in(포함)
+- **Reason**: SMR HDD LDPC SP디코더 NN 기반 LLR 보정·GA 최적화 — 스토리지 ECC, 디코더 LLR 기법 이식 가능(B/C)
 - **ID**: ieee:11127112
 - **Type**: journal
 - **Published**: March 2026
@@ -39,6 +47,8 @@
 
 ## Pushing the Limits of Areal Density: Fusing Advanced Channel Coding, HAMR, and SMR in Next-Generation HDDs
 
+- **Status**: in(포함)
+- **Reason**: HDD용 변조+LDPC 결합 최적화 채널코딩 - 스토리지 ECC 일반(B), LDPC 코딩 기법
 - **ID**: ieee:11301807
 - **Type**: journal
 - **Published**: March 2026
@@ -48,6 +58,8 @@
 
 ## Research on QC-LDPC Decoding Method With Low Quantization Word Length Based on Adaptive Information Mapping in Passive Optical Network
 
+- **Status**: in(포함)
+- **Reason**: QC-LDPC 저양자화 워드길이 적응 정보매핑 TDMP 디코딩 — 저비트폭 디코더 기법 NAND에 이식 가능(C)
 - **ID**: ieee:11159213
 - **Type**: journal
 - **Published**: March 2026
@@ -57,6 +69,8 @@
 
 ## Multiuser Ordered Symbol Switch (MOSS) GRAND Decoding With NOMA: Low-Latency Hardware Design and Implementation
 
+- **Status**: out(제외)
+- **Reason**: GRAND 디코더 NOMA 다중사용자용 - GRAND는 LDPC 아니고 NOMA/SIC 무선 특이, 이식 기법 없음
 - **ID**: ieee:11316213
 - **Type**: journal
 - **Published**: March 2026
@@ -66,6 +80,8 @@
 
 ## A Low-Complexity Serial List Viterbi Decoder of CRC-Aided TBCC for Broadcasting Services in 6G
 
+- **Status**: out(제외)
+- **Reason**: CRC-TBCC용 직렬 리스트 비터비 디코더 - LDPC 아니고 트렐리스 기반, NAND LDPC ECC로 이식할 기법 없음
 - **ID**: ieee:11195178
 - **Type**: journal
 - **Published**: March 2026
@@ -75,6 +91,8 @@
 
 ## Electro-Optical Reed–Muller Code Decoders Based on Integrated Optics
 
+- **Status**: out(제외)
+- **Reason**: 광집적회로 기반 Reed-Muller 디코더 - LDPC 아니고 전기광학 HW 특이, NAND로 이식 불가
 - **ID**: ieee:11214382
 - **Type**: journal
 - **Published**: March 2026
@@ -84,6 +102,8 @@
 
 ## Improving Wi-Fi Cooperative Broadcast With Fine-Grained Channel Estimation
 
+- **Status**: out(제외)
+- **Reason**: Wi-Fi 협력 브로드캐스트 채널추정(CFO/채널탭) - LDPC 무관, NAND ECC와 무관한 무선 특이 기법
 - **ID**: ieee:11202445
 - **Type**: journal
 - **Published**: March 2026
@@ -93,6 +113,8 @@
 
 ## LDPC Decoding Acceleration Architecture on Versal AI Edge for Space Platforms
 
+- **Status**: in(포함)
+- **Reason**: 고처리율 LDPC 디코더 HW 아키텍처(Versal SoC/AIE, 병렬화) — D 이식 가능
 - **ID**: ieee:11520106
 - **Type**: conference
 - **Published**: 7-14 March
@@ -102,6 +124,8 @@
 
 ## Design and Performance Analysis of a Highly Reliable Satellite Channel Communication System
 
+- **Status**: out(제외)
+- **Reason**: 위성 QPSK 시스템에 기성 LDPC 부수 사용, 떼어낼 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11485464
 - **Type**: conference
 - **Published**: 6-8 March 
@@ -111,6 +135,8 @@
 
 ## Both Sides Shifted Fountain Code
 
+- **Status**: out(제외)
+- **Reason**: Fountain/ZDF 소거채널 코드, 떼어낼 LDPC 디코더/HW/코드설계 기법 없음 (정정 ECC가 아닌 분수 코드)
 - **ID**: ieee:11518658
 - **Type**: conference
 - **Published**: 28-30 Marc
@@ -120,6 +146,8 @@
 
 ## Unequal Error Protection Scheme Based on Implicit Partial Product-LDPC Codes
 
+- **Status**: in(포함)
+- **Reason**: product-LDPC 기반 UEP 코드설계+turbo-like 반복 디코딩, NAND multi-page 차등보호로 이식 가능한 코드설계(E)
 - **ID**: ieee:11504662
 - **Type**: conference
 - **Published**: 27-29 Marc
@@ -129,6 +157,8 @@
 
 ## CRC-Aided External Iterative LDPC Decoding Algorithm for Slow Frequency-Hopping Interference Scenarios
 
+- **Status**: in(포함)
+- **Reason**: CRC-aided 외부반복 LDPC 디코딩으로 LLR 재가중·고신뢰 오류전파 억제, NAND LLR 처리에 이식 가능한 디코더 기법(C)
 - **ID**: ieee:11504822
 - **Type**: conference
 - **Published**: 27-29 Marc
@@ -138,6 +168,8 @@
 
 ## Design of Linear APSK Constellation Shaping for LDPC Coded Physical-Layer Network Coding
 
+- **Status**: out(제외)
+- **Reason**: APSK 컨스텔레이션 셰이핑+물리계층 네트워크코딩 무선 응용 특이적, LDPC가 부수적이고 이식 기법 없음
 - **ID**: ieee:11504542
 - **Type**: conference
 - **Published**: 27-29 Marc
@@ -147,6 +179,8 @@
 
 ## Project-Based Flipped Classroom Reform with Interactive and Collaborative Approaches
 
+- **Status**: out(제외)
+- **Reason**: 공학교육 플립러닝 교수법 논문으로 ECC와 무관
 - **ID**: ieee:11521105
 - **Type**: conference
 - **Published**: 27-29 Marc
@@ -156,6 +190,8 @@
 
 ## Efficient Error Control Coding using A Novel SPDEC Scheme with Soft-Decision Decoding
 
+- **Status**: out(제외)
+- **Reason**: SPDEC/BCH 단·이중오류정정 코드와 LFSR HW, LDPC 디코더/HW로 이식할 기법 없는 BCH 특이 설계
 - **ID**: ieee:11537695
 - **Type**: conference
 - **Published**: 26-28 Marc
@@ -165,6 +201,8 @@
 
 ## Noisy Soft Syndrome Decoding of Quantum LDPC Codes for the Quantum Erasure Channel
 
+- **Status**: in(포함)
+- **Reason**: 양자 소거채널이나 hardware-friendly min-sum 기반 soft-syndrome 반복 디코더로 이식 가능한 디코더 알고리즘(C)
 - **ID**: ieee:11478883
 - **Type**: conference
 - **Published**: 26 Feb.-1 
@@ -174,6 +212,8 @@
 
 ## LUT-Optimized RCQ LDPC Decoder for TLC Flash Memory Implementation on Xilinx FPGA
 
+- **Status**: in(포함)
+- **Reason**: TLC NAND 플래시용 RCQ QC-LDPC 디코더 FPGA 구현(A+D), 직접 적용 대상
 - **ID**: ieee:11476755
 - **Type**: conference
 - **Published**: 25-27 Marc
@@ -183,6 +223,8 @@
 
 ## Diffusion-Guided Feature Selection via Nishimori Temperature: Noise-Based Spectral Embedding
 
+- **Status**: out(제외)
+- **Reason**: Bethe-Hessian/Nishimori 기반 특징선택(차원축소)일 뿐 LDPC ECC와 무관, 떼어낼 디코더/HW/코드설계 기법 없음
 - **ID**: ieee:11476758
 - **Type**: conference
 - **Published**: 25-27 Marc
@@ -192,6 +234,8 @@
 
 ## Efficient Implementation of Non-Binary LDPC Codes for on-Chip Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11502739
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -201,6 +245,8 @@
 
 ## Hybrid Machine Learning Framework for Adaptive Error Correction in 6G Enabled IoT Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11502755
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -210,6 +256,8 @@
 
 ## Sparsely repeated 21.7 Tb/s Net-Rate Transoceanic Transmission with 266 km Ultra-Long Spans Enabled by Low IMI and Low loss Hollow Core Fiber
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11525062
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -219,6 +267,8 @@
 
 ## Technologies for Very High Speed PON
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11524648
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -228,6 +278,8 @@
 
 ## Coherent Free-Space Optical Communications with Concurrent Turbulence Characterization in a Terrestrial Urban Link
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11524762
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -237,6 +289,8 @@
 
 ## LightGBM-Assisted Rapid QBER Prediction and Adaptive Joint Multi-Parameter Optimisation for QKD-Classical Coexistence Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11524318
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -246,6 +300,8 @@
 
 ## 153.8 Tb/s O-Band Coherent Transmission over SMF with Low-Complexity DSP
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11525352
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -255,6 +311,8 @@
 
 ## DAS over a 585-km EDFA-repeatered Link with Co-propagating 15.8-Tb/s Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11525138
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -264,6 +322,8 @@
 
 ## Virtualisation in Optical Access Networks: Challenges and PHY Softwarization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11525056
 - **Type**: conference
 - **Published**: 15-19 Marc
@@ -273,6 +333,8 @@
 
 ## Performance Evaluation of BCH, LDPC, and Turbo Codes in LTE-Based MIMO-OFDM Systems Using 64-QAM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11508460
 - **Type**: conference
 - **Published**: 14-15 Marc
@@ -282,6 +344,8 @@
 
 ## Analysis of Channel Encoders and Energy Characteristics Performance of Lora in IoT Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11461043
 - **Type**: conference
 - **Published**: 10-12 Marc

@@ -3,6 +3,8 @@
 
 ## Iterative LDPC–LDPC Product Code for Bit Patterned Media
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7592444
 - **Type**: journal
 - **Published**: March 2017
@@ -12,6 +14,8 @@
 
 ## EXIT Chart Aided LDPC Code Design for Symmetric Alpha-Stable Impulsive Noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7775000
 - **Type**: journal
 - **Published**: March 2017
@@ -21,6 +25,8 @@
 
 ## Reduced Complexity Node-Wise Scheduling of ADMM Decoding for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7795194
 - **Type**: journal
 - **Published**: March 2017
@@ -30,6 +36,8 @@
 
 ## Explicit Constructions for Type-1 QC-LDPC Codes With Girth 12
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7762770
 - **Type**: journal
 - **Published**: March 2017
@@ -39,6 +47,8 @@
 
 ## Weight Distributions of Non-Binary Multi-Edge Type LDPC Code Ensembles: Analysis and Efficient Evaluation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7805299
 - **Type**: journal
 - **Published**: March 2017
@@ -48,6 +58,8 @@
 
 ## Deliberate Bit Flipping With Error-Correction for PAPR Reduction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7523929
 - **Type**: journal
 - **Published**: March 2017
@@ -57,6 +69,8 @@
 
 ## Nonadaptive Group Testing Based on Sparse Pooling Graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7676280
 - **Type**: journal
 - **Published**: March 2017
@@ -66,6 +80,8 @@
 
 ## The Structure of Dual Schubert Union Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7811301
 - **Type**: journal
 - **Published**: March 2017
@@ -75,6 +91,8 @@
 
 ## On the Construction of Polar Codes for Channels With Moderate Input Alphabet Sizes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7809075
 - **Type**: journal
 - **Published**: March 2017
@@ -84,6 +102,8 @@
 
 ## Edge Coloring and Stopping Sets Analysis in Product Codes With MDS Components
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7819551
 - **Type**: journal
 - **Published**: March 2017
@@ -93,6 +113,8 @@
 
 ## Efficient Multi-Rate Encoder of QC-LDPC Codes Based on FPGA for WIMAX Standard
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10855182
 - **Type**: journal
 - **Published**: March 2017
@@ -102,6 +124,8 @@
 
 ## Broadcast Coded Modulation: Multilevel and Bit-Interleaved Construction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7774994
 - **Type**: journal
 - **Published**: March 2017
@@ -111,6 +135,8 @@
 
 ## Efficient Decoding Schemes of LDPC Codes for the Layered-Division Multiplexing Systems in ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7574332
 - **Type**: journal
 - **Published**: March 2017
@@ -120,6 +146,8 @@
 
 ## A Non-Orthogonal Multiple-Access Scheme Using Reliable Physical-Layer Network Coding and Cascade-Computation Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7812764
 - **Type**: journal
 - **Published**: March 2017
@@ -129,6 +157,8 @@
 
 ## An Improved Concatenation Scheme of Polar Codes With Reed–Solomon Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7782825
 - **Type**: journal
 - **Published**: March 2017
@@ -138,6 +168,8 @@
 
 ## ATSC 3.0—The Next Step in the Evolution of Digital Television
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7845630
 - **Type**: journal
 - **Published**: March 2017
@@ -147,6 +179,8 @@
 
 ## Sparse Random Linear Network Coding With Precoded Band Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7756352
 - **Type**: journal
 - **Published**: March 2017
@@ -156,6 +190,8 @@
 
 ## Coding Schemes for Achieving Strong Secrecy at Negligible Cost
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7797514
 - **Type**: journal
 - **Published**: March 2017
@@ -165,6 +201,8 @@
 
 ## 9/12 2-D Modulation Code for Bit-Patterned Media Recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7738513
 - **Type**: journal
 - **Published**: March 2017
@@ -174,6 +212,8 @@
 
 ## Optimal Sequences for Non-Orthogonal Multiple Access: A Sparsity Maximization Perspective
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7605537
 - **Type**: journal
 - **Published**: March 2017
@@ -183,6 +223,8 @@
 
 ## Scattered Pilot Performance and Optimization for ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7782350
 - **Type**: journal
 - **Published**: March 2017
@@ -192,6 +234,8 @@
 
 ## An FPGA-Based High-Speed Error Resilient Data Aggregation and Control for High Energy Physics Experiment
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7828104
 - **Type**: journal
 - **Published**: March 2017
@@ -201,6 +245,8 @@
 
 ## Low-Complexity Decoding Algorithms for the LDM Core Layer at Fixed Receivers in ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7571136
 - **Type**: journal
 - **Published**: March 2017
@@ -210,6 +256,8 @@
 
 ## LDPC code design for Gaussian multiple-access channels using dynamic EXIT chart analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7952843
 - **Type**: conference
 - **Published**: 5-9 March 
@@ -219,6 +267,8 @@
 
 ## Multi-rate polar codes for solid state drives
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7952332
 - **Type**: conference
 - **Published**: 5-9 March 
@@ -228,6 +278,8 @@
 
 ## Combining belief propagation and successive cancellation list decoding of polar codes on a GPU platform
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7952840
 - **Type**: conference
 - **Published**: 5-9 March 
@@ -237,6 +289,8 @@
 
 ## Improving deep space telecommunications during solar superior conjunctions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7943738
 - **Type**: conference
 - **Published**: 4-11 March
@@ -246,6 +300,8 @@
 
 ## CDMA communication system for mars areostationary relay satellite
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7943941
 - **Type**: conference
 - **Published**: 4-11 March
@@ -255,6 +311,8 @@
 
 ## A Greedy Search Based Method with Optimized Lower Bound for QC-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7940234
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -264,6 +322,8 @@
 
 ## High throughput structured LDPC layered decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8300023
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -273,6 +333,8 @@
 
 ## A systematic approach for achieving low bit error rate of LDPC decoder using MWD algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8299713
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -282,6 +344,8 @@
 
 ## Design and implementation of quasi cyclic low density parity check (QC-LDPC) code on FPGA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8299744
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -291,6 +355,8 @@
 
 ## Complexity-aware scheduling for an LDPC encoded C-RAN uplink
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7926137
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -300,6 +366,8 @@
 
 ## Non-binary LDPC codes for compressed sensing image reconstruction on AWGN channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8300235
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -309,6 +377,8 @@
 
 ## Performance comparison of orthogonal complex MIMO STBC with ML decoding and soft decision decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8299936
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -318,6 +388,8 @@
 
 ## Theoretical maximum throughput of IEEE 802.11ad millimeter wave wireless LAN in the contention based access period: With two level aggregation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8300218
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -327,6 +399,8 @@
 
 ## Fountain code based error control technique in wireless body area network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8299792
 - **Type**: conference
 - **Published**: 22-24 Marc
@@ -336,6 +410,8 @@
 
 ## Symbol flipping decoding algorithm based on prediction for non-binary LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937392
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -345,6 +421,8 @@
 
 ## Experimental study of nonlinearity tolerant modulation formats based on LDPC coded non-uniform signaling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937328
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -354,6 +432,8 @@
 
 ## Bit-interleaved polar-coded modulation for low-latency short-block transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937344
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -363,6 +443,8 @@
 
 ## Signal overlap for efficient 1+1 protection in elastic optical networks (EONs)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937334
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -372,6 +454,8 @@
 
 ## Unrepeatered WDM transmission of single-carrier 400G (66-GBd PDM-16QAM) over 403 km
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937103
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -381,6 +465,8 @@
 
 ## Trans-Atlantic field trial using probabilistically shaped 64-QAM at high spectral efficiencies and single-carrier real-time 250-Gb/s 16-QAM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937148
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -390,6 +476,8 @@
 
 ## Electronically subcarrier multiplexed PM-32QAM with optimized FEC overheads
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937450
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -399,6 +487,8 @@
 
 ## Fully-parallel soft-decision cycle slip recovery
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937400
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -408,6 +498,8 @@
 
 ## Information rates and post-FEC BER prediction in optical fiber communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937049
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -417,6 +509,8 @@
 
 ## 1-Pb/s (32 SDM/46 WDM/768 Gb/s) C-band dense SDM transmission over 205.6-km of single-mode heterogeneous multi-core fiber using 96-Gbaud PDM-16QAM channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7937146
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -426,6 +520,8 @@
 
 ## A simplified dual-carrier DP-64QAM 1 Tb/s transceiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7936846
 - **Type**: conference
 - **Published**: 19-23 Marc
@@ -435,6 +531,8 @@
 
 ## Comparison of Polar Decoders with Existing Low-Density Parity-Check and Turbo Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7919106
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -444,6 +542,8 @@
 
 ## Secret Key Generation Using One-Bit Quantized Channel State Information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925527
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -453,6 +553,8 @@
 
 ## Polar Codes for Block Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7919041
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -462,6 +564,8 @@
 
 ## Fast Simplified Successive-Cancellation List Decoding of Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7919044
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -471,6 +575,8 @@
 
 ## Efficient Polar Code Construction for Higher-Order Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7919039
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -480,6 +586,8 @@
 
 ## Improved Fountain Codes for BI-AWGN Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925646
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -489,6 +597,8 @@
 
 ## On Efficient Decoding of Polar Codes with Large Kernels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7919042
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -498,6 +608,8 @@
 
 ## Capacity-Achieving Rate-Compatible Polar Codes for General Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7919107
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -507,6 +619,8 @@
 
 ## Caching and Coded Multicasting in Slow Fading Environment
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925533
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -516,6 +630,8 @@
 
 ## Hybrid Multiple Access System Based on Non Orthogonality and Sparse Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925930
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -525,6 +641,8 @@
 
 ## Robust Coded Cooperation Based on Multi-Dimensional Spatially-Coupled Repeat-Accumulate Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925560
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -534,6 +652,8 @@
 
 ## Hybrid-ARQ Protocol Design with Optimal Time and Power Allocation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925846
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -543,6 +663,8 @@
 
 ## Tracking of a Frequency-Hopping Interferer in an OFDM System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7925916
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -552,6 +674,8 @@
 
 ## Simulation of Gaussian pulses for optical communication using LDPC code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8276164
 - **Type**: conference
 - **Published**: 17-18 Marc
@@ -561,6 +685,8 @@
 
 ## High speed and low complexity XOR-free technique based data encoder architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8276075
 - **Type**: conference
 - **Published**: 17-18 Marc
@@ -570,6 +696,8 @@
 
 ## Comparative study on different reversible image data hiding techniques
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8276090
 - **Type**: conference
 - **Published**: 17-18 Marc

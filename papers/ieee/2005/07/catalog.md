@@ -3,6 +3,8 @@
 
 ## A new LDPC decoding algorithm aided by segmented cyclic redundancy checks for magnetic recording channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1463295
 - **Type**: journal
 - **Published**: July 2005
@@ -12,6 +14,8 @@
 
 ## Irregular LDPC codes as concatenation regular LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1461686
 - **Type**: journal
 - **Published**: July 2005
@@ -21,6 +25,8 @@
 
 ## A factor graph approach to iterative channel estimation and LDPC decoding over fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1512089
 - **Type**: journal
 - **Published**: July 2005
@@ -30,6 +36,8 @@
 
 ## Average coset weight distributions of Gallager's LDPC code ensemble
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1459072
 - **Type**: journal
 - **Published**: July 2005
@@ -39,6 +47,8 @@
 
 ## Decreasing the complexity of LDPC iterative decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1461688
 - **Type**: journal
 - **Published**: July 2005
@@ -48,6 +58,8 @@
 
 ## Nonuniform error correction using low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1459071
 - **Type**: journal
 - **Published**: July 2005
@@ -57,6 +69,8 @@
 
 ## Capacity-achieving ensembles for the binary erasure channel with bounded complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1459047
 - **Type**: journal
 - **Published**: July 2005
@@ -66,6 +80,8 @@
 
 ## Reduced-Complexity Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1468447
 - **Type**: journal
 - **Published**: July 2005
@@ -75,6 +91,8 @@
 
 ## Trellis and convolutional precoding for transmitter-based interference presubtraction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1468444
 - **Type**: journal
 - **Published**: July 2005
@@ -84,6 +102,8 @@
 
 ## Estimating the minimum distance of turbo-codes using double and triple impulse methods
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1461687
 - **Type**: journal
 - **Published**: July 2005
@@ -93,6 +113,8 @@
 
 ## Corrections to “Shuffled Iterative Decoding”
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1468445
 - **Type**: journal
 - **Published**: July 2005
@@ -102,6 +124,8 @@
 
 ## Efficient error correction solutions for OFDM-based wireless video
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1543040
 - **Type**: conference
 - **Published**: 28-28 July
@@ -111,6 +135,8 @@
 
 ## Assessing the performance of erasure codes in the wide-area
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1467792
 - **Type**: conference
 - **Published**: 28 June-1 
@@ -120,6 +146,8 @@
 
 ## Small parity-check erasure codes - exploration and observations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1467807
 - **Type**: conference
 - **Published**: 28 June-1 
@@ -129,6 +157,8 @@
 
 ## Application of erasure decoding in fiber optical systems with FEC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1528048
 - **Type**: conference
 - **Published**: 25-27 July
@@ -138,6 +168,8 @@
 
 ## 10 GBPS over copper lines - state of the art in VLSI
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1530996
 - **Type**: conference
 - **Published**: 20-24 July
@@ -147,6 +179,8 @@
 
 ## LDPC code design for OFDM channel: graph connectivity and information bits positioning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1511324
 - **Type**: conference
 - **Published**: 14-15 July

@@ -3,6 +3,8 @@
 
 ## Constructions of regular and irregular LDPC codes using Ramanujan graphs and ideas from Margulis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935867
 - **Type**: conference
 - **Published**: 2001
@@ -12,6 +14,8 @@
 
 ## Threshold for regular LDPC codes over PR channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935933
 - **Type**: conference
 - **Published**: 2001
@@ -21,6 +25,8 @@
 
 ## Iterative reliability based decoding of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936096
 - **Type**: conference
 - **Published**: 2001
@@ -30,6 +36,8 @@
 
 ## Low-density parity-check (LDPC) coded OFDM systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:956560
 - **Type**: conference
 - **Published**: 2001
@@ -39,6 +47,8 @@
 
 ## Spectral graphs for quasi-cyclic LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936089
 - **Type**: conference
 - **Published**: 2001
@@ -48,6 +58,8 @@
 
 ## LDPC-based space-time coded OFDM systems over correlated fading channels: performance analysis and receiver design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936176
 - **Type**: conference
 - **Published**: 2001
@@ -57,6 +69,8 @@
 
 ## Performance of (quasi-)cyclic LDPC codes in noise bursts on the EPR4 channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965970
 - **Type**: conference
 - **Published**: 2001
@@ -66,6 +80,8 @@
 
 ## Joint code and decoder design for implementation-oriented (3, k)-regular LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:987687
 - **Type**: conference
 - **Published**: 2001
@@ -75,6 +91,8 @@
 
 ## On the design of LDPC codes for MSK
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965570
 - **Type**: conference
 - **Published**: 2001
@@ -84,6 +102,8 @@
 
 ## Near optimum universal belief propagation based decoding of LDPC codes and extension to turbo decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936052
 - **Type**: conference
 - **Published**: 2001
@@ -93,6 +113,8 @@
 
 ## Efficient implementations of the sum-product algorithm for decoding LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965575
 - **Type**: conference
 - **Published**: 2001
@@ -102,6 +124,8 @@
 
 ## Extended bit-filling and LDPC code design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965565
 - **Type**: conference
 - **Published**: 2001
@@ -111,6 +135,8 @@
 
 ## Designing LDPC codes using bit-filling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936272
 - **Type**: conference
 - **Published**: 2001
@@ -120,6 +146,8 @@
 
 ## On the capacity of low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936183
 - **Type**: conference
 - **Published**: 2001
@@ -129,6 +157,8 @@
 
 ## An iterative algorithm for calculating posterior probability and model representation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936099
 - **Type**: conference
 - **Published**: 2001
@@ -138,6 +168,8 @@
 
 ## VLSI implementation-oriented (3, k)-regular low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:957328
 - **Type**: conference
 - **Published**: 2001
@@ -147,6 +179,8 @@
 
 ## Construction of low-density parity-check codes from Kirkman triple systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965562
 - **Type**: conference
 - **Published**: 2001
@@ -156,6 +190,8 @@
 
 ## Deriving performance bounds for ISI channels using Gallager codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936208
 - **Type**: conference
 - **Published**: 2001
@@ -165,6 +201,8 @@
 
 ## Regular low-density parity-check codes from combinatorial designs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955146
 - **Type**: conference
 - **Published**: 2001
@@ -174,6 +212,8 @@
 
 ## Design of low-density parity-check codes for bandwidth efficient modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955124
 - **Type**: conference
 - **Published**: 2001
@@ -183,6 +223,8 @@
 
 ## Multilevel coding with low-density parity-check component codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965571
 - **Type**: conference
 - **Published**: 2001
@@ -192,6 +234,8 @@
 
 ## Progressive edge-growth Tanner graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965567
 - **Type**: conference
 - **Published**: 2001
@@ -201,6 +245,8 @@
 
 ## On the complexity of reliable communication on the erasure channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935864
 - **Type**: conference
 - **Published**: 2001
@@ -210,6 +256,8 @@
 
 ## Decoding of low-density parity check codes over finite-state binary Markov channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935935
 - **Type**: conference
 - **Published**: 2001
@@ -219,6 +267,8 @@
 
 ## Multi-dimensional parity-check codes for bursty channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935986
 - **Type**: conference
 - **Published**: 2001
@@ -228,6 +278,8 @@
 
 ## Improving the performance of turbo codes through concatenation with rectangular parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936007
 - **Type**: conference
 - **Published**: 2001
@@ -237,6 +289,8 @@
 
 ## Capacity-achieving sequences for the erasure channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935911
 - **Type**: conference
 - **Published**: 2001
@@ -246,6 +300,8 @@
 
 ## Full diversity PSK space-time codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936013
 - **Type**: conference
 - **Published**: 2001
@@ -255,6 +311,8 @@
 
 ## Distance distributions in ensembles of low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935912
 - **Type**: conference
 - **Published**: 2001
@@ -264,6 +322,8 @@
 
 ## Low complexity (turbo) classifiers in high dimensional feature spaces
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935904
 - **Type**: conference
 - **Published**: 2001
@@ -273,6 +333,8 @@
 
 ## Parallel concatenated Gallager codes for CDMA applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965568
 - **Type**: conference
 - **Published**: 2001
@@ -282,6 +344,8 @@
 
 ## Low density parity check coding for magnetic recording channels with media noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:937044
 - **Type**: conference
 - **Published**: 2001
@@ -291,6 +355,8 @@
 
 ## A new schedule for decoding low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965569
 - **Type**: conference
 - **Published**: 2001
@@ -300,6 +366,8 @@
 
 ## Increasing data rates through iterative coding and antenna diversity in OFDM-based wireless communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:966003
 - **Type**: conference
 - **Published**: 2001
@@ -309,6 +377,8 @@
 
 ## Decoding low-density parity-check codes with probabilistic schedule
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:953537
 - **Type**: conference
 - **Published**: 2001
@@ -318,6 +388,8 @@
 
 ## High throughput low-density parity-check decoder architectures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965981
 - **Type**: conference
 - **Published**: 2001
@@ -327,6 +399,8 @@
 
 ## A comparison between the sum-product and the min-sum iterative detection algorithms based on density evolution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965572
 - **Type**: conference
 - **Published**: 2001
@@ -336,6 +410,8 @@
 
 ## The /spl pi/-rotation low-density parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965564
 - **Type**: conference
 - **Published**: 2001
@@ -345,6 +421,8 @@
 
 ## Decoding low-density parity check codes with normalized APP-based algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965573
 - **Type**: conference
 - **Published**: 2001
@@ -354,6 +432,8 @@
 
 ## Performance of coded OFDM in a fading environment using high rate low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965168
 - **Type**: conference
 - **Published**: 2001
@@ -363,6 +443,8 @@
 
 ## A class of efficient-encoding generalized low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:940503
 - **Type**: conference
 - **Published**: 2001
@@ -372,6 +454,8 @@
 
 ## High-performance, low-complexity decoding of generalized low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965103
 - **Type**: conference
 - **Published**: 2001
@@ -381,6 +465,8 @@
 
 ## Constrained iterative decoding: performance and convergence analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:986919
 - **Type**: conference
 - **Published**: 2001
@@ -390,6 +476,8 @@
 
 ## LDPC codes for robust transmission of images over wireless channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:987034
 - **Type**: conference
 - **Published**: 2001
@@ -399,6 +487,8 @@
 
 ## Mathematical analysis of iterative decoding of LDPC convolutional codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936054
 - **Type**: conference
 - **Published**: 2001
@@ -408,6 +498,8 @@
 
 ## Optimizing iterative decoding of low-density parity check codes on programmable pipelined parallel architectures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965980
 - **Type**: conference
 - **Published**: 2001
@@ -417,6 +509,8 @@
 
 ## On the achievable information rates of finite state ISI channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965976
 - **Type**: conference
 - **Published**: 2001
@@ -426,6 +520,8 @@
 
 ## Iterative source-channel decoder using extrinsic information from softbit-source decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:940547
 - **Type**: conference
 - **Published**: 2001
@@ -435,6 +531,8 @@
 
 ## Structured iteratively decodable codes based on Steiner systems and their application in magnetic recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965969
 - **Type**: conference
 - **Published**: 2001
@@ -444,6 +542,8 @@
 
 ## Blind iterative channel identification and equalization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:937057
 - **Type**: conference
 - **Published**: 2001
@@ -453,6 +553,8 @@
 
 ## On mismatch errors in analog-VLSI error correcting decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:922206
 - **Type**: conference
 - **Published**: 2001
@@ -462,6 +564,8 @@
 
 ## Coding theory: Tutorial & survey
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:959879
 - **Type**: conference
 - **Published**: 2001
@@ -471,6 +575,8 @@
 
 ## Multiple parallel concatenated single parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936273
 - **Type**: conference
 - **Published**: 2001
@@ -480,6 +586,8 @@
 
 ## System-on-chip oriented fault-tolerant sequential systems implementation methodology
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:966799
 - **Type**: conference
 - **Published**: 2001
@@ -489,6 +597,8 @@
 
 ## Run-length limited parity-check coding for transition-shift errors in optical recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965974
 - **Type**: conference
 - **Published**: 2001
@@ -498,6 +608,8 @@
 
 ## Serial concatenated trellis coded modulation with inner rate-1 accumulate code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965556
 - **Type**: conference
 - **Published**: 2001
@@ -507,6 +619,8 @@
 
 ## Generalized product accumulate codes: analysis and performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965563
 - **Type**: conference
 - **Published**: 2001
@@ -516,6 +630,8 @@
 
 ## Parity error detection in embedded computer system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955816
 - **Type**: conference
 - **Published**: 2001
@@ -525,6 +641,8 @@
 
 ## Concatenated codes based on multidimensional parity-check codes and turbo codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:986026
 - **Type**: conference
 - **Published**: 2001
@@ -534,6 +652,8 @@
 
 ## Turbo product codes for partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:937043
 - **Type**: conference
 - **Published**: 2001
@@ -543,6 +663,8 @@
 
 ## Product accumulate codes: properties and performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955123
 - **Type**: conference
 - **Published**: 2001
@@ -552,6 +674,8 @@
 
 ## On multiple access and capacity in frequency-selective channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:918787
 - **Type**: conference
 - **Published**: 2001
@@ -561,6 +685,8 @@
 
 ## Optimised labeling maps for bit-interleaved transmission with turbo demodulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:944629
 - **Type**: conference
 - **Published**: 2001
@@ -570,6 +696,8 @@
 
 ## Application of high-rate tail-biting codes to generalized partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965971
 - **Type**: conference
 - **Published**: 2001
@@ -579,6 +707,8 @@
 
 ## Comparison of structures for joint equalization and decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:940530
 - **Type**: conference
 - **Published**: 2001
@@ -588,6 +718,8 @@
 
 ## Using multi-dimensional parity-check codes to obtain diversity in Rayleigh fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965675
 - **Type**: conference
 - **Published**: 2001
@@ -597,6 +729,8 @@
 
 ## Enhanced block coded modulation using iterative decoding based on parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936324
 - **Type**: conference
 - **Published**: 2001
@@ -606,6 +740,8 @@
 
 ## Reduced-complexity decoding for concatenated codes based on rectangular parity-check codes and turbo codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965574
 - **Type**: conference
 - **Published**: 2001
@@ -615,6 +751,8 @@
 
 ## Performance bound for parity-check coded partial-response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936641
 - **Type**: conference
 - **Published**: 2001
@@ -624,6 +762,8 @@
 
 ## Improved decoding of woven convolutional codes via hierarchical near-EEP code structure
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965636
 - **Type**: conference
 - **Published**: 2001
@@ -633,6 +773,8 @@
 
 ## A new soft-output detection method for the magnetic recording channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965978
 - **Type**: conference
 - **Published**: 2001
@@ -642,6 +784,8 @@
 
 ## t-error correcting/d-error detecting (d>t) and all unidirectional error detecting codes with neural network. I
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:918851
 - **Type**: conference
 - **Published**: 2001
@@ -651,6 +795,8 @@
 
 ## On parallel iterative decoding of product code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:957196
 - **Type**: conference
 - **Published**: 2001
@@ -660,6 +806,8 @@
 
 ## Concatenated tree codes and related schemes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955141
 - **Type**: conference
 - **Published**: 2001
@@ -669,6 +817,8 @@
 
 ## Analysis and proof of the stability condition for low-density erasure codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:983683
 - **Type**: conference
 - **Published**: 2001
@@ -678,6 +828,8 @@
 
 ## A novel channel coding scheme for multi-carrier systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965138
 - **Type**: conference
 - **Published**: 2001
@@ -687,6 +839,8 @@
 
 ## Linear transformation of multi-level signal set in multi-code CDMA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:944582
 - **Type**: conference
 - **Published**: 2001
@@ -696,6 +850,8 @@
 
 ## Turbo decoding of linear block codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:953534
 - **Type**: conference
 - **Published**: 2001
@@ -705,6 +861,8 @@
 
 ## On the performance of turbo product codes and LDPC codes over partial-response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:937042
 - **Type**: conference
 - **Published**: 2001
@@ -714,6 +872,8 @@
 
 ## On a class of finite geometry low density parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935865
 - **Type**: conference
 - **Published**: 2001
@@ -723,6 +883,8 @@
 
 ## Message-passing decoders and their application to storage systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955120
 - **Type**: conference
 - **Published**: 2001
@@ -732,6 +894,8 @@
 
 ## Bounds on the performance of belief propagation decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935866
 - **Type**: conference
 - **Published**: 2001
@@ -741,6 +905,8 @@
 
 ## On finite precision implementation of low density parity check codes decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:922207
 - **Type**: conference
 - **Published**: 2001
@@ -750,6 +916,8 @@
 
 ## A heuristic search for good low-density parity-check codes at short block lengths
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936269
 - **Type**: conference
 - **Published**: 2001
@@ -759,6 +927,8 @@
 
 ## Parallel decoding architectures for low density parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:922344
 - **Type**: conference
 - **Published**: 2001
@@ -768,6 +938,8 @@
 
 ## A 220 mW 1 Gb/s 1024-bit rate-1/2 low density parity check code decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:929780
 - **Type**: conference
 - **Published**: 2001
@@ -777,6 +949,8 @@
 
 ## Weight distributions: how deviant can you be?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935913
 - **Type**: conference
 - **Published**: 2001
@@ -786,6 +960,8 @@
 
 ## An efficient decoding algorithm for cycle-free convolutional codes and its applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965634
 - **Type**: conference
 - **Published**: 2001
@@ -795,6 +971,8 @@
 
 ## Constrained coding and soft iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:955122
 - **Type**: conference
 - **Published**: 2001
@@ -804,6 +982,8 @@
 
 ## Iterative decoding of turbo product codes over PR-equalized Lorentzian channels with colored noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965972
 - **Type**: conference
 - **Published**: 2001
@@ -813,6 +993,8 @@
 
 ## VLSI implementation for low density parity check decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:957435
 - **Type**: conference
 - **Published**: 2001
@@ -822,6 +1004,8 @@
 
 ## Receiver design for type-I hybrid ARQ scheme in frequency-selective fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:987637
 - **Type**: conference
 - **Published**: 2001
@@ -831,6 +1015,8 @@
 
 ## A highly efficient domain-programmable parallel architecture for iterative LDPCC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:918858
 - **Type**: conference
 - **Published**: 2001
@@ -840,6 +1026,8 @@
 
 ## Optimizing the mapping of low-density parity check codes on parallel decoding architectures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:918859
 - **Type**: conference
 - **Published**: 2001
@@ -849,6 +1037,8 @@
 
 ## Low-density parity-check codes based on finite geometries: a rediscovery and new results
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:959255
 - **Type**: journal
 - **Published**: 2001
@@ -858,6 +1048,8 @@
 
 ## Performance analysis and code optimization of low density parity-check codes on Rayleigh fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:924876
 - **Type**: journal
 - **Published**: 2001
@@ -867,6 +1059,8 @@
 
 ## Reduced-complexity decoding of low density parity check codes for generalized partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917607
 - **Type**: journal
 - **Published**: 2001
@@ -876,6 +1070,8 @@
 
 ## Iterative decoding for partial response (PR), equalized, magneto-optical (MO) data storage channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:920185
 - **Type**: journal
 - **Published**: 2001
@@ -885,6 +1081,8 @@
 
 ## Applications of low-density parity-check codes to magnetic recording channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:924875
 - **Type**: journal
 - **Published**: 2001
@@ -894,6 +1092,8 @@
 
 ## Analysis of sum-product decoding of low-density parity-check codes using a Gaussian approximation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910580
 - **Type**: journal
 - **Published**: 2001
@@ -903,6 +1103,8 @@
 
 ## Efficient encoding of low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910579
 - **Type**: journal
 - **Published**: 2001
@@ -912,6 +1114,8 @@
 
 ## Iterative reliability-based decoding of low-density parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:924874
 - **Type**: journal
 - **Published**: 2001
@@ -921,6 +1125,8 @@
 
 ## Bounds on the maximum-likelihood decoding error probability of low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:959254
 - **Type**: journal
 - **Published**: 2001
@@ -930,6 +1136,8 @@
 
 ## Concatenated tree codes: a low-complexity, high-performance approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910589
 - **Type**: journal
 - **Published**: 2001
@@ -939,6 +1147,8 @@
 
 ## Decoding low-density parity-check codes with probabilistic scheduling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:957379
 - **Type**: journal
 - **Published**: 2001
@@ -948,6 +1158,8 @@
 
 ## Design of capacity-approaching irregular low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910578
 - **Type**: journal
 - **Published**: 2001
@@ -957,6 +1169,8 @@
 
 ## The capacity of low-density parity-check codes under message-passing decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910577
 - **Type**: journal
 - **Published**: 2001
@@ -966,6 +1180,8 @@
 
 ## Analyzing the turbo decoder using the Gaussian approximation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910581
 - **Type**: journal
 - **Published**: 2001
@@ -975,6 +1191,8 @@
 
 ## Expander graph arguments for message-passing algorithms
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910588
 - **Type**: journal
 - **Published**: 2001
@@ -984,6 +1202,8 @@
 
 ## On improved bounds on the decoding error probability of block codes over interleaved fading channels, with applications to turbo-like codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:945248
 - **Type**: journal
 - **Published**: 2001
@@ -993,6 +1213,8 @@
 
 ## Factor graphs and the sum-product algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910572
 - **Type**: journal
 - **Published**: 2001
@@ -1002,6 +1224,8 @@
 
 ## Convergence behavior of iteratively decoded parallel concatenated codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:957394
 - **Type**: journal
 - **Published**: 2001
@@ -1011,6 +1235,8 @@
 
 ## On the design of low-density parity-check codes within 0.0045 dB of the Shannon limit
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:905935
 - **Type**: journal
 - **Published**: 2001
@@ -1020,6 +1246,8 @@
 
 ## Efficient erasure correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910575
 - **Type**: journal
 - **Published**: 2001
@@ -1029,6 +1257,8 @@
 
 ## Improved low-density parity-check codes using irregular graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910576
 - **Type**: journal
 - **Published**: 2001
@@ -1038,6 +1268,8 @@
 
 ## Codes on graphs: normal realizations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910573
 - **Type**: journal
 - **Published**: 2001
@@ -1047,6 +1279,8 @@
 
 ## On the optimality of solutions of the max-product belief-propagation algorithm in arbitrary graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910585
 - **Type**: journal
 - **Published**: 2001
@@ -1056,6 +1290,8 @@
 
 ## Reliable communication over channels with insertions, deletions, and substitutions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910582
 - **Type**: journal
 - **Published**: 2001
@@ -1065,6 +1301,8 @@
 
 ## Unified design of iterative receivers using factor graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910595
 - **Type**: journal
 - **Published**: 2001
@@ -1074,6 +1312,8 @@
 
 ## Zigzag codes and concatenated zigzag codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910590
 - **Type**: journal
 - **Published**: 2001
@@ -1083,6 +1323,8 @@
 
 ## Probability propagation and decoding in analog VLSI
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910594
 - **Type**: journal
 - **Published**: 2001
@@ -1092,6 +1334,8 @@
 
 ## Minimum-distance bounds by graph analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910591
 - **Type**: journal
 - **Published**: 2001
@@ -1101,6 +1345,8 @@
 
 ## Effect of precoding on the convergence of turbo equalization for partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:920177
 - **Type**: journal
 - **Published**: 2001
@@ -1110,6 +1356,8 @@
 
 ## Fast Chase algorithm with an application in turbo decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:957387
 - **Type**: journal
 - **Published**: 2001
@@ -1119,6 +1367,8 @@
 
 ## Signal-space characterization of iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910587
 - **Type**: journal
 - **Published**: 2001
@@ -1128,6 +1378,8 @@
 
 ## An analysis of belief propagation on the turbo decoding graph with Gaussian densities
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910586
 - **Type**: journal
 - **Published**: 2001
@@ -1137,6 +1389,8 @@
 
 ## The turbo decoding algorithm and its phase trajectories
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910583
 - **Type**: journal
 - **Published**: 2001
@@ -1146,6 +1400,8 @@
 
 ## A low-density generator matrix interpretation of parallel concatenated single bit parity codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917609
 - **Type**: journal
 - **Published**: 2001
@@ -1155,6 +1411,8 @@
 
 ## Claude E. Shannon: a retrospective on his life, work, and impact
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:959253
 - **Type**: journal
 - **Published**: 2001
@@ -1164,6 +1422,8 @@
 
 ## Dynamic programming and the graphical representation of error-correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910574
 - **Type**: journal
 - **Published**: 2001
@@ -1173,6 +1433,8 @@
 
 ## Concatenated code system design for storage channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:920179
 - **Type**: journal
 - **Published**: 2001
@@ -1182,6 +1444,8 @@
 
 ## Generalized time sharing: a low-complexity capacity-achieving multiple-access technique
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:945256
 - **Type**: journal
 - **Published**: 2001
@@ -1191,6 +1455,8 @@
 
 ## Tanner graphs for group block codes and lattices: construction and complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:910592
 - **Type**: journal
 - **Published**: 2001
@@ -1200,6 +1466,8 @@
 
 ## Combinatorial analysis of the minimum distance of turbo codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:959256
 - **Type**: journal
 - **Published**: 2001
@@ -1209,6 +1477,8 @@
 
 ## Dropout compensation in magnetic tape channels by adaptive equalization and coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:966136
 - **Type**: journal
 - **Published**: 2001
@@ -1218,6 +1488,8 @@
 
 ## The distribution of loop lengths in graphical models for turbo decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:945266
 - **Type**: journal
 - **Published**: 2001
@@ -1227,6 +1499,8 @@
 
 ## The minimum description length principle for modeling recording channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:920180
 - **Type**: journal
 - **Published**: 2001
@@ -1236,6 +1510,8 @@
 
 ## Iterative optimum symbol-by-symbol decoding and fast correlation attacks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:959285
 - **Type**: journal
 - **Published**: 2001
@@ -1245,6 +1521,8 @@
 
 ## Block-coded modulation and multiple block-coded modulation with Viterbi decoding for fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:914498
 - **Type**: journal
 - **Published**: 2001
@@ -1254,6 +1532,8 @@
 
 ## Iterative detection for partial response magnetic recording channels-a graphical view
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:951004
 - **Type**: journal
 - **Published**: 2001
@@ -1263,6 +1543,8 @@
 
 ## Iterative soft decoded partial response channels for hybrid magneto-optical recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917600
 - **Type**: journal
 - **Published**: 2001
@@ -1272,6 +1554,8 @@
 
 ## VLSI architectures for iterative decoders in magnetic recording channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917611
 - **Type**: journal
 - **Published**: 2001
@@ -1281,6 +1565,8 @@
 
 ## Signal space detection for DVD optical recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917599
 - **Type**: journal
 - **Published**: 2001
@@ -1290,6 +1576,8 @@
 
 ## Bandwidth efficient modulation based on algebraic low density parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936028
 - **Type**: conference
 - **Published**: 2001
@@ -1299,6 +1587,8 @@
 
 ## Design and performance evaluation of some high-rate irregular low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:965566
 - **Type**: conference
 - **Published**: 2001
@@ -1308,6 +1598,8 @@
 
 ## Thresholds for iterative equalization of partial response channels using density evolution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:935936
 - **Type**: conference
 - **Published**: 2001
@@ -1317,6 +1609,8 @@
 
 ## Cycle-slip detection using soft-output information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:936642
 - **Type**: conference
 - **Published**: 2001
@@ -1326,6 +1620,8 @@
 
 ## On the performance of turbo product codes over partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:951012
 - **Type**: journal
 - **Published**: 2001
@@ -1335,6 +1631,8 @@
 
 ## Coded modulation schemes with turbo and list detection for high-order partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917608
 - **Type**: journal
 - **Published**: 2001
@@ -1344,6 +1642,8 @@
 
 ## On iterative decoding in some existing systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:924872
 - **Type**: journal
 - **Published**: 2001
@@ -1353,6 +1653,8 @@
 
 ## Iterative turbo decoder analysis based on density evolution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:924873
 - **Type**: journal
 - **Published**: 2001
@@ -1362,6 +1664,8 @@
 
 ## Noise predictive turbo systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917610
 - **Type**: journal
 - **Published**: 2001
@@ -1371,6 +1675,8 @@
 
 ## Bit error rate performance of iterative decoding in a perpendicular magnetic recording channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:917602
 - **Type**: journal
 - **Published**: 2001

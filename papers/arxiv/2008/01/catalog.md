@@ -3,6 +3,8 @@
 
 ## The dimensions of LU(3,q) codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0802.0015v8
 - **Type**: preprint
 - **Published**: 2008-01-31
@@ -12,6 +14,8 @@
 
 ## On the non-existence for quantum LDPC codes of type IEEE802.16e with rates 1/2 and 2/3B
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0801.1361v2
 - **Type**: preprint
 - **Published**: 2008-01-09
@@ -21,6 +25,8 @@
 
 ## Hybrid Decoding of Finite Geometry LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0801.1208v4
 - **Type**: preprint
 - **Published**: 2008-01-08
@@ -30,6 +36,8 @@
 
 ## The Asymptotic Bit Error Probability of LDPC Codes for the Binary Erasure Channel with Finite Iteration Number
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0801.0931v2
 - **Type**: preprint
 - **Published**: 2008-01-07

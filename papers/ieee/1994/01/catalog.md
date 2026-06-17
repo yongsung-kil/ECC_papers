@@ -3,6 +3,8 @@
 
 ## Two techniques for constructing DC-free codes with minimum distance 4
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:394760
 - **Type**: conference
 - **Published**: 1994
@@ -12,6 +14,8 @@
 
 ## Expander codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:365734
 - **Type**: conference
 - **Published**: 1994
@@ -21,6 +25,8 @@
 
 ## Logic Synthesis Techniques For Reduced Area Implementation Of Multilevel Circuits With Concurrent Error Detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:629891
 - **Type**: conference
 - **Published**: 1994
@@ -30,6 +36,8 @@
 
 ## Transparent memory testing for pattern sensitive faults
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:528033
 - **Type**: conference
 - **Published**: 1994
@@ -39,6 +47,8 @@
 
 ## Computing upper bounds to error probability of coded modulation schemes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:368803
 - **Type**: conference
 - **Published**: 1994
@@ -48,6 +58,8 @@
 
 ## On the programmable real-time error correcting coder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:467053
 - **Type**: conference
 - **Published**: 1994
@@ -57,6 +69,8 @@
 
 ## Techniques of bounding the probability of decoding error for block coded modulation structures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:335901
 - **Type**: journal
 - **Published**: 1994
@@ -66,6 +80,8 @@
 
 ## M-ary phase coding for the noncoherent AWGN channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:340470
 - **Type**: journal
 - **Published**: 1994
@@ -75,6 +91,8 @@
 
 ## Performance of a general decoding technique over the class of randomly chosen parity check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:272474
 - **Type**: journal
 - **Published**: 1994
@@ -84,6 +102,8 @@
 
 ## On the structure of linear codes with covering radius two and three
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:333857
 - **Type**: journal
 - **Published**: 1994
@@ -93,6 +113,8 @@
 
 ## Two-level coding based on trellis-coded modulation and Reed-Solomon codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:339830
 - **Type**: journal
 - **Published**: 1994

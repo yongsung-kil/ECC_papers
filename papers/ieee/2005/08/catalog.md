@@ -3,6 +3,8 @@
 
 ## Quasi-cyclic LDPC codes for fast encoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1468309
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -12,6 +14,8 @@
 
 ## Reduced-complexity decoding of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1495850
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -21,6 +25,8 @@
 
 ## Successive refinement for the Wyner-Ziv problem and layered code design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1468519
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -30,6 +36,8 @@
 
 ## A hardware Gaussian noise generator using the Wallace method
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1512179
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -39,6 +47,8 @@
 
 ## On channel estimation and equalization in TDS-OFDM based terrestrial HDTV broadcasting system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1510485
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -48,6 +58,8 @@
 
 ## Area-efficient high-throughput MAP decoder architectures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1512180
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -57,6 +69,8 @@
 
 ## On error-correction coding for CDMA PON
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1498937
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -66,6 +80,8 @@
 
 ## A 3-bit soft-decision IC for powerful forward error correction in 10-Gb/s optical communication systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1487614
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -75,6 +91,8 @@
 
 ## Iterative carrier phase recovery methods in turbo receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1496599
 - **Type**: journal
 - **Published**: Aug. 2005
@@ -84,6 +102,8 @@
 
 ## A class of turbo-like LDPC codes and their decoding based on neural network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618080
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -93,6 +113,8 @@
 
 ## On the performance of LDPC coded MC-CDMA in Rayleigh fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618132
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -102,6 +124,8 @@
 
 ## Low-density parity-check codes based on sparse binary sequences
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618129
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -111,6 +135,8 @@
 
 ## Construction and performance analysis of moderate-length rate-compatible LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618109
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -120,6 +146,8 @@
 
 ## Fast decoding algorithm for low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618116
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -129,6 +157,8 @@
 
 ## An FPGA implementation of a structured irregular LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618100
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -138,6 +168,8 @@
 
 ## Design considerations of a new HF modem and performance analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1618021
 - **Type**: conference
 - **Published**: 8-12 Aug. 
@@ -147,6 +179,8 @@
 
 ## Accuracy of dynamical models for analog iterative error control decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1594399
 - **Type**: conference
 - **Published**: 7-10 Aug. 
@@ -156,6 +190,8 @@
 
 ## Performance evaluation of LDPC codes in the presence of colored noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1517230
 - **Type**: conference
 - **Published**: 24-26 Aug.
@@ -165,6 +201,8 @@
 
 ## Multiple access receiver based on hierarchical clusters/users detection using non-binary LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1517286
 - **Type**: conference
 - **Published**: 24-26 Aug.
@@ -174,6 +212,8 @@
 
 ## Spectral performance of integrated DC-free error-control codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1517261
 - **Type**: conference
 - **Published**: 24-26 Aug.
@@ -183,6 +223,8 @@
 
 ## An enhanced block-coded modulation scheme with interblock memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1512834
 - **Type**: conference
 - **Published**: 24-22 Aug.
@@ -192,6 +234,8 @@
 
 ## Serially concatenated LDPC and turbo code with global iteration
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1562852
 - **Type**: conference
 - **Published**: 16-18 Aug.
@@ -201,6 +245,8 @@
 
 ## Code design and decoder implementation of low density parity check code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1544356
 - **Type**: conference
 - **Published**: 15-15 Aug.

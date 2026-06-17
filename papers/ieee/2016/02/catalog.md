@@ -3,6 +3,8 @@
 
 ## Finite-Length Algebraic Spatially-Coupled Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7347352
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -12,6 +14,8 @@
 
 ## On the Total Power Capacity of Regular-LDPC Codes With Iterative Message-Passing Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339416
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -21,6 +25,8 @@
 
 ## Randomly Punctured LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7353121
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -30,6 +36,8 @@
 
 ## Two Enhanced Reliability-Based Decoding Algorithms for Nonbinary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7366559
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -39,6 +47,8 @@
 
 ## Protograph-Based LDPC Code Design for Shaped Bit-Metric Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339431
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -48,6 +58,8 @@
 
 ## Message Passing-Based Decoding of Convolutional Codes: Performance and Complexity Analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7355317
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -57,6 +69,8 @@
 
 ## On the Waterfall Performance of Finite-Length SC-LDPC Codes Constructed From Protographs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339427
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -66,6 +80,8 @@
 
 ## On Progressive Edge-Growth Interleavers for Turbo Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339667
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -75,6 +91,8 @@
 
 ## Multi-CRC Polar Codes and Their Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7353162
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -84,6 +102,8 @@
 
 ## Fast List Decoders for Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339671
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -93,6 +113,8 @@
 
 ## Practical Dirty Paper Coding With Sum Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7350223
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -102,6 +124,8 @@
 
 ## Practical Design and Decoding of Parallel Concatenated Structure for Systematic Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7332771
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -111,6 +135,8 @@
 
 ## Distance Spectrum of Fixed-Rate Raptor Codes With Linear Random Precoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339429
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -120,6 +146,8 @@
 
 ## Performance Analysis of Block Markov Superposition Transmission of Short Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339426
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -129,6 +157,8 @@
 
 ## On the Complexity of the Rank Syndrome Decoding Problem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7364245
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -138,6 +168,8 @@
 
 ## Reduce the Complexity of List Decoding of Polar Codes by Tree-Pruning
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7348682
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -147,6 +179,8 @@
 
 ## Polar Subcodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339451
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -156,6 +190,8 @@
 
 ## A MAP Decoder for TVB Codes on a Generalized Iyengar–Siegel–Wolf BPMR Markov Channel Model
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7294692
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -165,6 +201,8 @@
 
 ## Interleaved Concatenations of Polar Codes With BCH and Convolutional Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339653
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -174,6 +212,8 @@
 
 ## A Split-Reduced Successive Cancellation List Decoder for Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339660
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -183,6 +223,8 @@
 
 ## Low Complexity Iterative MMSE-PIC Detection for Medium-Size Massive MIMO
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339655
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -192,6 +234,8 @@
 
 ## A Low-Latency List Successive-Cancellation Decoding Implementation for Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339658
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -201,6 +245,8 @@
 
 ## On the Origin of Polar Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7342879
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -210,6 +256,8 @@
 
 ## Dynamic Grain State Estimation for High-Density TDMR: Progress and Future Directions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7247749
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -219,6 +267,8 @@
 
 ## Codes for Partially Stuck-At Memory Cells
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7369966
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -228,6 +278,8 @@
 
 ## Two-Layer Coded Spatial Modulation With Block Markov Superposition Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7348663
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -237,6 +289,8 @@
 
 ## Comparison of Two-Reader and Three-Reader 2-D Magnetic Recording Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7258393
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -246,6 +300,8 @@
 
 ## Multilevel Reed–Solomon Codes for PMR Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7307210
 - **Type**: journal
 - **Published**: Feb. 2016
@@ -255,6 +311,8 @@
 
 ## Globally coupled LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7888167
 - **Type**: conference
 - **Published**: 31 Jan.-5 
@@ -264,6 +322,8 @@
 
 ## Some results on spatially coupled protograph LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7888150
 - **Type**: conference
 - **Published**: 31 Jan.-5 
@@ -273,6 +333,8 @@
 
 ## Approaching maximum likelihood performance of LDPC codes by stochastic resonance in noisy iterative decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7888185
 - **Type**: conference
 - **Published**: 31 Jan.-5 
@@ -282,6 +344,8 @@
 
 ## On adaptive linear programming decoding of linear codes over GF(8)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7888132
 - **Type**: conference
 - **Published**: 31 Jan.-5 
@@ -291,6 +355,8 @@
 
 ## Message-aggregation enhanced iterative hard-decision decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7888184
 - **Type**: conference
 - **Published**: 31 Jan.-5 
@@ -300,6 +366,8 @@
 
 ## Duality between erasures and defects
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7888148
 - **Type**: conference
 - **Published**: 31 Jan.-5 
@@ -309,6 +377,8 @@
 
 ## Joint iterative channel estimation and decoding under impulsive interference condition
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7423585
 - **Type**: conference
 - **Published**: 31 Jan.-3 
@@ -318,6 +388,8 @@
 
 ## Joint iterative channel estimation and decoding under impulsive interference condition
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7423584
 - **Type**: conference
 - **Published**: 31 Jan.-3 
@@ -327,6 +399,8 @@
 
 ## Comparative performance analysis of forward error correcting codes for Free Space Optical communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7603067
 - **Type**: conference
 - **Published**: 24-26 Feb.
@@ -336,6 +410,8 @@
 
 ## Modified PEG algorithm for large girth Quasi-cyclic protograph LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7440704
 - **Type**: conference
 - **Published**: 15-18 Feb.
@@ -345,6 +421,8 @@
 
 ## Improved trellis-based decoder for non-binary LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7440727
 - **Type**: conference
 - **Published**: 15-18 Feb.
@@ -354,6 +432,8 @@
 
 ## Joint source-channel decoding for LDPC-coded error-corrupted binary Markov sources
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7440677
 - **Type**: conference
 - **Published**: 15-18 Feb.
@@ -363,6 +443,8 @@
 
 ## Optimization of codes for the joint Viterbi detector decoder (JVDD)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7440607
 - **Type**: conference
 - **Published**: 15-18 Feb.

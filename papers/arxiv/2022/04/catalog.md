@@ -3,6 +3,8 @@
 
 ## Partitioning qubits in hypergraph product codes to implement logical gates
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2204.10812v3
 - **Type**: preprint
 - **Published**: 2022-04-22
@@ -12,6 +14,8 @@
 
 ## On Quantum-Assisted LDPC Decoding Augmented with Classical Post-Processing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2204.09940v1
 - **Type**: preprint
 - **Published**: 2022-04-21
@@ -21,6 +25,8 @@
 
 ## LDPC codes: comparing cluster graphs to factor graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2204.06350v2
 - **Type**: preprint
 - **Published**: 2022-04-13
@@ -30,6 +36,8 @@
 
 ## LDPC codes: tracking non-stationary channel noise using sequential variational Bayesian estimates
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2204.07037v2
 - **Type**: preprint
 - **Published**: 2022-04-13

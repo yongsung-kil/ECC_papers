@@ -3,6 +3,8 @@
 
 ## Quantum Error Correction near the Coding Theoretical Bound
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.21171v4
 - **Type**: preprint
 - **Published**: 2024-12-30
@@ -12,6 +14,8 @@
 
 ## Fundamental thresholds for computational and erasure errors via the coherent information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.16727v2
 - **Type**: preprint
 - **Published**: 2024-12-21
@@ -21,6 +25,8 @@
 
 ## Spiking Neural Belief Propagation Decoder for LDPC Codes with Small Variable Node Degrees
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.15897v1
 - **Type**: preprint
 - **Published**: 2024-12-20
@@ -30,6 +36,8 @@
 
 ## Turbo product decoding of cubic tensor codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.14017v1
 - **Type**: preprint
 - **Published**: 2024-12-18
@@ -39,6 +47,8 @@
 
 ## Topological Quantum Spin Glass Order and its realization in qLDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.13248v1
 - **Type**: preprint
 - **Published**: 2024-12-17
@@ -48,6 +58,8 @@
 
 ## Iterative Detection and Decoding for Clustered Cell-Free Massive MIMO Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.10956v1
 - **Type**: preprint
 - **Published**: 2024-12-14
@@ -57,6 +69,8 @@
 
 ## Study of Iterative Detection and Decoding for Multiuser Systems and MMSE Refinements with Active or Passive RIS
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.10642v1
 - **Type**: preprint
 - **Published**: 2024-12-14
@@ -66,6 +80,8 @@
 
 ## Quantum-enhanced belief propagation for LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.08596v1
 - **Type**: preprint
 - **Published**: 2024-12-11
@@ -75,6 +91,8 @@
 
 ## Pruning qLDPC codes: Towards bivariate bicycle codes with open boundary conditions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.04181v1
 - **Type**: preprint
 - **Published**: 2024-12-05
@@ -84,6 +102,8 @@
 
 ## SymBreak: Mitigating Quantum Degeneracy Issues in QLDPC Code Decoders by Breaking Symmetry
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.02885v1
 - **Type**: preprint
 - **Published**: 2024-12-03
@@ -93,6 +113,8 @@
 
 ## On the lifting degree of girth-8 QC-LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2412.02526v1
 - **Type**: preprint
 - **Published**: 2024-12-03

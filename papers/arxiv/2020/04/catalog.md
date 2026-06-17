@@ -3,6 +3,8 @@
 
 ## Comparison of Windowed-Decoder Configurations for Spatially Coupled LDPC Codes Under Equal-Complexity Constraints
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.12973v1
 - **Type**: preprint
 - **Published**: 2020-04-27
@@ -12,6 +14,8 @@
 
 ## Combining hard and soft decoders for hypergraph product codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.11199v2
 - **Type**: preprint
 - **Published**: 2020-04-23
@@ -21,6 +25,8 @@
 
 ## High-throughput GPU layered decoder of multi-edge type low density parity check codes in continuous-variable quantum key distribution systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.09084v1
 - **Type**: preprint
 - **Published**: 2020-04-20
@@ -30,6 +36,8 @@
 
 ## Decodable quantum LDPC codes beyond the $\sqrt{n}$ distance barrier using high dimensional expanders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.07935v1
 - **Type**: preprint
 - **Published**: 2020-04-16
@@ -39,6 +47,8 @@
 
 ## Cellular automaton decoders for topological quantum codes with noisy measurements and beyond
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.07247v2
 - **Type**: preprint
 - **Published**: 2020-04-15
@@ -48,6 +58,8 @@
 
 ## A Polynomial Interpolation based Quantum Key Reconciliation Protocol: Error Correction without Information Leakage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.07061v1
 - **Type**: preprint
 - **Published**: 2020-04-15
@@ -57,6 +69,8 @@
 
 ## On Cyclic Polar Codes and The Burst Erasure Performance of Spatially-Coupled LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.06875v1
 - **Type**: preprint
 - **Published**: 2020-04-15
@@ -66,6 +80,8 @@
 
 ## DNN-aided Read-voltage Threshold Optimization for MLC Flash Memory with Finite Block Length
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2004.05340v1
 - **Type**: preprint
 - **Published**: 2020-04-11

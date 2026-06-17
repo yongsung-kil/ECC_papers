@@ -3,6 +3,8 @@
 
 ## Experimental real-time GbE MIMO FSO under fog conditions with software defined GNU Radio platform-based adaptive switching
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9840520
 - **Type**: journal
 - **Published**: August 202
@@ -12,6 +14,8 @@
 
 ## Design of LUT-Based LDPC Decoders for Spin-Transfer Torque Magnetic Random Access Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9658546
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -21,6 +25,8 @@
 
 ## Construction of QC-LDPC Codes from Sidon Sequence Using Permutation and Segmentation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9780420
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -30,6 +36,8 @@
 
 ## Adaptive Belief Propagation Decoding of CRC Concatenated NR LDPC and Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9800962
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -39,6 +47,8 @@
 
 ## Automorphism Ensemble Decoding of Quasi-Cyclic LDPC Codes by Breaking Graph Symmetries
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9772648
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -48,6 +58,8 @@
 
 ## Multiple-Layer Integrated Interleaved Codes: A Class of Hierarchical Locally Recoverable Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9756519
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -57,6 +69,8 @@
 
 ## Nonlinear Transform Source-Channel Coding for Semantic Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9791398
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -66,6 +80,8 @@
 
 ## Simplified Ordered Statistic Decoding for Short-Length Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9779155
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -75,6 +91,8 @@
 
 ## Advanced Digital Signal Processing and Variable-Rate Coding for Unrepeatered Optical Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9795950
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -84,6 +102,8 @@
 
 ## Performance and Capacity Analysis of MDCSK-BICM for Impulsive Noise in PLC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9599361
 - **Type**: journal
 - **Published**: Aug. 2022
@@ -93,6 +113,8 @@
 
 ## Blind Recognition of LDPC Codes by Average LLR in Multi-Channels Based on CNN
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9955194
 - **Type**: conference
 - **Published**: 5-7 Aug. 2
@@ -102,6 +124,8 @@
 
 ## A LDPC Decoding Algorithm based on Convolutional Neural Network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9914424
 - **Type**: conference
 - **Published**: 4-5 Aug. 2
@@ -111,6 +135,8 @@
 
 ## Performance Evaluation of Burst Error Correction by LDPC Coding and Iterative Decoding System in Magnetic Tape Drive Using a BaFe Magnetic Tape
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9918619
 - **Type**: conference
 - **Published**: 29-31 Aug.
@@ -120,6 +146,8 @@
 
 ## Convolutional Neural Network-based Media Noise Prediction and Equalization for TDMR Turbo-detection with Write/Read TMR
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9918551
 - **Type**: conference
 - **Published**: 29-31 Aug.
@@ -129,6 +157,8 @@
 
 ## Performance Evaluation of Classic McEliece Post Quantum Cryptography
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10202276
 - **Type**: conference
 - **Published**: 29-30 Aug.
@@ -138,6 +168,8 @@
 
 ## Secure Image Communication using Systematic-LT Codes over AWGN Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9909507
 - **Type**: conference
 - **Published**: 26-28 Aug.
@@ -147,6 +179,8 @@
 
 ## Performance of PSA Kalman Filters for Phase Noise Compensation in High-Order QAM OFDM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9906479
 - **Type**: conference
 - **Published**: 24-26 Aug.
@@ -156,6 +190,8 @@
 
 ## Bit Error Rate Performance of OFDM Using Hierarchical Modulation in 3GPP TDL Channel Model
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9906481
 - **Type**: conference
 - **Published**: 24-26 Aug.
@@ -165,6 +201,8 @@
 
 ## Reliable Transceiver Design of LEO Satellite Communication Systems with Doppler Effect and Multipath and Amplification Nonlinear Distortions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9906513
 - **Type**: conference
 - **Published**: 24-26 Aug.
@@ -174,6 +212,8 @@
 
 ## Efficient ECC Architecture for Data Storage Memory Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9972043
 - **Type**: conference
 - **Published**: 24-25 Aug.
@@ -183,6 +223,8 @@
 
 ## Exploiting Binary Equilibrium for Efficient LDPC Decoding in 3D NAND Flash
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9904783
 - **Type**: conference
 - **Published**: 23-25 Aug.
@@ -192,6 +234,8 @@
 
 ## Intelligent and Reliable Coded Bit Stream Recovery over Correlated Fast Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10006524
 - **Type**: conference
 - **Published**: 23-24 Aug.
@@ -201,6 +245,8 @@
 
 ## Configurable Universal QC-LDPC Encoder Architecture Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9909148
 - **Type**: conference
 - **Published**: 21-23 Aug.
@@ -210,6 +256,8 @@
 
 ## Spatially Coupled Generalized LDPC Codes Over Burst Erasure Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9909157
 - **Type**: conference
 - **Published**: 21-23 Aug.
@@ -219,6 +267,8 @@
 
 ## Research of Error Control Coding and Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9919106
 - **Type**: conference
 - **Published**: 20-21 Aug.
@@ -228,6 +278,8 @@
 
 ## Optimized LDPC Code Concatenated with Trellis Shaping for PAPR Reduction in SISO-OFDM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9990252
 - **Type**: conference
 - **Published**: 16-20 Aug.
@@ -237,6 +289,8 @@
 
 ## LDPC Channel Coding in Coplanar MIMO Ultraviolet Communication System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9900999
 - **Type**: conference
 - **Published**: 12-15 Aug.
@@ -246,6 +300,8 @@
 
 ## A PAPR Reduction scheme Based on Nonlinear Companding Transform and LDPC-coded for a Coherent Optical GFDM system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9901270
 - **Type**: conference
 - **Published**: 12-15 Aug.
@@ -255,6 +311,8 @@
 
 ## Performance Analysis of LDPC Coding under Multiple Scattering in Ultraviolet Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9901155
 - **Type**: conference
 - **Published**: 12-15 Aug.
@@ -264,6 +322,8 @@
 
 ## Probabilistically Shaped High-order QAM Coherent Optical Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9901006
 - **Type**: conference
 - **Published**: 12-15 Aug.
@@ -273,6 +333,8 @@
 
 ## Partial Product-LDPC Codes Without Rate Loss
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880620
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -282,6 +344,8 @@
 
 ## Design of 4-cycles Free Short-length LDPC Codes Based on the Kirkman Triple Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9896662
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -291,6 +355,8 @@
 
 ## Parallel Decoding of PIC-LDPC Codes Aided by Free-Ride Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880658
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -300,6 +366,8 @@
 
 ## An Improved 5G NR LDPC Decoding Algorithm Based On Box-Plus Operation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880684
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -309,6 +377,8 @@
 
 ## A Transmission Scheme based on QC-LDPC Codes with Matrix Q over AWGN Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880641
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -318,6 +388,8 @@
 
 ## Design of Non-punctured Protograph LDPC Codes for JSCC Systems over Partial Response Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9896703
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -327,6 +399,8 @@
 
 ## A Spatially Coupled PAC Coding Scheme and Its List Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9896664
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -336,6 +410,8 @@
 
 ## Deep Learning Based Constellation Rearrangement Design in Hybrid ARQ System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9896677
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -345,6 +421,8 @@
 
 ## Bit-wise Detection for OTFS Modulation via Message Passing Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9896692
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -354,6 +432,8 @@
 
 ## A Low Complexity Iterative Receiving Method Based on Message Passing in π/4-DQPSK Modulated Frequency-Hopping Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880747
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -363,6 +443,8 @@
 
 ## Min-Max Hamming Distance Considerations for Activation Pattern Design in Index Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880838
 - **Type**: conference
 - **Published**: 11-13 Aug.
@@ -372,6 +454,8 @@
 
 ## Block Markov Superposition Transmission of Algebraic QC-LDPC Codes for Optical Fiber Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9880606
 - **Type**: conference
 - **Published**: 11-12 Aug.
@@ -381,6 +465,8 @@
 
 ## BCH-SPC based Cubic Turbo Product Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9870585
 - **Type**: conference
 - **Published**: 1-5 Aug. 2
@@ -390,6 +476,8 @@
 
 ## OAMP for Low Complexity Detection in Large-Scale LDS Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9870582
 - **Type**: conference
 - **Published**: 1-5 Aug. 2

@@ -3,6 +3,8 @@
 
 ## Ethereum ECCPoW
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2101.10729v1
 - **Type**: preprint
 - **Published**: 2021-01-26
@@ -12,6 +14,8 @@
 
 ## Codes approaching the Shannon limit with polynomial complexity per information bit
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2101.10145v1
 - **Type**: preprint
 - **Published**: 2021-01-25
@@ -21,6 +25,8 @@
 
 ## Unequal Error Protection Achieves Threshold Gains on BEC and BSC via Higher Fidelity Messages
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2101.09238v1
 - **Type**: preprint
 - **Published**: 2021-01-22
@@ -30,6 +36,8 @@
 
 ## Random Fourier Feature Based Deep Learning for Wireless Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2101.05254v1
 - **Type**: preprint
 - **Published**: 2021-01-13
@@ -39,6 +47,8 @@
 
 ## Deep Joint Source Channel Coding for WirelessImage Transmission with OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2101.03909v2
 - **Type**: preprint
 - **Published**: 2021-01-05

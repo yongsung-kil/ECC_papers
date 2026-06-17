@@ -3,6 +3,8 @@
 
 ## Logical blocks for fault-tolerant topological quantum computation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2112.12160v2
 - **Type**: preprint
 - **Published**: 2021-12-22
@@ -12,6 +14,8 @@
 
 ## Concatenated Code Design for Constrained DNA Data Storage with Asymmetric Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2112.09417v1
 - **Type**: preprint
 - **Published**: 2021-12-17
@@ -21,6 +25,8 @@
 
 ## Explicit Abelian Lifts and Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2112.01647v1
 - **Type**: preprint
 - **Published**: 2021-12-02

@@ -3,6 +3,8 @@
 
 ## Constructing low-density parity-check codes with circulant matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:814359
 - **Type**: conference
 - **Published**: 1999
@@ -12,6 +14,8 @@
 
 ## Channel code blocklength and rate optimization for progressive image transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:796817
 - **Type**: conference
 - **Published**: 1999
@@ -21,6 +25,8 @@
 
 ## The impact of using multicode transmission in the WCDMA system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:780607
 - **Type**: conference
 - **Published**: 1999
@@ -30,6 +36,8 @@
 
 ## Parity check codes for partial response channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:830156
 - **Type**: conference
 - **Published**: 1999
@@ -39,6 +47,8 @@
 
 ## Interleaved parity check codes and reduced complexity detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:765514
 - **Type**: conference
 - **Published**: 1999
@@ -48,6 +58,8 @@
 
 ## Impact of amplifier constraints on modem design for broadband wireless links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:810917
 - **Type**: conference
 - **Published**: 1999
@@ -57,6 +69,8 @@
 
 ## Generalized low density (Tanner) codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:767979
 - **Type**: conference
 - **Published**: 1999
@@ -66,6 +80,8 @@
 
 ## A low complexity FEC scheme based on the intersection of interleaved block codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:778060
 - **Type**: conference
 - **Published**: 1999
@@ -75,6 +91,8 @@
 
 ## Good error-correcting codes based on very sparse matrices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:748992
 - **Type**: journal
 - **Published**: 1999
@@ -84,6 +102,8 @@
 
 ## Time-varying periodic convolutional codes with low-density parity-check matrix
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:782171
 - **Type**: journal
 - **Published**: 1999
@@ -93,6 +113,8 @@
 
 ## On generalized low-density parity-check codes based on Hamming component codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:781010
 - **Type**: journal
 - **Published**: 1999
@@ -102,6 +124,8 @@
 
 ## Type II codes over F/sub 2/+uF/sub 2/
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:746770
 - **Type**: journal
 - **Published**: 1999
@@ -111,6 +135,8 @@
 
 ## Which codes have cycle-free Tanner graphs?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:782170
 - **Type**: journal
 - **Published**: 1999
@@ -120,6 +146,8 @@
 
 ## High-speed indoor wireless communications at 60 GHz with coded OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:803506
 - **Type**: journal
 - **Published**: 1999
@@ -129,6 +157,8 @@
 
 ## Symbol-based turbo codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:798019
 - **Type**: journal
 - **Published**: 1999
@@ -138,6 +168,8 @@
 
 ## Reduced complexity iterative decoding of low-density parity check codes based on belief propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:768759
 - **Type**: journal
 - **Published**: 1999
@@ -147,6 +179,8 @@
 
 ## Comparison of constructions of irregular Gallager codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:795809
 - **Type**: journal
 - **Published**: 1999
@@ -156,6 +190,8 @@
 
 ## Type IV self-dual codes over rings
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:796375
 - **Type**: journal
 - **Published**: 1999
@@ -165,6 +201,8 @@
 
 ## Throughput analysis of the go-back-N protocol in fading radio channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:768202
 - **Type**: journal
 - **Published**: 1999
@@ -174,6 +212,8 @@
 
 ## Constrained coding techniques for soft iterative decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:830157
 - **Type**: conference
 - **Published**: 1999
@@ -183,6 +223,8 @@
 
 ## On bootstrap iterative Viterbi algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:765492
 - **Type**: conference
 - **Published**: 1999
@@ -192,6 +234,8 @@
 
 ## Fault-tolerant linear finite state machines
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:813422
 - **Type**: conference
 - **Published**: 1999
@@ -201,6 +245,8 @@
 
 ## On lowest density MDS codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:746771
 - **Type**: journal
 - **Published**: 1999
@@ -210,6 +256,8 @@
 
 ## Low-density MDS codes and factors of complete graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:782102
 - **Type**: journal
 - **Published**: 1999

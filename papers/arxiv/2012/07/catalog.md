@@ -3,6 +3,8 @@
 
 ## LT Codes For Efficient and Reliable Distributed Storage Systems Revisited
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1207.5542v1
 - **Type**: preprint
 - **Published**: 2012-07-23
@@ -12,6 +14,8 @@
 
 ## Finite Alphabet Iterative Decoders, Part I: Decoding Beyond Belief Propagation on BSC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1207.4800v1
 - **Type**: preprint
 - **Published**: 2012-07-19
@@ -21,6 +25,8 @@
 
 ## Analysis and Optimization of a Frequency-Hopping Ad Hoc Network in Rayleigh Fading
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1207.3451v1
 - **Type**: preprint
 - **Published**: 2012-07-14
@@ -30,6 +36,8 @@
 
 ## Quantum LDPC Codes Constructed from Point-Line Subsets of the Finite Projective Plane
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1207.0732v1
 - **Type**: preprint
 - **Published**: 2012-07-03

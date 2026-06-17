@@ -3,6 +3,8 @@
 
 ## Index Codes for the Gaussian Broadcast Channel using Quadrature Amplitude Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1505.07283v1
 - **Type**: preprint
 - **Published**: 2015-05-27
@@ -12,6 +14,8 @@
 
 ## Simple rate-adaptive LDPC coding for quantum key distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1505.06423v1
 - **Type**: preprint
 - **Published**: 2015-05-24
@@ -21,6 +25,8 @@
 
 ## A 2.48Gb/s QC-LDPC Decoder Implementation on the NI USRP-2953R
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1505.04339v1
 - **Type**: preprint
 - **Published**: 2015-05-16
@@ -30,6 +36,8 @@
 
 ## Optimization Design and Analysis of Systematic LT codes over AWGN Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1505.01944v1
 - **Type**: preprint
 - **Published**: 2015-05-08

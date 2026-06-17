@@ -3,6 +3,8 @@
 
 ## Stopping-Set Assisted Reinforced Belief Propagation for Decoding Short LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9656848
 - **Type**: journal
 - **Published**: March 2022
@@ -12,6 +14,8 @@
 
 ## Area- and Energy-Efficient LDPC Decoder Using Mixed-Resolution Check-Node Processing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9530762
 - **Type**: journal
 - **Published**: March 2022
@@ -21,6 +25,8 @@
 
 ## Advanced ISDB-T and ATSC 3.0 LDPC Codes Performance and Complexity Comparison
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9665205
 - **Type**: journal
 - **Published**: March 2022
@@ -30,6 +36,8 @@
 
 ## High-Throughput LDPC-CC Decoders Based on Storage, Arithmetic, and Control Improvements
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9647009
 - **Type**: journal
 - **Published**: March 2022
@@ -39,6 +47,8 @@
 
 ## Multilevel Coding for Physical-Layer Security
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9690167
 - **Type**: journal
 - **Published**: March 2022
@@ -48,6 +58,8 @@
 
 ## A Polygonal Line Min-Sum Decoding Scheme for Low Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9520687
 - **Type**: journal
 - **Published**: March 2022
@@ -57,6 +69,8 @@
 
 ## Error Floor Analysis of LDPC Column Layered Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9656896
 - **Type**: journal
 - **Published**: March 2022
@@ -66,6 +80,8 @@
 
 ## QC-LDPC Codes With Large Column Weight and Free of Small Size ETSs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9663353
 - **Type**: journal
 - **Published**: March 2022
@@ -75,6 +91,8 @@
 
 ## Improving Asymptotic Properties of Loop Construction of SC-LDPC Chains Over the BEC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9663207
 - **Type**: journal
 - **Published**: March 2022
@@ -84,6 +102,8 @@
 
 ## Efficient First Four Minimum Values Finder for NB-LDPC Decoders With Compressed Messages
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9583586
 - **Type**: journal
 - **Published**: March 2022
@@ -93,6 +113,8 @@
 
 ## Hard Reliability-Based Ordered Statistic Decoding and Its Application to McEliece Public Key Cryptosystem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9658510
 - **Type**: journal
 - **Published**: March 2022
@@ -102,6 +124,8 @@
 
 ## Tail Latency Optimization for LDPC-Based High-Density and Low-Cost Flash Memory Devices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9365694
 - **Type**: journal
 - **Published**: March 2022
@@ -111,6 +135,8 @@
 
 ## Analysis and Design of Polar-Coded Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9678982
 - **Type**: journal
 - **Published**: March 2022
@@ -120,6 +146,8 @@
 
 ## Task-Oriented Multi-User Semantic Communications for VQA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9653664
 - **Type**: journal
 - **Published**: March 2022
@@ -129,6 +157,8 @@
 
 ## Coded Distributed Computing With Partial Recovery
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9641837
 - **Type**: journal
 - **Published**: March 2022
@@ -138,6 +168,8 @@
 
 ## Mitigating Coherent Noise by Balancing Weight-2 Z-Stabilizers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9624967
 - **Type**: journal
 - **Published**: March 2022
@@ -147,6 +179,8 @@
 
 ## Array BP-XOR Codes for Hierarchically Distributed Matrix Multiplication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9632620
 - **Type**: journal
 - **Published**: March 2022
@@ -156,6 +190,8 @@
 
 ## Regular Sparse NOMA: Ultimate Performance in Closed Form
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9718537
 - **Type**: journal
 - **Published**: March 2022
@@ -165,6 +201,8 @@
 
 ## A Low-Latency Random Access Scheme by Multichannel SIC for Industrial IoT
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9344839
 - **Type**: journal
 - **Published**: March 2022
@@ -174,6 +212,8 @@
 
 ## Sparse Layered MIMO With Iterative Detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9627077
 - **Type**: journal
 - **Published**: March 2022
@@ -183,6 +223,8 @@
 
 ## Low Complexity Partial Retransmission ARQ with Hard-Decision Message-Passing Technique
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9741642
 - **Type**: conference
 - **Published**: 9-11 March
@@ -192,6 +234,8 @@
 
 ## Flexible Upstream FEC for Higher Throughput, Efficiency, and Robustness for 50G PON
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9748605
 - **Type**: conference
 - **Published**: 6-10 March
@@ -201,6 +245,8 @@
 
 ## Investigation of Potential FEC Schemes for 800G-ZR Forward Error Correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9748672
 - **Type**: conference
 - **Published**: 6-10 March
@@ -210,6 +256,8 @@
 
 ## Mitigating Nonlinear Interference by Limiting Energy Variations in Sphere Shaping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9748613
 - **Type**: conference
 - **Published**: 6-10 March
@@ -219,6 +267,8 @@
 
 ## Mitigation of Transmitter Impairment with 4×2 WL MIMO Equalizer Embedding Preliminary CPR
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9748236
 - **Type**: conference
 - **Published**: 6-10 March
@@ -228,6 +278,8 @@
 
 ## New Use Cases for PONs Beyond Residential Services
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9748323
 - **Type**: conference
 - **Published**: 6-10 March
@@ -237,6 +289,8 @@
 
 ## Practical Entropy Loading Enabled by Enumerative Sphere Shaping with Short Block Lengths
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9748820
 - **Type**: conference
 - **Published**: 6-10 March
@@ -246,6 +300,8 @@
 
 ## Implementing Low-Density Parity-Check Codes in the Mars Relay Network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9843399
 - **Type**: conference
 - **Published**: 5-12 March
@@ -255,6 +311,8 @@
 
 ## 3D Cloud-RAN Functional Split to Provide 6G Connectivity on Mars
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9843703
 - **Type**: conference
 - **Published**: 5-12 March
@@ -264,6 +322,8 @@
 
 ## Preparing the Mars Relay Network for the Arrival of the Perseverance Rover at Mars
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9843762
 - **Type**: conference
 - **Published**: 5-12 March
@@ -273,6 +333,8 @@
 
 ## SelenIRIS: a Moon-Earth Optical Communication Terminal for CubeSats
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9749725
 - **Type**: conference
 - **Published**: 28-31 Marc
@@ -282,6 +344,8 @@
 
 ## Performance Analysis of Pulse Shaping Filters with Novel Rate Adaptive Irregular LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9767149
 - **Type**: conference
 - **Published**: 24-26 Marc
@@ -291,6 +355,8 @@
 
 ## Error-Control Coding Algorithms and Architecture for Modern Applications Powered by LDPC Codes and Belief Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9763119
 - **Type**: conference
 - **Published**: 23-25 Marc
@@ -300,6 +366,8 @@
 
 ## DWR: Differential Wearing for Read Performance Optimization on High-Density NAND Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9774738
 - **Type**: conference
 - **Published**: 14-23 Marc
@@ -309,6 +377,8 @@
 
 ## Area efficient implementation of short length QC-LDPC codes for Ultra-Reliable Low-Latency Communication (URLLC) application
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9774211
 - **Type**: conference
 - **Published**: 10-12 Marc
@@ -318,6 +388,8 @@
 
 ## DaRe: Data Recovery Through Application Layer Coding for LoRaWAN
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9167471
 - **Type**: journal
 - **Published**: 1 March 20

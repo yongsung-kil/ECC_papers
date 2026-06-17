@@ -3,6 +3,8 @@
 
 ## Efficient Search of Girth-Optimal QC-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7398027
 - **Type**: journal
 - **Published**: April 2016
@@ -12,6 +14,8 @@
 
 ## Nonbinary Protograph-Based LDPC Codes Based on Additive Group of Finite Field
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7397900
 - **Type**: journal
 - **Published**: April 2016
@@ -21,6 +25,8 @@
 
 ## Iterative Detection and Decoding Algorithms for MIMO Systems in Block-Fading Channels Using LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7105928
 - **Type**: journal
 - **Published**: April 2016
@@ -30,6 +36,8 @@
 
 ## Rate-Compatible Root-Protograph LDPC Codes for Quasi-Static Fading Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7080854
 - **Type**: journal
 - **Published**: April 2016
@@ -39,6 +47,8 @@
 
 ## Informed Decoding Algorithms of LDPC Codes Based on Dynamic Selection Strategy
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7403966
 - **Type**: journal
 - **Published**: April 2016
@@ -48,6 +58,8 @@
 
 ## A Generator-Matrix-Based Approach for Adaptively Generating Cut-Inducing Redundant Parity Checks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7407566
 - **Type**: journal
 - **Published**: April 2016
@@ -57,6 +69,8 @@
 
 ## A 520k (18900, 17010) Array Dispersion LDPC Decoder Architectures for NAND Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7208881
 - **Type**: journal
 - **Published**: April 2016
@@ -66,6 +80,8 @@
 
 ## LDPC Code Design for the Two-User Gaussian Multiple Access Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7364282
 - **Type**: journal
 - **Published**: April 2016
@@ -75,6 +91,8 @@
 
 ## Read and Write Voltage Signal Optimization for Multi-Level-Cell (MLC) NAND Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7416649
 - **Type**: journal
 - **Published**: April 2016
@@ -84,6 +102,8 @@
 
 ## Fast Converging ADMM-Penalized Algorithm for LDPC Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7409989
 - **Type**: journal
 - **Published**: April 2016
@@ -93,6 +113,8 @@
 
 ## Residual-Quantization Based Code Design for Compressing Noisy Sources With Arbitrary Decoder Side Information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7405308
 - **Type**: journal
 - **Published**: April 2016
@@ -102,6 +124,8 @@
 
 ## On Blind Recognition of Channel Codes Within a Candidate Set
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7397892
 - **Type**: journal
 - **Published**: April 2016
@@ -111,6 +135,8 @@
 
 ## Reversible Data Hiding in Encrypted Images With Distributed Source Encoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7076645
 - **Type**: journal
 - **Published**: April 2016
@@ -120,6 +146,8 @@
 
 ## Involutions Over the Galois Field  $ {\mathbb F}_{2^{n}}$
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7399375
 - **Type**: journal
 - **Published**: April 2016
@@ -129,6 +157,8 @@
 
 ## Hardware and Energy-Efficient Stochastic LU Decomposition Scheme for MIMO Receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7160773
 - **Type**: journal
 - **Published**: April 2016
@@ -138,6 +168,8 @@
 
 ## Throughput Improvement of 802.11 Networks Via Randomization of Transmission Power Levels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7097737
 - **Type**: journal
 - **Published**: April 2016
@@ -147,6 +179,8 @@
 
 ## Is the Low-Complexity Mobile-Relay-Aided FFR-DAS Capable of Outperforming the High-Complexity CoMP?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7067447
 - **Type**: journal
 - **Published**: April 2016
@@ -156,6 +190,8 @@
 
 ## New Soft-Encoding Relay (SoER) Mechanisms for Wireless Relay Systems: Convolutional and Turbo Constructions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7339715
 - **Type**: journal
 - **Published**: April 2016
@@ -165,6 +201,8 @@
 
 ## Staircase Codes for High-Rate Wireless Transmission on Burst-Error Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7352332
 - **Type**: journal
 - **Published**: April 2016
@@ -174,6 +212,8 @@
 
 ## LP-Decodable Multipermutation Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7401041
 - **Type**: journal
 - **Published**: April 2016
@@ -183,6 +223,8 @@
 
 ## Field Trial Transmission of Time Frequency Packed DP-QPSK Superchannel With Spectral Efficiency of 6.2 bit/s/Hz
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7433399
 - **Type**: journal
 - **Published**: April 2016
@@ -192,6 +234,8 @@
 
 ## Blind Compute-and-Forward
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7426766
 - **Type**: journal
 - **Published**: April 2016
@@ -201,6 +245,8 @@
 
 ## Error performance of LDPC decoder using bit flip algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7754139
 - **Type**: conference
 - **Published**: 6-8 April 
@@ -210,6 +256,8 @@
 
 ## Bezier curves with low density parity check codes over galois field GF (2⁁m) for error recovery in an image
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7754120
 - **Type**: conference
 - **Published**: 6-8 April 
@@ -219,6 +267,8 @@
 
 ## FPGA implementation of polar code based encoder architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7754231
 - **Type**: conference
 - **Published**: 6-8 April 
@@ -228,6 +278,8 @@
 
 ## Experimental study and praticai realization of a reconciliation method for quantum key distribution system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7476111
 - **Type**: conference
 - **Published**: 5-7 April 
@@ -237,6 +289,8 @@
 
 ## Improved LDPC decoding algorithms based on min-sum algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7480124
 - **Type**: conference
 - **Published**: 5-6 April 
@@ -246,6 +300,8 @@
 
 ## Evaluation of the hardware complexity of the ADMM approach for LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7565042
 - **Type**: conference
 - **Published**: 3-6 April 
@@ -255,6 +311,8 @@
 
 ## Spatially-coupled LDPC coding in cooperative wireless networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7564992
 - **Type**: conference
 - **Published**: 3-6 April 
@@ -264,6 +322,8 @@
 
 ## On ISI and ICI cancellation for FBMC/OQAM system using iterative decoding and ML detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7564954
 - **Type**: conference
 - **Published**: 3-6 April 
@@ -273,6 +333,8 @@
 
 ## Soft iterative detector and semi-blind identification for LDPC-coded MIMO systems in dispersive fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7564724
 - **Type**: conference
 - **Published**: 3-6 April 
@@ -282,6 +344,8 @@
 
 ## Performance comparison of message encoding techniques for bacterial nanonetworks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7565084
 - **Type**: conference
 - **Published**: 3-6 April 
@@ -291,6 +355,8 @@
 
 ## A DCT-based robust video steganographic method using BCH error correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7494111
 - **Type**: conference
 - **Published**: 29-29 Apri
@@ -300,6 +366,8 @@
 
 ## LDPC-DWDM processing for Optical communications using polymer fiber
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7516395
 - **Type**: conference
 - **Published**: 27-29 Apri
@@ -309,6 +377,8 @@
 
 ## Impact of transistor technology on power savings in monolithic 3D ICs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7480523
 - **Type**: conference
 - **Published**: 25-27 Apri
@@ -318,6 +388,8 @@
 
 ## FPGA architecture of multi-codeword LDPC decoder with efficient BRAM utilization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7482452
 - **Type**: conference
 - **Published**: 20-22 Apri
@@ -327,6 +399,8 @@
 
 ## High-rate turbo code design for block-fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7495402
 - **Type**: conference
 - **Published**: 18-20 Apri
@@ -336,6 +410,8 @@
 
 ## System-level error correction by read-disturb error model of 1Xnm TLC NAND Flash memory for read-intensive enterprise solid-state drives (SSDs)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7574622
 - **Type**: conference
 - **Published**: 17-21 Apri
@@ -345,6 +421,8 @@
 
 ## A study of the 60 GHz-band compact range wireless access system using large array antennas
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7481702
 - **Type**: conference
 - **Published**: 10-15 Apri
@@ -354,6 +432,8 @@
 
 ## Augmenting wide-band 802.11 transmissions via unequal packet bit protection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7524450
 - **Type**: conference
 - **Published**: 10-14 Apri
@@ -363,6 +443,8 @@
 
 ## Improving Read Performance of NAND Flash SSDs by Exploiting Error Locality
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6879446
 - **Type**: journal
 - **Published**: 1 April 20

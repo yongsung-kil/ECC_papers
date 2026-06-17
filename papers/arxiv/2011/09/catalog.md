@@ -3,6 +3,8 @@
 
 ## Security and complexity of the McEliece cryptosystem based on QC-LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1109.5827v6
 - **Type**: preprint
 - **Published**: 2011-09-27
@@ -12,6 +14,8 @@
 
 ## Quantized Compute and Forward: A Low-Complexity Architecture for Distributed Antenna Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1109.0800v1
 - **Type**: preprint
 - **Published**: 2011-09-05

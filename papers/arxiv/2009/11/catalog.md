@@ -3,6 +3,8 @@
 
 ## Moderate-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0911.3262v1
 - **Type**: preprint
 - **Published**: 2009-11-17

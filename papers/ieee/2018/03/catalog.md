@@ -3,6 +3,8 @@
 
 ## Design and Analysis of Time-Invariant SC-LDPC Convolutional Codes With Small Constraint Length
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8114265
 - **Type**: journal
 - **Published**: March 2018
@@ -12,6 +14,8 @@
 
 ## Analysis and Design of Cost-Effective, High-Throughput LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8207775
 - **Type**: journal
 - **Published**: March 2018
@@ -21,6 +25,8 @@
 
 ## Modeling and Energy Optimization of LDPC Decoder Circuits With Timing Violations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8123836
 - **Type**: journal
 - **Published**: March 2018
@@ -30,6 +36,8 @@
 
 ## 4.7-Gb/s LDPC Decoder on GPU
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8125078
 - **Type**: journal
 - **Published**: March 2018
@@ -39,6 +47,8 @@
 
 ## High-Throughput Multi-Codeword Decoder for Non-Binary LDPC Codes on GPU
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8254357
 - **Type**: journal
 - **Published**: March 2018
@@ -48,6 +58,8 @@
 
 ## Basic-Set Trellis Min–Max Decoder Architecture for Nonbinary LDPC Codes With High-Order Galois Fields
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8171205
 - **Type**: journal
 - **Published**: March 2018
@@ -57,6 +69,8 @@
 
 ## Design of Channel Coded Heterogeneous Modulation Physical Layer Network Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8082522
 - **Type**: journal
 - **Published**: March 2018
@@ -66,6 +80,8 @@
 
 ## Image Processing Unit for General-Purpose Representation and Association System for Recognizing Low-Resolution Digits With Visual Information Variability
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7560636
 - **Type**: journal
 - **Published**: March 2018
@@ -75,6 +91,8 @@
 
 ## Analysis and Design of Physical Layer Raptor Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8214248
 - **Type**: journal
 - **Published**: March 2018
@@ -84,6 +102,8 @@
 
 ## Spatial Modulation Aided Sparse Code-Division Multiple Access
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8166802
 - **Type**: journal
 - **Published**: March 2018
@@ -93,6 +113,8 @@
 
 ## Performance Analysis of Lossy Decode-and-Forward for Non-Orthogonal MARCs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8170333
 - **Type**: journal
 - **Published**: March 2018
@@ -102,6 +124,8 @@
 
 ## New Miller Codes for Run-Length Control in Visible Light Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8240732
 - **Type**: journal
 - **Published**: March 2018
@@ -111,6 +135,8 @@
 
 ## LDA Lattices Without Dithering Achieve Capacity on the Gaussian Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8122043
 - **Type**: journal
 - **Published**: March 2018
@@ -120,6 +146,8 @@
 
 ## Priori-Information Hold Subspace Pursuit: A Compressive Sensing-Based Channel Estimation for Layer Modulated TDS-OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7938332
 - **Type**: journal
 - **Published**: March 2018
@@ -129,6 +157,8 @@
 
 ## Rate-Compatible Tail-Biting Convolutional Codes for M2M Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8239785
 - **Type**: journal
 - **Published**: March 2018
@@ -138,6 +168,8 @@
 
 ## Systematic Block Markov Superposition Transmission of Repetition Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8240708
 - **Type**: journal
 - **Published**: March 2018
@@ -147,6 +179,8 @@
 
 ## Performance of Energy Harvesting Receivers With Power Optimization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8116685
 - **Type**: journal
 - **Published**: March 2018
@@ -156,6 +190,8 @@
 
 ## An Improved Variational Inference Approach to Iterative OFDM Receiver Design for Superimposed Training-Based AF Relay Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8082549
 - **Type**: journal
 - **Published**: March 2018
@@ -165,6 +201,8 @@
 
 ## MIMO Wiretap Channels Based on Generalized Extended Orthogonal STBCs and Feedback
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8107567
 - **Type**: journal
 - **Published**: March 2018
@@ -174,6 +212,8 @@
 
 ## Techniques for Improving the Finite Length Performance of Sparse Superposition Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8119577
 - **Type**: journal
 - **Published**: March 2018
@@ -183,6 +223,8 @@
 
 ## EXIT-Chart Aided Design of Row-Permutation Assisted Twin-Interleaver BICM-ID
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7935441
 - **Type**: journal
 - **Published**: March 2018
@@ -192,6 +234,8 @@
 
 ## Study of performance comparison of satellite error correction codes for correcting big burst data errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8367687
 - **Type**: conference
 - **Published**: 9-12 March
@@ -201,6 +245,8 @@
 
 ## Combating Bit Errors From Stuck Cells in Flash Memory Using Novel Information Theory Techniques
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8390326
 - **Type**: conference
 - **Published**: 5-8 March 
@@ -210,6 +256,8 @@
 
 ## Performance Analysis of Hybrid ARO Buffer Management
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8390363
 - **Type**: conference
 - **Published**: 5-8 March 
@@ -219,6 +267,8 @@
 
 ## High throughput GPU LDPC encoder and decoder for DVB-S2
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8396831
 - **Type**: conference
 - **Published**: 3-10 March
@@ -228,6 +278,8 @@
 
 ## Assessment of potential Mars relay network enhancements
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8396682
 - **Type**: conference
 - **Published**: 3-10 March
@@ -237,6 +289,8 @@
 
 ## High-rate Ka-band modulator for the NISAR mission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8396451
 - **Type**: conference
 - **Published**: 3-10 March
@@ -246,6 +300,8 @@
 
 ## K-Means Algorithm Over Compressed Binary Data
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8416624
 - **Type**: conference
 - **Published**: 27-30 Marc
@@ -255,6 +311,8 @@
 
 ## Approaching waterfilling capacity of parallel channels by higher order modulation and probabilistic amplitude shaping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8362291
 - **Type**: conference
 - **Published**: 21-23 Marc
@@ -264,6 +322,8 @@
 
 ## Polar coded Interleave Division Multiple Access Ultra Wide Band (IDMA-UWB) communication system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8354375
 - **Type**: conference
 - **Published**: 20-22 Marc
@@ -273,6 +333,8 @@
 
 ## On the Use of Hard-Decision LDPC Decoders on MLC NAND Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8570595
 - **Type**: conference
 - **Published**: 19-22 Marc
@@ -282,6 +344,8 @@
 
 ## The application of modulo q check codes to increase the efficiency of non-binary multithreshold decoders over q-ary symmetric channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8337291
 - **Type**: conference
 - **Published**: 14-16 Marc
@@ -291,6 +355,8 @@
 
 ## Adaptive RLS Channel Estimation and SIC for Large-Scale Antenna Systems with 1-Bit ADCs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385500
 - **Type**: conference
 - **Published**: 14-16 Marc
@@ -300,6 +366,8 @@
 
 ## Rate-Adaptive LDPC Convolutional Coding with Joint Layered Scheduling and Shortening Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385941
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -309,6 +377,8 @@
 
 ## Error elimination ECC by horizontal error detection and vertical-LDPC ECC to increase data-retention time by 230% and acceptable bit-error rate by 90% for 3D-NAND flash SSDs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8353680
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -318,6 +388,8 @@
 
 ## 41.5 Tb/s Data Transport over 549 km of Field Deployed Fiber Using Throughput Optimized Probabilistic-Shaped 144QAM to Support Metro Network Capacity Demands
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8386382
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -327,6 +399,8 @@
 
 ## An Iterative Soft Interference Cancellation for Pilot-Assisted Optical-OFDM with LDPC Code Optimized by EXIT Chart
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385944
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -336,6 +410,8 @@
 
 ## Multilevel Coding with Spatially-Coupled Codes for beyond 400Gbps Optical Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385942
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -345,6 +421,8 @@
 
 ## Probabilistic Constellation Shaping: Challenges and Opportunities for Forward Error Correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385783
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -354,6 +432,8 @@
 
 ## Generation and Intradyne Detection of Single-Wavelength 1.61-Tb/s Using an All-Electronic Digital Band Interleaved Transmitter
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8386370
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -363,6 +443,8 @@
 
 ## Efficient Offline Evaluation of FEC Codes Based on Captured Data with Probabilistic Shaping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385846
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -372,6 +454,8 @@
 
 ## SDN-Based Application Driven In-Band Adaptive Coding in Data Centers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8386074
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -381,6 +465,8 @@
 
 ## Record-High 17.3-bit/s/Hz Spectral Efficiency Transmission over 50 km Using Probabilistically Shaped PDM 4096-QAM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8386374
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -390,6 +476,8 @@
 
 ## Single-Channel 480-Gb/s Direct Detection of POL-MUX IQ Signal Using Single-Sideband Stokes Vector Receiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385890
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -399,6 +487,8 @@
 
 ## On Joint Design of Probabilistic Shaping and Forward Error Correction for Optical Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385842
 - **Type**: conference
 - **Published**: 11-15 Marc
@@ -408,6 +498,8 @@
 
 ## Hard Decoding Based Design of Regular LDPC using LabVIEW
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8550941
 - **Type**: conference
 - **Published**: 1-3 March 

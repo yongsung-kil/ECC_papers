@@ -3,6 +3,8 @@
 
 ## Throughput-Optimized Multi-Rate LDPC Codes for Satellite Communication Systems With Restricted Decoder Complexity
 
+- **Status**: in(포함)
+- **Reason**: 처리율 최적화 다중률 LDPC 부호설계(프로토매트릭스 탐색) — 코드설계 이식(E)
 - **ID**: ieee:11202618
 - **Type**: journal
 - **Published**: April 2026
@@ -12,6 +14,8 @@
 
 ## SiDTBF: Merging Soft Information With Dynamic Threshold Bit Flipping LDPC Decoding for 3-D NAND flash memory
 
+- **Status**: in(포함)
+- **Reason**: 3D NAND 플래시 LDPC 소프트정보+동적임계 BF 디코딩 — NAND 직접+디코더(A/C)
 - **ID**: ieee:11154047
 - **Type**: journal
 - **Published**: April 2026
@@ -21,6 +25,8 @@
 
 ## Design of Protograph-Based LDPC Codes for Rate-Diverse Multiple Access
 
+- **Status**: in(포함)
+- **Reason**: 프로토그래프 LDPC 부호설계 EXIT 해석 — 코드설계 이식 가능(E)
 - **ID**: ieee:11218994
 - **Type**: journal
 - **Published**: April 2026
@@ -30,6 +36,8 @@
 
 ## A 3.3 Gb/s/mm2 Area-Efficient Non-Binary LDPC Decoder Using Column-Layered Processing
 
+- **Status**: in(포함)
+- **Reason**: NB-LDPC 디코더 HW(trellis min-max, column-layered, 28nm CMOS), 스토리지용으로 명시 — D/E 이식 가능
 - **ID**: ieee:11251477
 - **Type**: journal
 - **Published**: April 2026
@@ -39,6 +47,8 @@
 
 ## Design and Analysis of Two-Layer Coding Scheme for DNA-Based Data Storage
 
+- **Status**: in(포함)
+- **Reason**: DNA 스토리지 ECC, BCH+LDPC 연접·유한길이 redundancy 최적화 — B/E 코드 설계 이식 가능
 - **ID**: ieee:11316539
 - **Type**: journal
 - **Published**: April 2026
@@ -48,6 +58,8 @@
 
 ## Learning to Decode Double Polar Codes for Joint Source-Channel Coding
 
+- **Status**: out(제외)
+- **Reason**: polar 부호 JSCC 신경망 BP 디코더 — LDPC 아님, 소스코딩 결합으로 제외
 - **ID**: ieee:11197026
 - **Type**: journal
 - **Published**: April 2026
@@ -57,6 +69,8 @@
 
 ## Random Multiplexing
 
+- **Status**: out(제외)
+- **Reason**: 무선 multiplexing/AMP 검출기 이론, LDPC 미언급·떼어낼 디코더/HW/코드 기법 없음
 - **ID**: ieee:11369302
 - **Type**: journal
 - **Published**: April 2026
@@ -66,6 +80,8 @@
 
 ## Adaptive Distributed Detection Scheme in Collaborative Multiple-Input Multiple-Output Systems
 
+- **Status**: out(제외)
+- **Reason**: 분산 MIMO 검출 기법, LDPC는 부수 구성요소 — 떼어낼 기법 없음
 - **ID**: ieee:11207172
 - **Type**: journal
 - **Published**: April 2026
@@ -75,6 +91,8 @@
 
 ## FPGA Implementation of High-Speed LDPC Decoder with Cross-Layer Scheduling for CV-QKD
 
+- **Status**: in(포함)
+- **Reason**: QC-LDPC FPGA 디코더 HW, layered 스케줄링·메모리 충돌 해소 — D 이식 가능 (CV-QKD는 응용일 뿐)
 - **ID**: ieee:11500286
 - **Type**: conference
 - **Published**: 6-8 April 
@@ -84,6 +102,8 @@
 
 ## BiBiEQ: Bivariate Bicycle Codes on Erasure Qubits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11500360
 - **Type**: conference
 - **Published**: 6-8 April 
@@ -93,6 +113,8 @@
 
 ## FPGA and ASIC Implementation of a 12×24 Parity-Check Matrix Based LDPC Decoder
 
+- **Status**: in(포함)
+- **Reason**: Min-sum LDPC 디코더의 FPGA/ASIC RTL 구현(타이밍·전력·면적)으로 이식 가능 HW 아키텍처(D)
 - **ID**: ieee:11542085
 - **Type**: conference
 - **Published**: 21-23 Apri
@@ -102,6 +124,8 @@
 
 ## Exploiting Variable-Dimensional LDPC Coding to Improve NAND Flash Memory System Performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11539595
 - **Type**: conference
 - **Published**: 20-22 Apri
@@ -111,6 +135,8 @@
 
 ## SSALDPC: A Syndrome-Sum Based Adaptive LDPC Decoding Scheme for NAND Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11539179
 - **Type**: conference
 - **Published**: 20-22 Apri
@@ -120,6 +146,8 @@
 
 ## Optimal Compilation of Syndrome Extraction Circuits for General Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11539585
 - **Type**: conference
 - **Published**: 20-22 Apri
@@ -129,6 +157,8 @@
 
 ## Attention-Aware Deep Joint Source-Channel Coding for Robust Power Grid Inspection Image Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11544951
 - **Type**: conference
 - **Published**: 18-20 Apri
@@ -138,6 +168,8 @@
 
 ## On Blind Recognition of BCH Codes Within a Candidate Set
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11540728
 - **Type**: conference
 - **Published**: 17-19 Apri
@@ -147,6 +179,8 @@
 
 ## An Intelligent and Optimized Reconciliation Technique for Enhanced Secret Key Rates in Quantum Key Distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:11546488
 - **Type**: conference
 - **Published**: 16-18 Apri

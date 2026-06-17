@@ -3,6 +3,8 @@
 
 ## Non-binary Entanglement-assisted Stabilizer Quantum Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1105.5872v1
 - **Type**: preprint
 - **Published**: 2011-05-30
@@ -12,6 +14,8 @@
 
 ## A Flexible LDPC code decoder with a Network on Chip as underlying interconnect architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1105.2624v1
 - **Type**: preprint
 - **Published**: 2011-05-13
@@ -21,6 +25,8 @@
 
 ## Joint Network and LDPC Coding for Bi-directional Relaying
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1105.2422v1
 - **Type**: preprint
 - **Published**: 2011-05-12

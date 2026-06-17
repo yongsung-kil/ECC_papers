@@ -3,6 +3,8 @@
 
 ## Efficient Polar Code Construction for Higher-Order Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1610.08030v1
 - **Type**: preprint
 - **Published**: 2016-10-25

@@ -3,6 +3,8 @@
 
 ## Placing and routing quantum LDPC codes in multilayer superconducting hardware
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.23011v2
 - **Type**: preprint
 - **Published**: 2025-07-30
@@ -12,6 +14,8 @@
 
 ## Adaptive Learned Belief Propagation for Decoding Error-Correcting Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.19941v1
 - **Type**: preprint
 - **Published**: 2025-07-26
@@ -21,6 +25,8 @@
 
 ## Polar Coding and Linear Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.19695v1
 - **Type**: preprint
 - **Published**: 2025-07-25
@@ -30,6 +36,8 @@
 
 ## Directional Codes: a new family of quantum LDPC codes on hexagonal- and square-grid connectivity hardware
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.19430v2
 - **Type**: preprint
 - **Published**: 2025-07-25
@@ -39,6 +47,8 @@
 
 ## Action-List Reinforcement Learning Syndrome Decoding for Binary Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.17893v2
 - **Type**: preprint
 - **Published**: 2025-07-23
@@ -48,6 +58,8 @@
 
 ## CSS-$T$ codes over Binary Extension Fields and their Physical Foundations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.17611v1
 - **Type**: preprint
 - **Published**: 2025-07-23
@@ -57,6 +69,8 @@
 
 ## Efficient and Robust Semantic Image Communication via Stable Cascade
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.17416v1
 - **Type**: preprint
 - **Published**: 2025-07-23
@@ -66,6 +80,8 @@
 
 ## Hourglass Sorting: A novel parallel sorting algorithm and its implementation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.16326v1
 - **Type**: preprint
 - **Published**: 2025-07-22
@@ -75,6 +91,8 @@
 
 ## Transversal non-Clifford gates on qLDPC codes breaking the $\sqrt{N}$ distance barrier and quantum-inspired geometry with $\mathbb{Z}_2$ systolic freedom
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.15056v1
 - **Type**: preprint
 - **Published**: 2025-07-20
@@ -84,6 +102,8 @@
 
 ## Growing Sparse Quantum Codes from a Seed
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.13496v1
 - **Type**: preprint
 - **Published**: 2025-07-17
@@ -93,6 +113,8 @@
 
 ## Expansion creates spin-glass order in finite-connectivity models: a rigorous and intuitive approach from the theory of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.13342v1
 - **Type**: preprint
 - **Published**: 2025-07-17
@@ -102,6 +124,8 @@
 
 ## A mapping of the Min-Sum decoder to reduction operations, and its implementation using CUDA kernels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.10424v1
 - **Type**: preprint
 - **Published**: 2025-07-14
@@ -111,6 +135,8 @@
 
 ## High Girth Spatially-Coupled LDPC Codes with Hierarchical Structure
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.10185v1
 - **Type**: preprint
 - **Published**: 2025-07-14
@@ -120,6 +146,8 @@
 
 ## Small Quantum Low Density Parity Check Codes for Near-Term Experiments
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.09690v3
 - **Type**: preprint
 - **Published**: 2025-07-13
@@ -129,6 +157,8 @@
 
 ## Low-depth quantum error correction via three-qubit gates in Rydberg atom arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.06096v2
 - **Type**: preprint
 - **Published**: 2025-07-08
@@ -138,6 +168,8 @@
 
 ## Unified Framework for Quantum Code Embedding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.05361v3
 - **Type**: preprint
 - **Published**: 2025-07-07
@@ -147,6 +179,8 @@
 
 ## Learning Variable Node Selection for Improved Multi-Round Belief Propagation Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.03461v1
 - **Type**: preprint
 - **Published**: 2025-07-04
@@ -156,6 +190,8 @@
 
 ## Bias-tailored single-shot quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.02239v1
 - **Type**: preprint
 - **Published**: 2025-07-03
@@ -165,6 +201,8 @@
 
 ## Construction of LDPC convolutional codes with large girth from Latin squares
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2507.00591v1
 - **Type**: preprint
 - **Published**: 2025-07-01

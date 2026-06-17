@@ -3,6 +3,8 @@
 
 ## The Design of Protograph LDPC Codes as Source Codes in a JSCC System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8288583
 - **Type**: journal
 - **Published**: April 2018
@@ -12,6 +14,8 @@
 
 ## Improving the Decoding Threshold of Tailbiting Spatially Coupled LDPC Codes by Energy Shaping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8281448
 - **Type**: journal
 - **Published**: April 2018
@@ -21,6 +25,8 @@
 
 ## Design of Binary LDPC Codes With Parallel Vector Message Passing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8207605
 - **Type**: journal
 - **Published**: April 2018
@@ -30,6 +36,8 @@
 
 ## An LDPC Code Based Physical Layer Message Authentication Scheme With Prefect Security
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8334238
 - **Type**: journal
 - **Published**: April 2018
@@ -39,6 +47,8 @@
 
 ## Nonbinary LDPC-Coded Spatial Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8290977
 - **Type**: journal
 - **Published**: April 2018
@@ -48,6 +58,8 @@
 
 ## Randomized Serially Concatenated LDGM Codes for the Gaussian Wiretap Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8252922
 - **Type**: journal
 - **Published**: April 2018
@@ -57,6 +69,8 @@
 
 ## Design and Analysis of Anytime Codes for Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8166790
 - **Type**: journal
 - **Published**: April 2018
@@ -66,6 +80,8 @@
 
 ## Designing Protograph-Based LDPC Codes for Iterative Receivers on ${M}$ -ary DCSK Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8012533
 - **Type**: journal
 - **Published**: April 2018
@@ -75,6 +91,8 @@
 
 ## Precoded MIMO Systems With Nonbinary LDPC Codes and Many-to-One Mapping
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8120131
 - **Type**: journal
 - **Published**: April 2018
@@ -84,6 +102,8 @@
 
 ## Burst-mode fpga implementation and error location analysis of forward error correction for passive optical networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8336683
 - **Type**: journal
 - **Published**: April 2018
@@ -93,6 +113,8 @@
 
 ## A Survey of Physical Layer Security Techniques for 5G Wireless Networks and Challenges Ahead
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8335290
 - **Type**: journal
 - **Published**: April 2018
@@ -102,6 +124,8 @@
 
 ## A 9.52 dB NCG FEC Scheme and 162 b/Cycle Low-Complexity Product Decoder Architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8036239
 - **Type**: journal
 - **Published**: April 2018
@@ -111,6 +135,8 @@
 
 ## Flexible WOM codes for NAND flash memory based on raptor-like codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8360624
 - **Type**: journal
 - **Published**: April 2018
@@ -120,6 +146,8 @@
 
 ## Low-Complexity Iterative MMSE-PIC Detection for MIMO-GFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8186198
 - **Type**: journal
 - **Published**: April 2018
@@ -129,6 +157,8 @@
 
 ## Partially Active Message Passing Receiver for MIMO-SCMA Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8089405
 - **Type**: journal
 - **Published**: April 2018
@@ -138,6 +168,8 @@
 
 ## A Novel Joint PAPR Reduction Algorithm With Low Complexity Using LT Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8066380
 - **Type**: journal
 - **Published**: April 2018
@@ -147,6 +179,8 @@
 
 ## Robust Modulation of PWM-Based Multi-Level Perpendicular Magnetic Recording for Conventional Media
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8293860
 - **Type**: journal
 - **Published**: April 2018
@@ -156,6 +190,8 @@
 
 ## Window-Interleaved Turbo Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8259467
 - **Type**: journal
 - **Published**: April 2018
@@ -165,6 +201,8 @@
 
 ## Probabilistic MIMO Symbol Detection With Expectation Consistency Approximate Inference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8234658
 - **Type**: journal
 - **Published**: April 2018
@@ -174,6 +212,8 @@
 
 ## Simulating the reliability of radio links during superior solar conjunctions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8568939
 - **Type**: conference
 - **Published**: 9-13 April
@@ -183,6 +223,8 @@
 
 ## Compressed Low-rate Codes for Failure-tolerant Distributed Storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8385237
 - **Type**: conference
 - **Published**: 9-12 April
@@ -192,6 +234,8 @@
 
 ## 9.1x Error acceptable adaptive artificial neural network coupled LDPC ECC for charge-trap and floating-gate 3D-NAND flash memories
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8357064
 - **Type**: conference
 - **Published**: 8-11 April
@@ -201,6 +245,8 @@
 
 ## An Approach of Secure Image Transmission Using Low Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8524546
 - **Type**: conference
 - **Published**: 3-5 April 
@@ -210,6 +256,8 @@
 
 ## Reduced-complexity window decoding of spatially coupled LDPC codes for magnetic recording systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8508405
 - **Type**: conference
 - **Published**: 23-27 Apri
@@ -219,6 +267,8 @@
 
 ## Two-dimensional Signal Processing Systems Using CRC-polar Coding and List Decoding for Bit-patterned Magnetic Recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8508411
 - **Type**: conference
 - **Published**: 23-27 Apri
@@ -228,6 +278,8 @@
 
 ## Polar Coding for Spin-Torque Transfer Magnetic Random Access Memory (STT-MRAM)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8508795
 - **Type**: conference
 - **Published**: 23-27 Apri
@@ -237,6 +289,8 @@
 
 ## Spatially-Coupled Codes for Channels With SNR Variation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8508464
 - **Type**: conference
 - **Published**: 23-27 Apri
@@ -246,6 +300,8 @@
 
 ## Channel modeling and multi-island recording scheme on bit patterned media with long-range island orientation fluctuations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8508481
 - **Type**: conference
 - **Published**: 23-27 Apri
@@ -255,6 +311,8 @@
 
 ## LDPC-coded OFDM-system with BPSK modulation: Performance comparison with uncoded OFDM system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8376467
 - **Type**: conference
 - **Published**: 20-23 Apri
@@ -264,6 +322,8 @@
 
 ## Construction and decoding of OSMLD codes derived from unital and oval designs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8360280
 - **Type**: conference
 - **Published**: 2-4 April 
@@ -273,6 +333,8 @@
 
 ## Information Freshness Over an Interference Channel: A Game Theoretic View
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8486409
 - **Type**: conference
 - **Published**: 16-19 Apri
@@ -282,6 +344,8 @@
 
 ## Lightweight Retransmission for Random Access in Satellite Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8485806
 - **Type**: conference
 - **Published**: 16-19 Apri
@@ -291,6 +355,8 @@
 
 ## Reduced-Complexity Trellis Min-Max Decoder for Non-Binary Ldpc Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8462192
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -300,6 +366,8 @@
 
 ## A Shuffled-Based Iterative Demodulation and Decoding Scheme for Ldpc Coded Flash Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8461609
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -309,6 +377,8 @@
 
 ## Faster-Than-Nyquist Signaling with Differential Encoding and Non Coherent Detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8462455
 - **Type**: conference
 - **Published**: 15-20 Apri
@@ -318,6 +388,8 @@
 
 ## Performance analysis and optimization for LDPC coded OFDM systems with pulse blanking
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377021
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -327,6 +399,8 @@
 
 ## Efficient multi-source network coding using low rank parity check code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377229
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -336,6 +410,8 @@
 
 ## ADMM hardware decoder for regular LDPC codes using a NISC-based architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377331
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -345,6 +421,8 @@
 
 ## Short length non-binary rate-adaptive LDPC codes for Slepian-Wolf source coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377291
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -354,6 +432,8 @@
 
 ## New concatenated code schemes for data gathering in WSN's using rank metric codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377248
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -363,6 +443,8 @@
 
 ## Implementation aspects of a pipeline ADMM-based LP decoding of LDPC convolutional codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377103
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -372,6 +454,8 @@
 
 ## Short packet physical-layer network coding with mismatched channel state information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377116
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -381,6 +465,8 @@
 
 ## Flexible IR-HARQ scheme for polar-coded modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8369005
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -390,6 +476,8 @@
 
 ## Belief propagation decoding of polar codes on permuted factor graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377158
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -399,6 +487,8 @@
 
 ## Randomized chained polar subcodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8369001
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -408,6 +498,8 @@
 
 ## On the construction of protograph based SC-LDPC codes for windowed decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377289
 - **Type**: conference
 - **Published**: 15-18 Apri
@@ -417,6 +509,8 @@
 
 ## IIC of the MIMO-FBMC/OQAM system using linear and SIC detection schemes in LTE channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8377031
 - **Type**: conference
 - **Published**: 15-18 Apri

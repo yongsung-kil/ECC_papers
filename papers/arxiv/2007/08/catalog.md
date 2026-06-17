@@ -3,6 +3,8 @@
 
 ## Eigenvalue bounds on the pseudocodeword weight of expander codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0708.2462v1
 - **Type**: preprint
 - **Published**: 2007-08-18
@@ -12,6 +14,8 @@
 
 ## The typical behaviour of relays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0708.0364v1
 - **Type**: preprint
 - **Published**: 2007-08-02

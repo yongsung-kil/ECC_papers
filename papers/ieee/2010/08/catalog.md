@@ -3,6 +3,8 @@
 
 ## Joint Channel and Network Coding for Cooperative Diversity in a Shared-Relay Environment
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5494766
 - **Type**: journal
 - **Published**: August 201
@@ -12,6 +14,8 @@
 
 ## Asymptotic Performance Analysis of Coded BLAST Architectures with Statistical Rate and Power Allocations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5510785
 - **Type**: journal
 - **Published**: August 201
@@ -21,6 +25,8 @@
 
 ## On the Dynamics of Analog Min-Sum Iterative Decoders: An Analytical Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555878
 - **Type**: journal
 - **Published**: August 201
@@ -30,6 +36,8 @@
 
 ## Nested Polar Codes for Wiretap and Relay Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5545658
 - **Type**: journal
 - **Published**: August 201
@@ -39,6 +47,8 @@
 
 ## Trapping Sets of Fountain Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5545659
 - **Type**: journal
 - **Published**: August 201
@@ -48,6 +58,8 @@
 
 ## Approximate Performance Analysis for Linear Codes in Superposition Schemes over Gaussian Broadcast Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555872
 - **Type**: journal
 - **Published**: August 201
@@ -57,6 +69,8 @@
 
 ## Optimal Routing for Decode-Forward in Cooperative Wireless Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555886
 - **Type**: journal
 - **Published**: August 201
@@ -66,6 +80,8 @@
 
 ## LDPC-Coded OFDM for Heterogeneous Access Optical Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5491028
 - **Type**: journal
 - **Published**: Aug. 2010
@@ -75,6 +91,8 @@
 
 ## A new DC-free multimode code design with error correction capability for optical storage systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5606293
 - **Type**: journal
 - **Published**: Aug. 2010
@@ -84,6 +102,8 @@
 
 ## Performance Bounds for Erasure, List, and Decision Feedback Schemes With Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5508626
 - **Type**: journal
 - **Published**: Aug. 2010
@@ -93,6 +113,8 @@
 
 ## An Energy Efficient Layered Decoding Architecture for LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5229117
 - **Type**: journal
 - **Published**: Aug. 2010
@@ -102,6 +124,8 @@
 
 ## Iterative Polar Quantization-Based Modulation to Achieve Channel Capacity in Ultrahigh-Speed Optical Communication Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5482065
 - **Type**: journal
 - **Published**: Aug. 2010
@@ -111,6 +135,8 @@
 
 ## Hybrid ARQ with Partial Retransmissions and LDPC codes and its Impact on TCP
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5595132
 - **Type**: journal
 - **Published**: Aug. 2010
@@ -120,6 +146,8 @@
 
 ## Low redundancy overhead multibit error correction in memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5615316
 - **Type**: conference
 - **Published**: 28 July-1 
@@ -129,6 +157,8 @@
 
 ## Iterative symbol-by-symbol decoding of LDPC codes and constellation mapping for multilevel modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5684713
 - **Type**: conference
 - **Published**: 25-27 Aug.
@@ -138,6 +168,8 @@
 
 ## From product codes to structured generalized LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5684632
 - **Type**: conference
 - **Published**: 25-27 Aug.
@@ -147,6 +179,8 @@
 
 ## A source-destination network coded cooperation for wireless ad-hoc networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5684774
 - **Type**: conference
 - **Published**: 25-27 Aug.
@@ -156,6 +190,8 @@
 
 ## Full-rate full-diversity space-frequency block coding for digital TV broadcasting
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7096618
 - **Type**: conference
 - **Published**: 23-27 Aug.
@@ -165,6 +201,8 @@
 
 ## IRIS verification system with secure template storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7096661
 - **Type**: conference
 - **Published**: 23-27 Aug.
@@ -174,6 +212,8 @@
 
 ## Non-uniform source modeling for distributed video coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7096654
 - **Type**: conference
 - **Published**: 23-27 Aug.
@@ -183,6 +223,8 @@
 
 ## Distributed video coding with particle filtering for correlation tracking
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7096270
 - **Type**: conference
 - **Published**: 23-27 Aug.
@@ -192,6 +234,8 @@
 
 ## Security applications of distributed arithmetic coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7096510
 - **Type**: conference
 - **Published**: 23-27 Aug.
@@ -201,6 +245,8 @@
 
 ## Distributed source coding: Theory and applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7096269
 - **Type**: conference
 - **Published**: 23-27 Aug.
@@ -210,6 +256,8 @@
 
 ## Bootstrapped Iterative Decoding Algorithms for Low Density Parity Check (LDPC) Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5634871
 - **Type**: conference
 - **Published**: 22-27 Aug.
@@ -219,6 +267,8 @@
 
 ## Modified Log-BP decoding algorithm combined with PSO for Low-Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5579320
 - **Type**: conference
 - **Published**: 20-22 Aug.
@@ -228,6 +278,8 @@
 
 ## Reliability-based iterative decoding of LDPC codes using segmented accumulation of likelihood ratio
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5578935
 - **Type**: conference
 - **Published**: 20-22 Aug.
@@ -237,6 +289,8 @@
 
 ## A Construction Method of Niederreiter Public-Key Cryptosystem Based on Quantum LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5566239
 - **Type**: conference
 - **Published**: 20-22 Aug.
@@ -246,6 +300,8 @@
 
 ## Design of structured LDPC codes with quasi-cyclic and rotation architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5578934
 - **Type**: conference
 - **Published**: 20-22 Aug.
@@ -255,6 +311,8 @@
 
 ## Reduced-complexity extended Min-sum check node processing for non-binary LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5548712
 - **Type**: conference
 - **Published**: 1-4 Aug. 2
@@ -264,6 +322,8 @@
 
 ## A fixed bits LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5559810
 - **Type**: conference
 - **Published**: 1-3 Aug. 2
@@ -273,6 +333,8 @@
 
 ## Efficient uncompressed video communications using multicarrier, redundancy exploitation and low density error correction techniques
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5559780
 - **Type**: conference
 - **Published**: 1-3 Aug. 2

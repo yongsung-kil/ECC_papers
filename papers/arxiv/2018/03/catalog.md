@@ -3,6 +3,8 @@
 
 ## On LDPC Code Based Massive Random-Access Scheme for the Gaussian Multiple Access Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1803.08377v1
 - **Type**: preprint
 - **Published**: 2018-03-22
@@ -12,6 +14,8 @@
 
 ## Efficient Search of QC-LDPC Codes with Girths 6 and 8 and Free of Elementary Trapping Sets with Small Size
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1803.08141v1
 - **Type**: preprint
 - **Published**: 2018-03-21
@@ -21,6 +25,8 @@
 
 ## Iterative Turbo Receiver for LDPC-Coded MIMO Systems Based on Semi-definite Relaxation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1803.05844v3
 - **Type**: preprint
 - **Published**: 2018-03-15
@@ -30,6 +36,8 @@
 
 ## A Branch-Price-and-Cut Algorithm for Optimal Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1803.04798v1
 - **Type**: preprint
 - **Published**: 2018-03-13
@@ -39,6 +47,8 @@
 
 ## Finite Length Analysis of Irregular Repetition Slotted ALOHA in the Waterfall Region
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1803.01368v1
 - **Type**: preprint
 - **Published**: 2018-03-04
@@ -48,6 +58,8 @@
 
 ## Low-Complexity Concatenated LDPC-Staircase Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1803.01076v2
 - **Type**: preprint
 - **Published**: 2018-03-02

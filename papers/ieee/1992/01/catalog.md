@@ -3,6 +3,8 @@
 
 ## Iterative decoding for multilevel codes using reliability information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:276690
 - **Type**: conference
 - **Published**: 1992
@@ -12,6 +14,8 @@
 
 ## Coded modulation with time diversity, unequal error protection, and low delay for the Rayleigh fading channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:240757
 - **Type**: conference
 - **Published**: 1992
@@ -21,6 +25,8 @@
 
 ## Ampdes: a program for the synthesis of high-performance amplifiers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:205980
 - **Type**: conference
 - **Published**: 1992
@@ -30,6 +36,8 @@
 
 ## On computing undetected error probabilities on the Gilbert channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:200782
 - **Type**: conference
 - **Published**: 1992
@@ -39,6 +47,8 @@
 
 ## Fundamental properties of extended Kleene-Stone logic functions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:186802
 - **Type**: conference
 - **Published**: 1992
@@ -48,6 +58,8 @@
 
 ## Vlsi Systolic Array Implementation Of A Staged Decoder For Bcm Signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:641046
 - **Type**: conference
 - **Published**: 1992
@@ -57,6 +69,8 @@
 
 ## Counteracting the quantisation noise from PCM codecs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:187002
 - **Type**: conference
 - **Published**: 1992
@@ -66,6 +80,8 @@
 
 ## High-dimensional symmetric interleaved parity check code-general high-dimensional ring code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:255142
 - **Type**: conference
 - **Published**: 1992
@@ -75,6 +91,8 @@
 
 ## Theory and design of t-error correcting, k-error detecting and d-unidirectional error detecting codes with d>k>t
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:135553
 - **Type**: journal
 - **Published**: 1992
@@ -84,6 +102,8 @@
 
 ## Sequential decoding of low-density parity-check codes by adaptive reordering of parity checks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:165462
 - **Type**: journal
 - **Published**: 1992
@@ -93,6 +113,8 @@
 
 ## Nonbinary error detection codes for data retransmission and bit error rate monitoring
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:153355
 - **Type**: journal
 - **Published**: 1992

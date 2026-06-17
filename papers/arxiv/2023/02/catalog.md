@@ -3,6 +3,8 @@
 
 ## Semantic Communications with Variable-Length Coding for Extended Reality
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2302.08645v2
 - **Type**: preprint
 - **Published**: 2023-02-17

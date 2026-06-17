@@ -3,6 +3,8 @@
 
 ## Construction of Adaptive Short LDPC Codes for Distributed Transmit Beamforming
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1807.03526v2
 - **Type**: preprint
 - **Published**: 2018-07-10
@@ -12,6 +14,8 @@
 
 ## Asymptotic Analysis of Spatial Coupling Coding for Compute-and-Forward Relaying
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1807.01599v1
 - **Type**: preprint
 - **Published**: 2018-07-03

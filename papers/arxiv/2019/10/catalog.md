@@ -3,6 +3,8 @@
 
 ## Topological defects in general quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1910.09646v1
 - **Type**: preprint
 - **Published**: 2019-10-21
@@ -12,6 +14,8 @@
 
 ## Finite State Markov Modeling of Fading Channels Towards Decoding of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1912.09463v1
 - **Type**: preprint
 - **Published**: 2019-10-19

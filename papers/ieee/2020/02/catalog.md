@@ -3,6 +3,8 @@
 
 ## Construction of QC LDPC Codes With Low Error Floor by Efficient Systematic Search and Elimination of Trapping Sets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8901173
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -12,6 +14,8 @@
 
 ## Performance Bounds and Estimates for Quantized LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8897669
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -21,6 +25,8 @@
 
 ## Robust BICM Design for the LDPC Coded DCO-OFDM: A Deep Learning Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8906157
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -30,6 +36,8 @@
 
 ## Extended Integrated Interleaved Codes Over Any Field With Applications to Locally Recoverable Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8793117
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -39,6 +47,8 @@
 
 ## Packet Layer Erasure Coding in Interplanetary Links: The LTP Erasure Coding Link Service Adapter
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8713483
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -48,6 +58,8 @@
 
 ## Spatially Coupled LDPC Codes With Small Constraint Length and Low Error Floor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8911359
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -57,6 +69,8 @@
 
 ## Massive-MIMO Iterative Channel Estimation and Decoding (MICED) in the Uplink
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8873655
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -66,6 +80,8 @@
 
 ## Design of a Superposition Coding PPM-DCSK System for Downlink Multi-User Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8928564
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -75,6 +91,8 @@
 
 ## Non-Coherent NOMA With Massive MIMO
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8854312
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -84,6 +102,8 @@
 
 ## Short-Packet Physical-Layer Network Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8918237
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -93,6 +113,8 @@
 
 ## Joint Occlusion Detection and Phase Estimation Algorithm for Helicopter Satellite Communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8728272
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -102,6 +124,8 @@
 
 ## Iterative Processing Structure for the Single-Channel Mixture of Digital-Modulated Adjacent-Frequency Source Signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8930054
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -111,6 +135,8 @@
 
 ## Enumerative Sphere Shaping for Wireless Communications With Short Packets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:8895789
 - **Type**: journal
 - **Published**: Feb. 2020
@@ -120,6 +146,8 @@
 
 ## Performance of Spatially Coupled LDPC Codes over Underwater Acoustic Communication Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9056068
 - **Type**: conference
 - **Published**: 21-23 Feb.
@@ -129,6 +157,8 @@
 
 ## Efficient Nested Key Equation Solver Architectures for Generalized Integrated Interleaved Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9245015
 - **Type**: conference
 - **Published**: 2-7 Feb. 2
@@ -138,6 +168,8 @@
 
 ## Link-Level Investigations of Hybrid-ARQ schemes for 5G URLLC Scenarios
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9097114
 - **Type**: conference
 - **Published**: 18-20 Feb.
@@ -147,6 +179,8 @@
 
 ## Indoor Measurements with Commercial 60 GHz WLAN Components
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9097144
 - **Type**: conference
 - **Published**: 18-20 Feb.
@@ -156,6 +190,8 @@
 
 ## Learning PHY Layer Parameters via SNR-Value Network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9049722
 - **Type**: conference
 - **Published**: 17-20 Feb.
@@ -165,6 +201,8 @@
 
 ## A New Fast Algorithm for Finding Capacity of Discrete Memoryless Thresholding Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9049773
 - **Type**: conference
 - **Published**: 17-20 Feb.
@@ -174,6 +212,8 @@
 
 ## Comparison of Latency with Selective Repeat and Rateless Coding in Delayed Feedback Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9049761
 - **Type**: conference
 - **Published**: 17-20 Feb.
@@ -183,6 +223,8 @@
 
 ## Robust-LDPC codes for Efficient Wireless Communication system: WiMAX Technology
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:9102691
 - **Type**: conference
 - **Published**: 13-15 Feb.

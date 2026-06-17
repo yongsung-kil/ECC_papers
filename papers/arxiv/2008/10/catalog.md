@@ -3,6 +3,8 @@
 
 ## Low-Density Parity-Check Codes Which Can Correct Three Errors Under Iterative Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0810.1105v1
 - **Type**: preprint
 - **Published**: 2008-10-07

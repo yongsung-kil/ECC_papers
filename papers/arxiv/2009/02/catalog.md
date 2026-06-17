@@ -3,6 +3,8 @@
 
 ## On the Dynamics of the Error Floor Behavior in (Regular) LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0902.1786v2
 - **Type**: preprint
 - **Published**: 2009-02-11

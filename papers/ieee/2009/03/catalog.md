@@ -3,6 +3,8 @@
 
 ## Efficient Shuffle Network Architecture and Application for WiMAX LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4801645
 - **Type**: journal
 - **Published**: March 2009
@@ -12,6 +14,8 @@
 
 ## Two-staged informed dynamic scheduling for sequential belief propagation decoding of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4799021
 - **Type**: journal
 - **Published**: March 2009
@@ -21,6 +25,8 @@
 
 ## Two bit-flipping decoding algorithms for low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4799029
 - **Type**: journal
 - **Published**: March 2009
@@ -30,6 +36,8 @@
 
 ## Low-Density Graph Codes That Are Optimal for Binning and Coding With Side Information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4787613
 - **Type**: journal
 - **Published**: March 2009
@@ -39,6 +47,8 @@
 
 ## Density Evolution for Nonbinary LDPC Codes Under Gaussian Approximation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4787626
 - **Type**: journal
 - **Published**: March 2009
@@ -48,6 +58,8 @@
 
 ## Performance Bounds for Nonbinary Linear Block Codes Over Memoryless Symmetric Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4787607
 - **Type**: journal
 - **Published**: March 2009
@@ -57,6 +69,8 @@
 
 ## Doubly-Generalized LDPC Codes: Stability Bound Over the BEC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4787610
 - **Type**: journal
 - **Published**: March 2009
@@ -66,6 +80,8 @@
 
 ## Burst erasure correcting LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4799040
 - **Type**: journal
 - **Published**: March 2009
@@ -75,6 +91,8 @@
 
 ## Detection by multiple trellises
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4799048
 - **Type**: journal
 - **Published**: March 2009
@@ -84,6 +102,8 @@
 
 ## Two-Terminal Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4782072
 - **Type**: journal
 - **Published**: March 2009
@@ -93,6 +113,8 @@
 
 ## Reducing Area Overhead for Error-Protecting Large L2/L3 Caches
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4626951
 - **Type**: journal
 - **Published**: March 2009
@@ -102,6 +124,8 @@
 
 ## Adaptive coding for frequency-hop transmission in mobile ad hoc networks with partial-band interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4799056
 - **Type**: journal
 - **Published**: March 2009
@@ -111,6 +135,8 @@
 
 ## Coding Schemes for Relay-Assisted Information Embedding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4781896
 - **Type**: journal
 - **Published**: March 2009
@@ -120,6 +146,8 @@
 
 ## An Analytical Approach for Finite Block Length Performance Analysis of Turbo Frequency-Domain Equalization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4555268
 - **Type**: journal
 - **Published**: March 2009
@@ -129,6 +157,8 @@
 
 ## Performance analysis of sphere detection combined with the LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5069222
 - **Type**: conference
 - **Published**: 6-8 March 
@@ -138,6 +168,8 @@
 
 ## A class of non-binary regular girth-8 LDPC codes for optical communication channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5032303
 - **Type**: conference
 - **Published**: 22-26 Marc
@@ -147,6 +179,8 @@
 
 ## Operating points for low-density parity-check codes in on-off keyed fiber-optic transmission systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5032873
 - **Type**: conference
 - **Published**: 22-26 Marc
@@ -156,6 +190,8 @@
 
 ## Proposal for frame structure of optical channel transport unit employing LDPC codes for 100 Gb/s FEC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5032470
 - **Type**: conference
 - **Published**: 22-26 Marc
@@ -165,6 +201,8 @@
 
 ## Soft decision LSI operating at 32 Gsample/s for LDPC FEC-based optical transmission systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5032874
 - **Type**: conference
 - **Published**: 22-26 Marc
@@ -174,6 +212,8 @@
 
 ## Modulation formats which approach the Shannon limit
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5032554
 - **Type**: conference
 - **Published**: 22-26 Marc
@@ -183,6 +223,8 @@
 
 ## On unequal error protection with low density parity check codes in scalable video coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054826
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -192,6 +234,8 @@
 
 ## Noise adaptive LDPC decoding using particle filter
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054686
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -201,6 +245,8 @@
 
 ## Asymptotic analysis of LDGM-based quantum codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054696
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -210,6 +256,8 @@
 
 ## Non-asymmetric Slepian-Wolf decoding using belief propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054685
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -219,6 +267,8 @@
 
 ## Cooperative sensing of primary users in cognitive radio networks based on message passing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054784
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -228,6 +278,8 @@
 
 ## LDPC-like belief propagation algorithm for consensus building in wireless sensor networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054828
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -237,6 +289,8 @@
 
 ## Multipath multi-stream distributed reliable video delivery in Wireless Sensor Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054718
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -246,6 +300,8 @@
 
 ## Low-complexity cooperation with correlated sources: Diversity order analysis
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054801
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -255,6 +311,8 @@
 
 ## Extrinsic tree decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054754
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -264,6 +322,8 @@
 
 ## Non-linear coding for improved performance in compressive sensing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5054682
 - **Type**: conference
 - **Published**: 18-20 Marc
@@ -273,6 +333,8 @@
 
 ## A random construction of LDPC codes using a sub-optimal search algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5233993
 - **Type**: conference
 - **Published**: 17-19 Marc
@@ -282,6 +344,8 @@
 
 ## Design of Punctured LDPC Codes for Rate-Compatible Asymmetric Slepian-Wolf Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4976492
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -291,6 +355,8 @@
 
 ## Analog Joint Source Channel Coding Using Space-Filling Curves and MMSE Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4976454
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -300,6 +366,8 @@
 
 ## On Compression of Data Encrypted with Block Ciphers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4976465
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -309,6 +377,8 @@
 
 ## Multi-carrier frequency hopping spread spectrum system with girth-six low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5164224
 - **Type**: conference
 - **Published**: 14-16 Marc

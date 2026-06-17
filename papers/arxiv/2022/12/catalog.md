@@ -3,6 +3,8 @@
 
 ## Flag Gadgets based on Classical Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2212.10738v2
 - **Type**: preprint
 - **Published**: 2022-12-21
@@ -12,6 +14,8 @@
 
 ## Local Probabilistic Decoding of a Quantum Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2212.06985v3
 - **Type**: preprint
 - **Published**: 2022-12-14
@@ -21,6 +25,8 @@
 
 ## Generalized Belief Propagation Algorithms for Decoding of Surface Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2212.03214v2
 - **Type**: preprint
 - **Published**: 2022-12-06
@@ -30,6 +36,8 @@
 
 ## Asymmetric adaptive LDPC-based information reconciliation for industrial quantum key distribution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2212.01121v2
 - **Type**: preprint
 - **Published**: 2022-12-02

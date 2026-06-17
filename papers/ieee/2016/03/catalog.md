@@ -3,6 +3,8 @@
 
 ## A Relaxed Min-Sum LDPC Decoder With Simplified Check Nodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7378848
 - **Type**: journal
 - **Published**: March 2016
@@ -12,6 +14,8 @@
 
 ## An LDPC-Coded Generalized Space Shift Keying Scheme Using A Codebook-Assisted Low-Complexity Massive MIMO Detector
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7383250
 - **Type**: journal
 - **Published**: March 2016
@@ -21,6 +25,8 @@
 
 ## Low-Density Parity-Check Codes for ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7419255
 - **Type**: journal
 - **Published**: March 2016
@@ -30,6 +36,8 @@
 
 ## Performance Analysis of Raptor Codes Under Maximum Likelihood Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7393818
 - **Type**: journal
 - **Published**: March 2016
@@ -39,6 +47,8 @@
 
 ## Bit-Interleaved Coded Modulation (BICM) for ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7383286
 - **Type**: journal
 - **Published**: March 2016
@@ -48,6 +58,8 @@
 
 ## Arithmetic-BICM for Seamless Rate Adaptation for Wireless Communication Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6939666
 - **Type**: journal
 - **Published**: March 2016
@@ -57,6 +69,8 @@
 
 ## An Overview of the ATSC 3.0 Physical Layer Specification
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7383281
 - **Type**: journal
 - **Published**: March 2016
@@ -66,6 +80,8 @@
 
 ## Non-Uniform Constellations for ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7419222
 - **Type**: journal
 - **Published**: March 2016
@@ -75,6 +91,8 @@
 
 ## Layered-Division-Multiplexing: Theory and Practice
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7378924
 - **Type**: journal
 - **Published**: March 2016
@@ -84,6 +102,8 @@
 
 ## Secure Reversible Image Data Hiding Over Encrypted Domain via Key Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7067375
 - **Type**: journal
 - **Published**: March 2016
@@ -93,6 +113,8 @@
 
 ## A survey and tutorial on contemporary aspects of multiple-valued logic and its application to microelectronic circuits
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7419926
 - **Type**: journal
 - **Published**: March 2016
@@ -102,6 +124,8 @@
 
 ## Transmit Diversity Code Filter Sets (TDCFSs), an MISO Antenna Frequency Predistortion Scheme for ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7378938
 - **Type**: journal
 - **Published**: March 2016
@@ -111,6 +135,8 @@
 
 ## Interleaved Concatenated Coding for Secrecy in the Finite Blocklength Regime
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7364175
 - **Type**: journal
 - **Published**: March 2016
@@ -120,6 +146,8 @@
 
 ## Hamming Distance Spectrum of DAC Codes for Equiprobable Binary Sources
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7384484
 - **Type**: journal
 - **Published**: March 2016
@@ -129,6 +157,8 @@
 
 ## Flexible and Robust Transmission for Physical Layer Signaling of ATSC 3.0
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7404240
 - **Type**: journal
 - **Published**: March 2016
@@ -138,6 +168,8 @@
 
 ## Lattice-Reduction-Aided Precoding for Coded Modulation over Algebraic Signal Constellations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7499149
 - **Type**: conference
 - **Published**: 9-11 March
@@ -147,6 +179,8 @@
 
 ## Coded sub band replacement DWT based space image compression
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7500538
 - **Type**: conference
 - **Published**: 5-12 March
@@ -156,6 +190,8 @@
 
 ## Performance evaluation of SATCOM link in the presence of radio frequency interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7500741
 - **Type**: conference
 - **Published**: 5-12 March
@@ -165,6 +201,8 @@
 
 ## Statistical ARQ link analysis and planning for dynamic links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7500547
 - **Type**: conference
 - **Published**: 5-12 March
@@ -174,6 +212,8 @@
 
 ## Proximity link design and performance options for a Mars areostationary relay satellite
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7500680
 - **Type**: conference
 - **Published**: 5-12 March
@@ -183,6 +223,8 @@
 
 ## A low-complex Min-Sum decoding algorithm for irregular LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7566135
 - **Type**: conference
 - **Published**: 23-25 Marc
@@ -192,6 +234,8 @@
 
 ## Performance evaluation of downlink LTE system with QPP interleaver for channel encoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7523184
 - **Type**: conference
 - **Published**: 21-23 Marc
@@ -201,6 +245,8 @@
 
 ## Convergence-optimized variable node structure for stochastic LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7472936
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -210,6 +256,8 @@
 
 ## A generalized LDPC framework for robust and sublinear compressive sensing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7472553
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -219,6 +267,8 @@
 
 ## Robust receiver design based on FEC code diversity in pilot-contaminated multi-user massive MIMO systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7472313
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -228,6 +278,8 @@
 
 ## Multicore implementation of LDPC decoders based on ADMM algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7471820
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -237,6 +289,8 @@
 
 ## Partitioned successive-cancellation list decoding of polar codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7471817
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -246,6 +300,8 @@
 
 ## Recovering K-sparse N-length vectors in O(K log N) time: Compressed sensing using sparse-graph codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7472438
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -255,6 +311,8 @@
 
 ## Convergence analysis for Guassian belief propagation: Dynamic behaviour of marginal covariances
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7472147
 - **Type**: conference
 - **Published**: 20-25 Marc
@@ -264,6 +322,8 @@
 
 ## Density evolution and error floor analysis for staircase and braided codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537380
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -273,6 +333,8 @@
 
 ## A practicable rate-adaptive FEC scheme flexible about capacity and distance in optical transport networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537243
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -282,6 +344,8 @@
 
 ## LDPC-coded BICM-ID based nonuniform signaling for ultra-high-speed optical transport
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537241
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -291,6 +355,8 @@
 
 ## Tandem-turbo-product nonbinary BICM for next-generation high-speed optical transmission systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537303
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -300,6 +366,8 @@
 
 ## Pareto-efficient set of modulation and coding based on RGMI in nonlinear fiber transmissions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537302
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -309,6 +377,8 @@
 
 ## Multidimensional modulation and coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537239
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -318,6 +388,8 @@
 
 ## Predicting the performance of nonbinary forward error correction in optical transmission experiments
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7537200
 - **Type**: conference
 - **Published**: 20-24 Marc
@@ -327,6 +399,8 @@
 
 ## Performance of LDPC coded modulations in Power Line Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7476294
 - **Type**: conference
 - **Published**: 20-23 Marc
@@ -336,6 +410,8 @@
 
 ## Unequal error protection for impulsive noise channels in power line communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7476288
 - **Type**: conference
 - **Published**: 20-23 Marc
@@ -345,6 +421,8 @@
 
 ## Hybrid sub-optimal decoding technique for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7530160
 - **Type**: conference
 - **Published**: 18-19 Marc
@@ -354,6 +432,8 @@
 
 ## H.264/AVC video protection model based on private cloud for military organisation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7530121
 - **Type**: conference
 - **Published**: 18-19 Marc
@@ -363,6 +443,8 @@
 
 ## On the LLR criterion based shortening design for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7460482
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -372,6 +454,8 @@
 
 ## Triggering wave-like convergence of tail-biting spatially coupled LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7460483
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -381,6 +465,8 @@
 
 ## EXIT chart based IRA code design for TDMR
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7460573
 - **Type**: conference
 - **Published**: 16-18 Marc
@@ -390,6 +476,8 @@
 
 ## Saturated min-sum decoding: An “afterburner” for LDPC decoder hardware
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7459497
 - **Type**: conference
 - **Published**: 14-18 Marc
@@ -399,6 +487,8 @@
 
 ## Error resilience and energy efficiency: An LDPC decoder design study
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7459380
 - **Type**: conference
 - **Published**: 14-18 Marc

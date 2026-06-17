@@ -3,6 +3,8 @@
 
 ## A topological theory for qLDPC: non-Clifford gates and magic state fountain on homological product codes with constant rate and beyond the $N^{1/3}$ distance barrier
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.19375v3
 - **Type**: preprint
 - **Published**: 2025-01-31
@@ -12,6 +14,8 @@
 
 ## Upper Bounds on the Minimum Distance of Structured LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.19125v1
 - **Type**: preprint
 - **Published**: 2025-01-31
@@ -21,6 +25,8 @@
 
 ## 5G LDPC Linear Transformer for Channel Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.14102v1
 - **Type**: preprint
 - **Published**: 2025-01-23
@@ -30,6 +36,8 @@
 
 ## Threshold Selection for Iterative Decoding of $(v,w)$-regular Binary Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.13865v1
 - **Type**: preprint
 - **Published**: 2025-01-23
@@ -39,6 +47,8 @@
 
 ## Explicit Construction of Quantum Quasi-Cyclic Low-Density Parity-Check Codes with Column Weight 2 and Girth 12
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.13444v2
 - **Type**: preprint
 - **Published**: 2025-01-23
@@ -48,6 +58,8 @@
 
 ## Soft-Decision Decoding for LDPC Code-Based Quantitative Group Testing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.12167v1
 - **Type**: preprint
 - **Published**: 2025-01-21
@@ -57,6 +69,8 @@
 
 ## Faster-Than-Nyquist Equalization with Convolutional Neural Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.11594v2
 - **Type**: preprint
 - **Published**: 2025-01-20
@@ -66,6 +80,8 @@
 
 ## Few-shot Policy (de)composition in Conversational Question Answering
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.11335v1
 - **Type**: preprint
 - **Published**: 2025-01-20
@@ -75,6 +91,8 @@
 
 ## Efficient Reconciliation of Continuous Variable Quantum Key Distribution with Multiplicatively Repeated Non-Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.11009v2
 - **Type**: preprint
 - **Published**: 2025-01-19
@@ -84,6 +102,8 @@
 
 ## Decoding Quantum LDPC Codes using Collaborative Check Node Removal
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.08036v3
 - **Type**: preprint
 - **Published**: 2025-01-14
@@ -93,6 +113,8 @@
 
 ## Design and Analysis of a Concatenated Code for Intersymbol Interference Wiretap Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.07561v5
 - **Type**: preprint
 - **Published**: 2025-01-13
@@ -102,6 +124,8 @@
 
 ## Entanglement-Assisted Quantum Quasi-Cyclic LDPC Codes with Transversal Logical Operators
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.07363v2
 - **Type**: preprint
 - **Published**: 2025-01-13
@@ -111,6 +135,8 @@
 
 ## A graph-based approach to entanglement entropy of quantum error correcting codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.06407v3
 - **Type**: preprint
 - **Published**: 2025-01-11
@@ -120,6 +146,8 @@
 
 ## Enhanced Min-Sum Decoding of Quantum Codes Using Previous Iteration Dynamics
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.05021v1
 - **Type**: preprint
 - **Published**: 2025-01-09
@@ -129,6 +157,8 @@
 
 ## Maximally Extendable Product Codes are Good Coboundary Expanders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2501.01411v2
 - **Type**: preprint
 - **Published**: 2025-01-02

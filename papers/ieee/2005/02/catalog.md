@@ -3,6 +3,8 @@
 
 ## Construction of low-density parity-check codes by superposition
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1402646
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -12,6 +14,8 @@
 
 ## Shuffled iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1402639
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -21,6 +25,8 @@
 
 ## Codes on finite geometries
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1386528
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -30,6 +36,8 @@
 
 ## High-rate serially concatenated coding with extended Hamming codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1388739
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -39,6 +47,8 @@
 
 ## A Decoding Algorithm for Finite-Geometry LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1402664
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -48,6 +58,8 @@
 
 ## Evaluation of the very low BER of FEC codes using dual adaptive importance sampling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1388740
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -57,6 +69,8 @@
 
 ## Approximate belief propagation, density evolution, and statistical neurodynamics for CDMA multiuser detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1386539
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -66,6 +80,8 @@
 
 ## Bounds on information combining
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1386530
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -75,6 +91,8 @@
 
 ## Signal processing for perpendicular recording channels with intertrack interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1396214
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -84,6 +102,8 @@
 
 ## Split soft-decision equalization for wireless channels with large delay spread
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1402649
 - **Type**: journal
 - **Published**: Feb. 2005
@@ -93,6 +113,8 @@
 
 ## Interleaver and Accumulator Design for Systematic Repeat-Accumulate Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1624218
 - **Type**: conference
 - **Published**: 2-4 Feb. 2
@@ -102,6 +124,8 @@
 
 ## A 480Mb/s LDPC-COFDM-based UWB baseband transceiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1494060
 - **Type**: conference
 - **Published**: 10-10 Feb.
@@ -111,6 +135,8 @@
 
 ## A 135Mb/s DVB-S2 compliant codec based on 64800b LDPC and BCH codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1494061
 - **Type**: conference
 - **Published**: 10-10 Feb.
@@ -120,6 +146,8 @@
 
 ## Session 24 overview - baseband processing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:1494058
 - **Type**: conference
 - **Published**: 10-10 Feb.

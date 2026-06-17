@@ -3,6 +3,8 @@
 
 ## Outshining Mirrors: MTTDL of Fixed-Order Spiral Layouts
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4438042
 - **Type**: conference
 - **Published**: 24-24 Sept

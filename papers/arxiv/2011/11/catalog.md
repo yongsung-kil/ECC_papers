@@ -3,6 +3,8 @@
 
 ## Efficient Joint Network-Source Coding for Multiple Terminals with Side Information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1111.5735v1
 - **Type**: preprint
 - **Published**: 2011-11-24
@@ -12,6 +14,8 @@
 
 ## Efficient Network for Non-Binary QC-LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1111.0703v1
 - **Type**: preprint
 - **Published**: 2011-11-03

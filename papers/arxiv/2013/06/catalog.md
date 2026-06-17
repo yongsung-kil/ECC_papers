@@ -3,6 +3,8 @@
 
 ## Photonic circuits for iterative decoding of a class of low-density parity-check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1306.0583v1
 - **Type**: preprint
 - **Published**: 2013-06-03

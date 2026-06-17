@@ -3,6 +3,8 @@
 
 ## Analysis of a blockchain protocol based on LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2202.07265v3
 - **Type**: preprint
 - **Published**: 2022-02-15
@@ -12,6 +14,8 @@
 
 ## Fold-Transversal Clifford Gates for Quantum Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2202.06647v3
 - **Type**: preprint
 - **Published**: 2022-02-14
@@ -21,6 +25,8 @@
 
 ## An Improved EPA based Receiver Design for Uplink LDPC Coded SCMA System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2202.05530v1
 - **Type**: preprint
 - **Published**: 2022-02-11
@@ -30,6 +36,8 @@
 
 ## Efficient ADMM Decoder for Non-binary LDPC Codes with Codeword-Independent Performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2202.02961v1
 - **Type**: preprint
 - **Published**: 2022-02-07
@@ -39,6 +47,8 @@
 
 ## Hybrid Neural Coded Modulation: Design and Training Methods
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2202.01972v1
 - **Type**: preprint
 - **Published**: 2022-02-04
@@ -48,6 +58,8 @@
 
 ## Bias-tailored quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2202.01702v3
 - **Type**: preprint
 - **Published**: 2022-02-03

@@ -3,6 +3,8 @@
 
 ## Tapering off qubits to simulate fermionic Hamiltonians
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.08213v1
 - **Type**: preprint
 - **Published**: 2017-01-27
@@ -12,6 +14,8 @@
 
 ## Design of Capacity Approaching Ensembles of LDPC Codes for Correlated Sources using EXIT Charts
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.08067v1
 - **Type**: preprint
 - **Published**: 2017-01-27
@@ -21,6 +25,8 @@
 
 ## Floor Scale Modulo Lifting for QC-LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.07521v2
 - **Type**: preprint
 - **Published**: 2017-01-25
@@ -30,6 +36,8 @@
 
 ## On Advisability of Designing Short Length QC-LDPC Codes Using Perfect Difference Families
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.06218v1
 - **Type**: preprint
 - **Published**: 2017-01-22
@@ -39,6 +47,8 @@
 
 ## High Rate LDPC Codes from Difference Covering Arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.05686v1
 - **Type**: preprint
 - **Published**: 2017-01-20
@@ -48,6 +58,8 @@
 
 ## Performance Analysis of Low-Density Parity-Check Codes over 2D Interference Channels via Density Evolution
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.03840v1
 - **Type**: preprint
 - **Published**: 2017-01-13
@@ -57,6 +69,8 @@
 
 ## The Velocity of the Decoding Wave for Spatially Coupled Codes on BMS Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.03764v1
 - **Type**: preprint
 - **Published**: 2017-01-13
@@ -66,6 +80,8 @@
 
 ## The Velocity of the Propagating Wave for General Coupled Scalar Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1701.03759v1
 - **Type**: preprint
 - **Published**: 2017-01-13

@@ -3,6 +3,8 @@
 
 ## Iterative LMMSE Channel Estimation, Multiuser Detection, and Decoding via Spatial Coupling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1412.6223v1
 - **Type**: preprint
 - **Published**: 2014-12-19
@@ -12,6 +14,8 @@
 
 ## Thresholds for correcting errors, erasures, and faulty syndrome measurements in degenerate quantum codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1412.6172v1
 - **Type**: preprint
 - **Published**: 2014-12-18
@@ -21,6 +25,8 @@
 
 ## Convolutional codes from unit schemes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1412.1695v4
 - **Type**: preprint
 - **Published**: 2014-12-04

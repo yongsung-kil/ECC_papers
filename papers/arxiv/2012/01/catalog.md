@@ -3,6 +3,8 @@
 
 ## Extended Extremes of Information Combining
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1201.6046v2
 - **Type**: preprint
 - **Published**: 2012-01-29
@@ -12,6 +14,8 @@
 
 ## Spatially Coupled Ensembles Universally Achieve Capacity under Belief Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1201.2999v1
 - **Type**: preprint
 - **Published**: 2012-01-14
@@ -21,6 +25,8 @@
 
 ## A Novel Error Correcting System Based on Product Codes for Future Magnetic Recording Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1201.1065v1
 - **Type**: preprint
 - **Published**: 2012-01-05

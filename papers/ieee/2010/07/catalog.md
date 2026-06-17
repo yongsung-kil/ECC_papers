@@ -3,6 +3,8 @@
 
 ## On the Number of Minimum Stopping Sets and Minimum Codewords of Array LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5545626
 - **Type**: journal
 - **Published**: July 2010
@@ -12,6 +14,8 @@
 
 ## Adaptive Mixed Scheduling for Correcting Errors in Trapping Sets of LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5545624
 - **Type**: journal
 - **Published**: July 2010
@@ -21,6 +25,8 @@
 
 ## Mitigation of Impulsive Noise Effect on the PLC Channel With QC–LDPC Codes as the Outer Coding Scheme
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5439947
 - **Type**: journal
 - **Published**: July 2010
@@ -30,6 +36,8 @@
 
 ## Adaptive-Normalized/Offset Min-Sum Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5545625
 - **Type**: journal
 - **Published**: July 2010
@@ -39,6 +47,8 @@
 
 ## Reduced-Memory Decoding of Low-Density Lattice Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5545622
 - **Type**: journal
 - **Published**: July 2010
@@ -48,6 +58,8 @@
 
 ## On the Dynamics of the Error Floor Behavior in (Regular) LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5485006
 - **Type**: journal
 - **Published**: July 2010
@@ -57,6 +69,8 @@
 
 ## An Improved Belief-Propagation Decoder for LDPC-Coded Partial-Response Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5422626
 - **Type**: journal
 - **Published**: July 2010
@@ -66,6 +80,8 @@
 
 ## A Separation Algorithm for Improved LP-Decoding of Linear Block Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5485012
 - **Type**: journal
 - **Published**: July 2010
@@ -75,6 +91,8 @@
 
 ## A Novel JSCC Framework With Diversity-Multiplexing-Coding Gain Tradeoff for Scalable Video Transmission Over Cooperative MIMO
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5473098
 - **Type**: journal
 - **Published**: July 2010
@@ -84,6 +102,8 @@
 
 ## A modified Offset Min-Sum decoding algorithm for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5564884
 - **Type**: conference
 - **Published**: 9-11 July 
@@ -93,6 +113,8 @@
 
 ## High performance of parallel concatenated code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5564637
 - **Type**: conference
 - **Published**: 9-11 July 
@@ -102,6 +124,8 @@
 
 ## High parallel variation Banyan network based permutation network for reconfigurable LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5540964
 - **Type**: conference
 - **Published**: 7-9 July 2
@@ -111,6 +135,8 @@
 
 ## Application of 2-state trellis LDPC code in OFDM system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5554812
 - **Type**: conference
 - **Published**: 7-9 July 2
@@ -120,6 +146,8 @@
 
 ## A fully-overlapped multi-mode QC-LDPC decoder architecture for mobile WiMAX applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5540958
 - **Type**: conference
 - **Published**: 7-9 July 2
@@ -129,6 +157,8 @@
 
 ## A note on relationship between algebraic geometric codes and LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555509
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -138,6 +168,8 @@
 
 ## Dynamic Power Management on LDPC Decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5572822
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -147,6 +179,8 @@
 
 ## Quasi-cyclic LDPC-coded signal space diversity with precoding over fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555283
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -156,6 +190,8 @@
 
 ## Cross-layer design in multiuser diversity system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555417
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -165,6 +201,8 @@
 
 ## Improved BP-OSD cascade decoding algorithm using limited likelihood information
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555229
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -174,6 +212,8 @@
 
 ## Performance of distributed GLD codes over mobile-to-mobile fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555708
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -183,6 +223,8 @@
 
 ## Improved syndrome-based ordered statistic decoding algorithm for LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555626
 - **Type**: conference
 - **Published**: 5-7 July 2
@@ -192,6 +234,8 @@
 
 ## A self-hosting configuration management system to mitigate the impact of Radiation-Induced Multi-Bit Upsets in SRAM-based FPGAs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5637493
 - **Type**: conference
 - **Published**: 4-7 July 2
@@ -201,6 +245,8 @@
 
 ## Control of a high torque density seven-phase induction motor with field-weakening capability
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5637787
 - **Type**: conference
 - **Published**: 4-7 July 2
@@ -210,6 +256,8 @@
 
 ## Reverse link performance of packet data with LDPC and soft handoff in cellular CDMA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5591646
 - **Type**: conference
 - **Published**: 29-31 July
@@ -219,6 +267,8 @@
 
 ## The SP algorithm decoding of convolutional codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5582047
 - **Type**: conference
 - **Published**: 28-30 July
@@ -228,6 +278,8 @@
 
 ## Rate-Adaptive nonbinary-LDPC-coded modulation with backpropagation for long-haul optical transport networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5549085
 - **Type**: conference
 - **Published**: 27 June-1 
@@ -237,6 +289,8 @@
 
 ## Generalized hybrid subcarrier/amplitude/phase/polarization LDPC-coded modulation based FSO networking
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5549018
 - **Type**: conference
 - **Published**: 27 June-1 
@@ -246,6 +300,8 @@
 
 ## Performance of adaptive low-density parity check codes in a low cost spectrum-sliced WDM network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5549249
 - **Type**: conference
 - **Published**: 27 June-1 
@@ -255,6 +311,8 @@
 
 ## The stability of LDPC codes with higher order modulation schemes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5580434
 - **Type**: conference
 - **Published**: 21-23 July
@@ -264,6 +322,8 @@
 
 ## LDPC FEC code extension for unequal error protection in 2nd generation DVB systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5582541
 - **Type**: conference
 - **Published**: 19-23 July
@@ -273,6 +333,8 @@
 
 ## Embedded multicore architectures for LDPC decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5642046
 - **Type**: conference
 - **Published**: 19-22 July
@@ -282,6 +344,8 @@
 
 ## A GPU implementation for two MIMO-OFDM detectors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5642054
 - **Type**: conference
 - **Published**: 19-22 July
@@ -291,6 +355,8 @@
 
 ## Modified progressive edge-growth algorithm based LDPC coded-modulation for 400 Gb/s optical transport
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5553711
 - **Type**: conference
 - **Published**: 19-21 July
@@ -300,6 +366,8 @@
 
 ## Performance analysis of projective geometry LDPC coded UWB system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5568734
 - **Type**: conference
 - **Published**: 17-18 July
@@ -309,6 +377,8 @@
 
 ## Symmetric Distributed Joint Source-Channel Coding Using Raptor Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5575677
 - **Type**: conference
 - **Published**: 15-17 July
@@ -318,6 +388,8 @@
 
 ## Idle time reduction in TDMP implementation of LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555310
 - **Type**: conference
 - **Published**: 11-15 July
@@ -327,6 +399,8 @@
 
 ## New algorithm for message restoring with errors detection and correction using binary LDPC-codes and network coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5555305
 - **Type**: conference
 - **Published**: 11-15 July
@@ -336,6 +410,8 @@
 
 ## What is the role of DSP in future optical access?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5546422
 - **Type**: conference
 - **Published**: 11-14 July
@@ -345,6 +421,8 @@
 
 ## Iterative bit-flipped decoding of concatenated reed solomon/convolutional codes with HMAC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5588212
 - **Type**: conference
 - **Published**: 11-14 July

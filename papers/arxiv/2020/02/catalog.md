@@ -3,6 +3,8 @@
 
 ## LDPC codes constructed from cubic symmetric graphs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2002.06690v1
 - **Type**: preprint
 - **Published**: 2020-02-16
@@ -12,6 +14,8 @@
 
 ## Toward Efficient Quantum Key Distribution Reconciliation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2002.04887v1
 - **Type**: preprint
 - **Published**: 2020-02-12
@@ -21,6 +25,8 @@
 
 ## Protograph-Based Decoding of LDPC Codes with Hamming Weight Amplifiers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2002.02696v1
 - **Type**: preprint
 - **Published**: 2020-02-07

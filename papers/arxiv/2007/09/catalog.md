@@ -3,6 +3,8 @@
 
 ## LDPC codes in the McEliece cryptosystem: attacks and countermeasures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0710.0142v2
 - **Type**: preprint
 - **Published**: 2007-09-30
@@ -12,6 +14,8 @@
 
 ## Serially Concatenated IRA Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0709.4466v1
 - **Type**: preprint
 - **Published**: 2007-09-27
@@ -21,6 +25,8 @@
 
 ## LDPC codes from Singer cycles
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0709.2813v1
 - **Type**: preprint
 - **Published**: 2007-09-18

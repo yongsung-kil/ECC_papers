@@ -3,6 +3,8 @@
 
 ## Achievable Information Rates for Fiber Optics: Applications and Computations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1709.10393v2
 - **Type**: preprint
 - **Published**: 2017-07-26
@@ -12,6 +14,8 @@
 
 ## Distance Properties of Short LDPC Codes and their Impact on the BP, ML and Near-ML Decoding Performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:1707.01025v1
 - **Type**: preprint
 - **Published**: 2017-07-04

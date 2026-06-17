@@ -3,6 +3,8 @@
 
 ## Decoding LDPC Codes by Using Negative Proximal Regularization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10122222
 - **Type**: journal
 - **Published**: July 2023
@@ -12,6 +14,8 @@
 
 ## Momentum-Based Symbol Flipping Decoding Algorithms for Non-Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10050147
 - **Type**: journal
 - **Published**: July 2023
@@ -21,6 +25,8 @@
 
 ## The Syndrome Bit Flipping Algorithm for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10113636
 - **Type**: journal
 - **Published**: July 2023
@@ -30,6 +36,8 @@
 
 ## Improving the Thresholds of Generalized LDPC Codes With Convolutional Code Constraints
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10121163
 - **Type**: journal
 - **Published**: July 2023
@@ -39,6 +47,8 @@
 
 ## Hamming-Distance Trellis Min-Max-Based Architecture for Non-Binary LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10032576
 - **Type**: journal
 - **Published**: July 2023
@@ -48,6 +58,8 @@
 
 ## Winning by Successive Failures—Enhanced Link Adaptation for Cellular Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10132391
 - **Type**: journal
 - **Published**: July 2023
@@ -57,6 +69,8 @@
 
 ## Reinforcement-Learning-Based Overhead Reduction for Online Fountain Codes With Limited Feedback
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10119212
 - **Type**: journal
 - **Published**: July 2023
@@ -66,6 +80,8 @@
 
 ## Sub-4.7 Scaling Exponent of Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10063203
 - **Type**: journal
 - **Published**: July 2023
@@ -75,6 +91,8 @@
 
 ## On the Probabilistic Quantum Error Correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10063938
 - **Type**: journal
 - **Published**: July 2023
@@ -84,6 +102,8 @@
 
 ## Flexible transceiver for an access network: a multicarrier entropy loading approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10153945
 - **Type**: journal
 - **Published**: July 2023
@@ -93,6 +113,8 @@
 
 ## A Model-Driven Quasi-ResNet Belief Propagation Neural Network Decoder for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10217911
 - **Type**: conference
 - **Published**: 9-12 July 
@@ -102,6 +124,8 @@
 
 ## A Highly Robust Secret Key Reconcile System Based on Cyclic Shift Buffer and HARQ Mechanism
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10271035
 - **Type**: conference
 - **Published**: 8-10 July 
@@ -111,6 +135,8 @@
 
 ## FPGA Implementation of Elliptic Curve Encryption Algorithm Based on PUFs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10270847
 - **Type**: conference
 - **Published**: 8-10 July 
@@ -120,6 +146,8 @@
 
 ## A Doppler Reciprocity based Key Generation Method for C-V2X System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10270831
 - **Type**: conference
 - **Published**: 8-10 July 
@@ -129,6 +157,8 @@
 
 ## Speculative ECC and LCIM Enabled NUMA Device Core
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10213102
 - **Type**: conference
 - **Published**: 7-9 July 2
@@ -138,6 +168,8 @@
 
 ## Advances and Challenges in Physical Layer Security: A Comprehensive Review
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10257614
 - **Type**: conference
 - **Published**: 7-9 July 2
@@ -147,6 +179,8 @@
 
 ## Addendum Parity Check Codes for Futuristic Wireless Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10193041
 - **Type**: conference
 - **Published**: 6-8 July 2
@@ -156,6 +190,8 @@
 
 ## Uplink Performance Analysis of PD-NOMA System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10306916
 - **Type**: conference
 - **Published**: 6-8 July 2
@@ -165,6 +201,8 @@
 
 ## Design of Low-Power Turbo Coder for Low-Energy Mobile Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10307894
 - **Type**: conference
 - **Published**: 6-8 July 2
@@ -174,6 +212,8 @@
 
 ## LDPC Over Multihop LoRa Nodes with Peeling Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10335410
 - **Type**: conference
 - **Published**: 6-7 July 2
@@ -183,6 +223,8 @@
 
 ## Looping for Encryption Key Generation Over the Internet: A New Frontier in Physical Layer Security
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10201818
 - **Type**: conference
 - **Published**: 4-7 July 2
@@ -192,6 +234,8 @@
 
 ## Design and Performance Analysis of a Novel HQAM for Telecommunication Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10212916
 - **Type**: conference
 - **Published**: 30 June-2 
@@ -201,6 +245,8 @@
 
 ## A Bit-Interleaved Coded Modulation Scheme Based on the Polar Code in Underwater Acoustic OFDM Communication System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10212576
 - **Type**: conference
 - **Published**: 30 June-2 
@@ -210,6 +256,8 @@
 
 ## On the Performance of LDPC Codes over Radio Stripes System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10221509
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -219,6 +267,8 @@
 
 ## Aircraft Optical Video Transmission Communication based on the Forward Error Correction Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10221478
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -228,6 +278,8 @@
 
 ## On the LIS System Performance with and without Equalization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10221448
 - **Type**: conference
 - **Published**: 3-6 July 2
@@ -237,6 +289,8 @@
 
 ## Design of F-L-QC-LDPC Decoder Based on LNMS Decoding Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10280802
 - **Type**: conference
 - **Published**: 29-31 July
@@ -246,6 +300,8 @@
 
 ## Fast Bit-Flipping Decoding of Polar Codes with Additional Nodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10225069
 - **Type**: conference
 - **Published**: 29 June-3 
@@ -255,6 +311,8 @@
 
 ## Enhanced Bluetooth with Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10202150
 - **Type**: conference
 - **Published**: 28 June-1 
@@ -264,6 +322,8 @@
 
 ## Efficient Genetic Algorithm-based LDPC Code Design for IoT Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10227247
 - **Type**: conference
 - **Published**: 27-28 July
@@ -273,6 +333,8 @@
 
 ## Effect of Pointing Errors on BER Performance of Multidimensional LDPC-Coded OAM Modulation with Direct Detection over Turbulent FSO Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10207427
 - **Type**: conference
 - **Published**: 2-6 July 2
@@ -282,6 +344,8 @@
 
 ## Impact of Non-Gaussian Noise Distribution by Artificial Neural Network-based Equalizers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10209616
 - **Type**: conference
 - **Published**: 2-6 July 2
@@ -291,6 +355,8 @@
 
 ## Multi-dimensional reconciliation encoder with quasi-cyclic LDPC codes on FPGA
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10207471
 - **Type**: conference
 - **Published**: 2-6 July 2
@@ -300,6 +366,8 @@
 
 ## Experimental Demonstration of Neural Network-based Soft Demapper for Long-haul Optical Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10209891
 - **Type**: conference
 - **Published**: 2-6 July 2
@@ -309,6 +377,8 @@
 
 ## Probabilistic Shaping over Multi-Dimensional Constellations for Optical Fiber Transmissions: Trade-offs and Insights
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10209722
 - **Type**: conference
 - **Published**: 2-6 July 2
@@ -318,6 +388,8 @@
 
 ## FPGA based High Bandwidth LDPC using Channel Coding Technique
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10212353
 - **Type**: conference
 - **Published**: 19-21 July
@@ -327,6 +399,8 @@
 
 ## Channel Coding Challenges for Short and Moderate Block Lengths-based Applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10206234
 - **Type**: conference
 - **Published**: 18-20 July
@@ -336,6 +410,8 @@
 
 ## Updating Not Just Payload but Payload and Extra Data Simultaneously in Real-Time IoT Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10226950
 - **Type**: conference
 - **Published**: 17-19 July
@@ -345,6 +421,8 @@
 
 ## A family of error correcting codes for automotive applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:10217205
 - **Type**: conference
 - **Published**: 17-19 July

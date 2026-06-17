@@ -3,6 +3,8 @@
 
 ## Families of LDPC Codes Derived from Nonprimitive BCH Codes and Cyclotomic Cosets
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0802.4079v1
 - **Type**: preprint
 - **Published**: 2008-02-27
@@ -12,6 +14,8 @@
 
 ## Distributed Joint Source-Channel Coding for arbitrary memoryless correlated sources and Source coding for Markov correlated sources using LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:0802.2666v1
 - **Type**: preprint
 - **Published**: 2008-02-19

@@ -3,6 +3,8 @@
 
 ## Cognitive Base Stations in LTE/3GPP Femtocells: A Correlated Equilibrium Game-Theoretic Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6042302
 - **Type**: journal
 - **Published**: December 2
@@ -12,6 +14,8 @@
 
 ## A Unified Framework for Linear-Programming Based Communication Receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6042890
 - **Type**: journal
 - **Published**: December 2
@@ -21,6 +25,8 @@
 
 ## Multidimensional Hybrid Modulations for Ultrahigh-Speed Optical Transport
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6059467
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -30,6 +36,8 @@
 
 ## Hardware Implementation of a Backtracking-Based Reconfigurable Decoder for Lowering the Error Floor of Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5954141
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -39,6 +47,8 @@
 
 ## Joint Decoding of LDPC Codes and Finite-State Channels Via Linear-Programming
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5993490
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -48,6 +58,8 @@
 
 ## Study of the Concatenation of Irregular LDPC Code with Equalizer of Low Complexity for 4G Mobile Wireless Network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6129697
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -57,6 +69,8 @@
 
 ## Investigation of Two-Dimensional Magnetic Recording (TDMR) With Position and Timing Uncertainty at 4 Tb/in$^{2}$
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5765692
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -66,6 +80,8 @@
 
 ## SigSag: Iterative Detection Through Soft Message-Passing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6025245
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -75,6 +91,8 @@
 
 ## SISO Detection Over Linear Channels With Linear Complexity in the Number of Interferers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6024433
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -84,6 +102,8 @@
 
 ## Limits on Support Recovery of Sparse Signals via Multiple-Access Communication Techniques
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6080743
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -93,6 +113,8 @@
 
 ## Iterative Tomographic Solution of Integer Least Squares Problems With Applications to MIMO Detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6032063
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -102,6 +124,8 @@
 
 ## Allocation of Computational Resources for Soft MIMO Detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:5961604
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -111,6 +135,8 @@
 
 ## Channel State Feedback Over the MIMO-MAC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6094251
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -120,6 +146,8 @@
 
 ## Iterative Source–Channel Decoding With Reduced Error Floors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6009164
 - **Type**: journal
 - **Published**: Dec. 2011
@@ -129,6 +157,8 @@
 
 ## Quasi Cyclic-LDPC codes based on PEG algorithm with maximized girth property
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6146165
 - **Type**: conference
 - **Published**: 7-9 Dec. 2
@@ -138,6 +168,8 @@
 
 ## LDPC decoder with modified LLR for bit patterned media with write errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6146112
 - **Type**: conference
 - **Published**: 7-9 Dec. 2
@@ -147,6 +179,8 @@
 
 ## Construction of quasi-cyclic LDPC codes form SFT structure and cyclic shift
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6146084
 - **Type**: conference
 - **Published**: 7-9 Dec. 2
@@ -156,6 +190,8 @@
 
 ## Distributed source coding: Theorem and its application to video coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6146218
 - **Type**: conference
 - **Published**: 7-9 Dec. 2
@@ -165,6 +201,8 @@
 
 ## Reduced-complexity modified per-survivor iterative timing recovery using M-algorithm for magnetic recording system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6146175
 - **Type**: conference
 - **Published**: 7-9 Dec. 2
@@ -174,6 +212,8 @@
 
 ## Prioritized 3-D Video Transmission over Cooperative MIMO-OFDM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6128686
 - **Type**: conference
 - **Published**: 6-8 Dec. 2
@@ -183,6 +223,8 @@
 
 ## Joint Channel Estimation and Decoding of Root-LDPC Codes in Block-Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134331
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -192,6 +234,8 @@
 
 ## Soft Information for LDPC Decoding in Flash: Mutual-Information Optimized Quantization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134417
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -201,6 +245,8 @@
 
 ## Enhancing Binary Images of Non-Binary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134315
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -210,6 +256,8 @@
 
 ## Performance Analysis of Enhanced Verification-Based Decoding for Packet-Based LDPC Codes over Binary Symmetric Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133747
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -219,6 +267,8 @@
 
 ## Threshold of Protograph-Based LDPC Coded BICM for Rayleigh Fading
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133952
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -228,6 +278,8 @@
 
 ## LDPC code design for the BPSK-constrained Gaussian wiretap channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6162586
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -237,6 +289,8 @@
 
 ## Protograph-Based Raptor-Like LDPC Codes for Rate Compatibility with Short Blocklengths
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134051
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -246,6 +300,8 @@
 
 ## Noise Adaptive LDPC Decoding Using Expectation Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133838
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -255,6 +311,8 @@
 
 ## Efficient Algorithms to Find All Small Error-Prone Substructures in LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133832
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -264,6 +322,8 @@
 
 ## On q-ary LDPC Code Design for a Low Error Floor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134057
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -273,6 +333,8 @@
 
 ## Non-Concatenated FEC Codes for Ultra-High Speed Optical Transport Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133616
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -282,6 +344,8 @@
 
 ## LLR Approximation for Wireless Channels Based on Taylor Series and Its Application to BICM with LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133575
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -291,6 +355,8 @@
 
 ## Stability of Iterative Decoding of Multi-Edge Type Doubly-Generalized LDPC Codes over the BEC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134025
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -300,6 +366,8 @@
 
 ## Adaptive Extended Min-Sum Algorithm for Nonbinary LDPC Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134511
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -309,6 +377,8 @@
 
 ## Progressive Coding and Iterative Source-Channel Decoding in Wireless Data Gathering Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133958
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -318,6 +388,8 @@
 
 ## High-Throughput Low-Power LDPC Decoder and Code Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134485
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -327,6 +399,8 @@
 
 ## Concatenated Signal Codes with Applications to Compute and Forward
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134136
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -336,6 +410,8 @@
 
 ## Channel Coding for IDM: High-Rate Convolutional Code Concatenated with Irregular Repetition Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133686
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -345,6 +421,8 @@
 
 ## A Multi-Level Design for Dirty-Paper Coding with Applications to the Cognitive Radio Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134130
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -354,6 +432,8 @@
 
 ## Energy-Efficient Free-Space Optical Communication by Coded OAM Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133703
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -363,6 +443,8 @@
 
 ## Novel SISO Detection Algorithms for Nonlinear Satellite Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134173
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -372,6 +454,8 @@
 
 ## Application Layer Joint Coding for Image Transmission over Deep Space Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133825
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -381,6 +465,8 @@
 
 ## Iterative Cross-Entropy Encoding for Memory Systems with Stuck-At Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6134073
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -390,6 +476,8 @@
 
 ## Analysis of Mutual Information Based Soft Forwarding Relays in AWGN Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133667
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -399,6 +487,8 @@
 
 ## Robust Reputation Management Using Probabilistic Message Passing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133861
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -408,6 +498,8 @@
 
 ## Optimum and Suboptimum Combining of Independent Class-A Noise Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6133826
 - **Type**: conference
 - **Published**: 5-9 Dec. 2
@@ -417,6 +509,8 @@
 
 ## Efficient architecture design for mobile sensor networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6123089
 - **Type**: conference
 - **Published**: 30 Nov.-1 
@@ -426,6 +520,8 @@
 
 ## Distributed video coding with Multiple Reference Frame motion estimation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6182497
 - **Type**: conference
 - **Published**: 24-26 Dec.
@@ -435,6 +531,8 @@
 
 ## Improved log domain decoding algorithm for LDPC codes over GF (q)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6164824
 - **Type**: conference
 - **Published**: 22-24 Dec.
@@ -444,6 +542,8 @@
 
 ## Combined normalized and offset extended min sum decoding algorithm for LDPC codes over GF (q)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6164866
 - **Type**: conference
 - **Published**: 22-24 Dec.
@@ -453,6 +553,8 @@
 
 ## Improved sub-block encoder of irregular LDPC code for image transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6147416
 - **Type**: conference
 - **Published**: 20-22 Dec.
@@ -462,6 +564,8 @@
 
 ## A new interconnection structure method for QC-LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6150451
 - **Type**: conference
 - **Published**: 17-19 Dec.
@@ -471,6 +575,8 @@
 
 ## Low-complexity architecture design for modified WiMAX Low-Density Parity-Check codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6174313
 - **Type**: conference
 - **Published**: 13-16 Dec.
@@ -480,6 +586,8 @@
 
 ## A 6.72-Gb/s 8pJ/bit/iteration IEEE 802.15.3c LDPC decoder chip
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6131868
 - **Type**: conference
 - **Published**: 12-14 Dec.
@@ -489,6 +597,8 @@
 
 ## Design of high-rate long-length structured QC-LDPC with good error performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6140871
 - **Type**: conference
 - **Published**: 12-14 Dec.
@@ -498,6 +608,8 @@
 
 ## Digital baseband challenges for a 60GHz gigabit link
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6122284
 - **Type**: conference
 - **Published**: 11-14 Dec.

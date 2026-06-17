@@ -3,6 +3,8 @@
 
 ## Quantum low-density parity-check codes for erasure-biased atomic quantum processors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.20189v2
 - **Type**: preprint
 - **Published**: 2025-02-27
@@ -12,6 +14,8 @@
 
 ## Existence and Characterisation of Bivariate Bicycle Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.17052v4
 - **Type**: preprint
 - **Published**: 2025-02-24
@@ -21,6 +25,8 @@
 
 ## Decision-tree decoders for general quantum LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.16408v1
 - **Type**: preprint
 - **Published**: 2025-02-23
@@ -30,6 +36,8 @@
 
 ## Non-Binary LDPC Arithmetic Error Correction For Processing-in-Memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.11487v1
 - **Type**: preprint
 - **Published**: 2025-02-17
@@ -39,6 +47,8 @@
 
 ## Demystifying 5G Polar and LDPC Codes: A Comprehensive Review and Foundations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.11053v3
 - **Type**: preprint
 - **Published**: 2025-02-16
@@ -48,6 +58,8 @@
 
 ## Semantic Learning for Molecular Communication in Internet of Bio-Nano Things
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.08426v2
 - **Type**: preprint
 - **Published**: 2025-02-12
@@ -57,6 +69,8 @@
 
 ## Explicit Codes approaching Generalized Singleton Bound using Expanders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.07308v1
 - **Type**: preprint
 - **Published**: 2025-02-11
@@ -66,6 +80,8 @@
 
 ## Practical classical error correction for parity-encoded spin systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.07170v4
 - **Type**: preprint
 - **Published**: 2025-02-11
@@ -75,6 +91,8 @@
 
 ## Regular LDPC codes on BMS wiretap channels: Security bounds
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2502.06058v1
 - **Type**: preprint
 - **Published**: 2025-02-09

@@ -3,6 +3,8 @@
 
 ## Improved Iterative Hard- and Soft-Reliability Based Majority-Logic Decoding Algorithms for Non-Binary Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6880860
 - **Type**: journal
 - **Published**: Oct.15, 20
@@ -12,6 +14,8 @@
 
 ## A Low Complexity-High Throughput QC-LDPC Encoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6781047
 - **Type**: journal
 - **Published**: May15, 201
@@ -21,6 +25,8 @@
 
 ## A Flexible NISC-Based LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6766729
 - **Type**: journal
 - **Published**: May15, 201
@@ -30,6 +36,8 @@
 
 ## Coded-Aided Phase Tracking for Coherent Fiber Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6690206
 - **Type**: journal
 - **Published**: March15, 2
@@ -39,6 +47,8 @@
 
 ## Distributed Source-Channel Coding Based on Real-Field BCH Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6712144
 - **Type**: journal
 - **Published**: March1, 20
@@ -48,6 +58,8 @@
 
 ## Subcarrier Reliability Aware Soft-Decision LDPC Code in CO-OFDM Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6778012
 - **Type**: journal
 - **Published**: June1, 201
@@ -57,6 +69,8 @@
 
 ## Lowering the Error Floor of LDPC Codes Using Multi-Step Quantization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6676774
 - **Type**: journal
 - **Published**: January 20
@@ -66,6 +80,8 @@
 
 ## Quantized Iterative Message Passing Decoders with Low Error Floor for LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6685976
 - **Type**: journal
 - **Published**: January 20
@@ -75,6 +91,8 @@
 
 ## Gallager B LDPC Decoder with Transient and Permanent Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6679370
 - **Type**: journal
 - **Published**: January 20
@@ -84,6 +102,8 @@
 
 ## Source Coding with Side Information at the Decoder and Uncertain Knowledge of the Correlation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6685982
 - **Type**: journal
 - **Published**: January 20
@@ -93,6 +113,8 @@
 
 ## Improved Binary DAC Codec with Spectrum for Equiprobable Sources
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6679369
 - **Type**: journal
 - **Published**: January 20
@@ -102,6 +124,8 @@
 
 ## Minimum-Variance Importance-Sampling Bernoulli Estimator for Fast Simulation of Linear Block Codes over Binary Symmetric Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6678682
 - **Type**: journal
 - **Published**: January 20
@@ -111,6 +135,8 @@
 
 ## Rate-Adaptive Coded Modulation for Fiber-Optic Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6634233
 - **Type**: journal
 - **Published**: Jan.15, 20
@@ -120,6 +146,8 @@
 
 ## Turbo Equalization for Digital Coherent Receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6671388
 - **Type**: journal
 - **Published**: Jan.15, 20
@@ -129,6 +157,8 @@
 
 ## An LDPC Decoder With Time-Domain Analog and Digital Mixed-Signal Processing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6630119
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -138,6 +168,8 @@
 
 ## Correlation Noise-Based Unequal Error Protected Rate-Adaptive Codes for Distributed Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6560406
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -147,6 +179,8 @@
 
 ## EXIT-Based Side Information Refinement in Wyner–Ziv Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6574264
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -156,6 +190,8 @@
 
 ## Variable Length Lossy Coding Using an LDPC Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6651840
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -165,6 +201,8 @@
 
 ## On Classical and Quantum MDS-Convolutional BCH Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6649974
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -174,6 +212,8 @@
 
 ## On Decoding Irregular Tanner Codes With Local-Optimality Guarantees
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6626647
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -183,6 +223,8 @@
 
 ## Path-Congestion-Aware Adaptive Routing With a Contention Prediction Scheme for Network-on-Chip Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6685943
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -192,6 +234,8 @@
 
 ## Detection-Decoding on BPMR Channels With Written-In Error Correction and ITI Mitigation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6600835
 - **Type**: journal
 - **Published**: Jan. 2014
@@ -201,6 +245,8 @@
 
 ## Terabit/s Nyquist Superchannels in High Capacity Fiber Field Trials Using DP-16QAM and DP-8QAM Modulation Formats
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6595033
 - **Type**: journal
 - **Published**: Feb.15, 20
@@ -210,6 +256,8 @@
 
 ## High-Throughput Energy-Efficient LDPC Decoders Using Differential Binary Message Passing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6675862
 - **Type**: journal
 - **Published**: Feb.1, 201
@@ -219,6 +267,8 @@
 
 ## Novel Blind Identification of LDPC Codes Using Average LLR of Syndrome a Posteriori Probability
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6678305
 - **Type**: journal
 - **Published**: Feb.1, 201
@@ -228,6 +278,8 @@
 
 ## VLSI Implementation of a Non-Binary Decoder Based on the Analog Digital Belief Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6832658
 - **Type**: journal
 - **Published**: Aug.1, 201
@@ -237,6 +289,8 @@
 
 ## Technology Options for 400 Gb/s PM-16QAM Flex-Grid Network Upgrades
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6739082
 - **Type**: journal
 - **Published**: April15, 2
@@ -246,6 +300,8 @@
 
 ## On the Equivalence Between Canonical Forms of Recursive Systematic Convolutional Transducers Based on Single Shift Registers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6802341
 - **Type**: journal
 - **Published**: 2014
@@ -255,6 +311,8 @@
 
 ## The role model estimator revisited
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875118
 - **Type**: conference
 - **Published**: 2014
@@ -264,6 +322,8 @@
 
 ## An improvement of approximate BP decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979829
 - **Type**: conference
 - **Published**: 2014
@@ -273,6 +333,8 @@
 
 ## Boosting the capacity of legacy networks using PM-64QAM and Nyquist-WDM technique
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6843826
 - **Type**: conference
 - **Published**: 2014
@@ -282,6 +344,8 @@
 
 ## Binary transmissions over Gaussian wiretap channel under soft/hard decision decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979874
 - **Type**: conference
 - **Published**: 2014
@@ -291,6 +355,8 @@
 
 ## Performance comparison of hybrid partial response detectors over frequency-selective fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865485
 - **Type**: conference
 - **Published**: 2014
@@ -300,6 +366,8 @@
 
 ## Channel capacity and achievable rates of peak power limited AWGNC, and their applications to adaptive modulation and coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979912
 - **Type**: conference
 - **Published**: 2014
@@ -309,6 +377,8 @@
 
 ## On multivariate cryptosystems based on maps with logarithmically invertible decomposition corresponding to walk on graph
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6933073
 - **Type**: conference
 - **Published**: 2014
@@ -318,6 +388,8 @@
 
 ## Achievable rates for reduced-complexity receivers on nonlinear satellite channels with memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6883970
 - **Type**: conference
 - **Published**: 2014
@@ -327,6 +399,8 @@
 
 ## Conference proceedings
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6986334
 - **Type**: conference
 - **Published**: 2014
@@ -336,6 +410,8 @@
 
 ## Counting balanced sequencesw/o forbidden patterns via the betheapproximation and loop calculus
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875105
 - **Type**: conference
 - **Published**: 2014
@@ -345,6 +421,8 @@
 
 ## Link adaptation in closed-loop coded MIMO systems with LMMSE-IC based turbo receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6785410
 - **Type**: conference
 - **Published**: 2014
@@ -354,6 +432,8 @@
 
 ## Trade-offs in execution signature compression for reliable processor systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6800307
 - **Type**: conference
 - **Published**: 2014
@@ -363,6 +443,8 @@
 
 ## Pattern-Aware Sequential Monte Carlo Detection for Generalized Space-Time Shift Keying
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6984626
 - **Type**: conference
 - **Published**: 2014
@@ -372,6 +454,8 @@
 
 ## Capacity and shaping in coherent fiber-optic links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6995366
 - **Type**: conference
 - **Published**: 2014
@@ -381,6 +465,8 @@
 
 ## On the primitive polynomial as the characteristic polynomial of a symmetric companion matrix
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979863
 - **Type**: conference
 - **Published**: 2014
@@ -390,6 +476,8 @@
 
 ## Mutual information based resource allocation in the two-way relay channel with OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875329
 - **Type**: conference
 - **Published**: 2014
@@ -399,6 +487,8 @@
 
 ## Design and Implementation for GPU-based seamless rate adaptive decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7054292
 - **Type**: conference
 - **Published**: 2014
@@ -408,6 +498,8 @@
 
 ## Sparse binary matrices as efficient associative memories
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7028496
 - **Type**: conference
 - **Published**: 2014
@@ -417,6 +509,8 @@
 
 ## Study on circularly arranged non-uniform constellations in dual-polarized MIMO-OFDM transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6873477
 - **Type**: conference
 - **Published**: 2014
@@ -426,6 +520,8 @@
 
 ## Low power reduced-complexity error-resilient MIMO detector
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865478
 - **Type**: conference
 - **Published**: 2014
@@ -435,6 +531,8 @@
 
 ## Implementation of a burst error and burst erasure channel emulator using an FPGA architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7039095
 - **Type**: conference
 - **Published**: 2014
@@ -444,6 +542,8 @@
 
 ## On a problem of Massey
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6804256
 - **Type**: conference
 - **Published**: 2014
@@ -453,6 +553,8 @@
 
 ## Hybrid DFSF-BP equalization for ATSC DTV receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865484
 - **Type**: conference
 - **Published**: 2014
@@ -462,6 +564,8 @@
 
 ## A hybrid iterative MIMO detection algorithm: Partial Gaussian approach with integer programming
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7008322
 - **Type**: conference
 - **Published**: 2014
@@ -471,6 +575,8 @@
 
 ## A generalization of threshold saturation: application to spatially coupled BICM-ID
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875247
 - **Type**: conference
 - **Published**: 2014
@@ -480,6 +586,8 @@
 
 ## Performance of RoFSO system with spatial diversity reception technology in strong atmospheric turbulence channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7062255
 - **Type**: conference
 - **Published**: 2014
@@ -489,6 +597,8 @@
 
 ## Low power and low voltage SRAM design for LDPC codes hardware applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6920865
 - **Type**: conference
 - **Published**: 2014
@@ -498,6 +608,8 @@
 
 ## Faulty stochastic LDPC decoders over the binary symmetric channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955096
 - **Type**: conference
 - **Published**: 2014
@@ -507,6 +619,8 @@
 
 ## LDPC code optimization with joint source-channel decoding of quantized Gauss-Markov signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6884152
 - **Type**: conference
 - **Published**: 2014
@@ -516,6 +630,8 @@
 
 ## Adaptive iterative decoding of MISO-BICM for DVB-T2
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6776140
 - **Type**: conference
 - **Published**: 2014
@@ -525,6 +641,8 @@
 
 ## Non-binary LDPC code with multiple memory reads for multi-level-cell (MLC) flash
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7041532
 - **Type**: conference
 - **Published**: 2014
@@ -534,6 +652,8 @@
 
 ## Short-blocklength non-binary LDPC codes with feedback-dependent incremental transmissions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6874868
 - **Type**: conference
 - **Published**: 2014
@@ -543,6 +663,8 @@
 
 ## Reducing the complexity of LDPC decoding algorithms: An optimization-oriented approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7136286
 - **Type**: conference
 - **Published**: 2014
@@ -552,6 +674,8 @@
 
 ## Towards energy effective LDPC decoding by exploiting channel noise variability
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7004180
 - **Type**: conference
 - **Published**: 2014
@@ -561,6 +685,8 @@
 
 ## Performance and evaluation of OFDM and SC - FDE over an AWGN propagation channel under RF impairments using simulink at 60GHz
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6996487
 - **Type**: conference
 - **Published**: 2014
@@ -570,6 +696,8 @@
 
 ## Simulating DVB-T to DVB-T2 migration opportunities in Croatian TV broadcasting
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7039121
 - **Type**: conference
 - **Published**: 2014
@@ -579,6 +707,8 @@
 
 ## Reconfigurable FEC codes for software-defined optical transceivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6987087
 - **Type**: conference
 - **Published**: 2014
@@ -588,6 +718,8 @@
 
 ## Joint channel estimation and raptor decoding over fading channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6841207
 - **Type**: conference
 - **Published**: 2014
@@ -597,6 +729,8 @@
 
 ## On the energy-efficient multidimensional coded modulation for optical transport networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7114428
 - **Type**: conference
 - **Published**: 2014
@@ -606,6 +740,8 @@
 
 ## A Study of Equipment Dependence of a Single-Dot Pattern Method for an Information-Hiding by Applying an Error-Correcting Code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6998376
 - **Type**: conference
 - **Published**: 2014
@@ -615,6 +751,8 @@
 
 ## The effect of saturation on belief propagation decoding of LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875305
 - **Type**: conference
 - **Published**: 2014
@@ -624,6 +762,8 @@
 
 ## Closed-form Cramér-Rao lower bounds for CFO and phase estimation from turbo-coded square-QAM-modulated signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7037447
 - **Type**: conference
 - **Published**: 2014
@@ -633,6 +773,8 @@
 
 ## Advanced coded modulation for ultrahigh speed optical transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6887154
 - **Type**: conference
 - **Published**: 2014
@@ -642,6 +784,8 @@
 
 ## High throughput millimeter-wave MIMO beamforming system for short range communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6866623
 - **Type**: conference
 - **Published**: 2014
@@ -651,6 +795,8 @@
 
 ## Code-Shift-Keying (CSK) with advanced FEC coding for GNSS applications in satellite multipath channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7045139
 - **Type**: conference
 - **Published**: 2014
@@ -660,6 +806,8 @@
 
 ## Optimal Joint Viterbi Detector Decoder (JVDD) over AWGN/ISI channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6785346
 - **Type**: conference
 - **Published**: 2014
@@ -669,6 +817,8 @@
 
 ## Fast convergence and reduced complexity receiver design for LDS-OFDM system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7136297
 - **Type**: conference
 - **Published**: 2014
@@ -678,6 +828,8 @@
 
 ## Fast software polar decoders
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6855069
 - **Type**: conference
 - **Published**: 2014
@@ -687,6 +839,8 @@
 
 ## High Order Modulation in Faster-Than-Nyquist Signaling Communication Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6965997
 - **Type**: conference
 - **Published**: 2014
@@ -696,6 +850,8 @@
 
 ## Code division multiple access communications systems for CubeSats at Lunar Lagrangian L1
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6836341
 - **Type**: conference
 - **Published**: 2014
@@ -705,6 +861,8 @@
 
 ## Noisy belief propagation decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7094847
 - **Type**: conference
 - **Published**: 2014
@@ -714,6 +872,8 @@
 
 ## Memory sharing techniques for multi-standard high-throughput FEC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6893199
 - **Type**: conference
 - **Published**: 2014
@@ -723,6 +883,8 @@
 
 ## Flexible multistandard FEC processor design with ASIP methodology
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6868664
 - **Type**: conference
 - **Published**: 2014
@@ -732,6 +894,8 @@
 
 ## High order non-uniform constellations for broadcasting UHDTV
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6952116
 - **Type**: conference
 - **Published**: 2014
@@ -741,6 +905,8 @@
 
 ## Analysis of one-step majority logic decoding under correlated data-dependent gate failures
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875304
 - **Type**: conference
 - **Published**: 2014
@@ -750,6 +916,8 @@
 
 ## Analog-to-stochastic converter using magnetic-tunnel junction devices
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6880490
 - **Type**: conference
 - **Published**: 2014
@@ -759,6 +927,8 @@
 
 ## Finite alphabet iterative decoders robust to faulty hardware: Analysis and selection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955095
 - **Type**: conference
 - **Published**: 2014
@@ -768,6 +938,8 @@
 
 ## Millimetre wave bands for 5G wireless communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7000244
 - **Type**: conference
 - **Published**: 2014
@@ -777,6 +949,8 @@
 
 ## Instanton search algorithm for the ADMM penalized decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6874922
 - **Type**: conference
 - **Published**: 2014
@@ -786,6 +960,8 @@
 
 ## Adaptive joint carrier recovery and turbo decoding for nyquist terabit optical transmission in the presence of phase noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6887153
 - **Type**: conference
 - **Published**: 2014
@@ -795,6 +971,8 @@
 
 ## A transmission method to combat multiple carrier frequency offsets (MCFOS) in coordinated multiple point (COMP) schemes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7041626
 - **Type**: conference
 - **Published**: 2014
@@ -804,6 +982,8 @@
 
 ## Soft intertrack interference cancellation for two-dimensional magnetic recording
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6785322
 - **Type**: conference
 - **Published**: 2014
@@ -813,6 +993,8 @@
 
 ## Partial Constrained Group Decoding: A New Interference Mitigation Technique for the Next Generation Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6814042
 - **Type**: conference
 - **Published**: 2014
@@ -822,6 +1004,8 @@
 
 ## Advanced techniques for spectrally efficient DVB-S2X systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6934538
 - **Type**: conference
 - **Published**: 2014
@@ -831,6 +1015,8 @@
 
 ## Software polar decoder on an embedded processor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6986083
 - **Type**: conference
 - **Published**: 2014
@@ -840,6 +1026,8 @@
 
 ## Asynchronous baseband processor design for cooperative MIMO satellite communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6908544
 - **Type**: conference
 - **Published**: 2014
@@ -849,6 +1037,8 @@
 
 ## FPGA implementation of a FEC decoding subsystem for a DVB-S2 receiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7002218
 - **Type**: conference
 - **Published**: 2014
@@ -858,6 +1048,8 @@
 
 ## Achievable rates and forward-backward decoding algorithms for the Gaussian relay channels under the one-code constraint
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6883639
 - **Type**: conference
 - **Published**: 2014
@@ -867,6 +1059,8 @@
 
 ## FPGA implementation of a multi-algorithm parallel FEC for SDR platforms
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6927446
 - **Type**: conference
 - **Published**: 2014
@@ -876,6 +1070,8 @@
 
 ## Table of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7016720
 - **Type**: conference
 - **Published**: 2014
@@ -885,6 +1081,8 @@
 
 ## Program
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955072
 - **Type**: conference
 - **Published**: 2014
@@ -894,6 +1092,8 @@
 
 ## Table of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6947684
 - **Type**: conference
 - **Published**: 2014
@@ -903,6 +1103,8 @@
 
 ## Table of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7000246
 - **Type**: conference
 - **Published**: 2014
@@ -912,6 +1114,8 @@
 
 ## Session 27 overview: Energy-efficient digital circuits: Energy-efficient digital subcommittee
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6757573
 - **Type**: conference
 - **Published**: 2014
@@ -921,6 +1125,8 @@
 
 ## Taber of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7062387
 - **Type**: conference
 - **Published**: 2014
@@ -930,6 +1136,8 @@
 
 ## Technical program
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979790
 - **Type**: conference
 - **Published**: 2014
@@ -939,6 +1147,8 @@
 
 ## [Front cover]
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979788
 - **Type**: conference
 - **Published**: 2014
@@ -948,6 +1158,8 @@
 
 ## Table of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7017220
 - **Type**: conference
 - **Published**: 2014
@@ -957,6 +1169,8 @@
 
 ## Table of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6951851
 - **Type**: conference
 - **Published**: 2014
@@ -966,6 +1180,8 @@
 
 ## Hardware-Oriented Construction of a Family of Rate-Compatible Raptor Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6814837
 - **Type**: journal
 - **Published**: 2014
@@ -975,6 +1191,8 @@
 
 ## Cloud Transmission: System Performance and Application Scenarios
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6746098
 - **Type**: journal
 - **Published**: 2014
@@ -984,6 +1202,8 @@
 
 ## Multiple-Vote Symbol-Flipping Decoder for Nonbinary LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6731592
 - **Type**: journal
 - **Published**: 2014
@@ -993,6 +1213,8 @@
 
 ## Soft-Decision Feedback Turbo Equalization for LDPC-Coded MIMO Underwater Acoustic Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6479709
 - **Type**: journal
 - **Published**: 2014
@@ -1002,6 +1224,8 @@
 
 ## On Detection Method for Soft Iterative Decoding in the Presence of Impulsive Interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6809154
 - **Type**: journal
 - **Published**: 2014
@@ -1011,6 +1235,8 @@
 
 ## Closed-Form CRLBs for SNR Estimation From Turbo-Coded BPSK-, MSK-, and Square-QAM-Modulated Signals
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6850016
 - **Type**: journal
 - **Published**: 2014
@@ -1020,6 +1246,8 @@
 
 ## Adaptive HARQ With Non-Binary Repetition Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6780990
 - **Type**: journal
 - **Published**: 2014
@@ -1029,6 +1257,8 @@
 
 ## A 16-Core Processor With Shared-Memory and Message-Passing Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6634267
 - **Type**: journal
 - **Published**: 2014
@@ -1038,6 +1268,8 @@
 
 ## Channel Coding and Lossy Source Coding Using a Generator of Constrained Random Numbers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6750723
 - **Type**: journal
 - **Published**: 2014
@@ -1047,6 +1279,8 @@
 
 ## Multidimensional Optical Transport Based on Optimized Vector-Quantization-Inspired Signal Constellation Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6877631
 - **Type**: journal
 - **Published**: 2014
@@ -1056,6 +1290,8 @@
 
 ## Iterative Decoding Algorithms for a Class of Non-Binary Two-Step Majority-Logic Decodable Cyclic Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6805582
 - **Type**: journal
 - **Published**: 2014
@@ -1065,6 +1301,8 @@
 
 ## Channel Hardening-Exploiting Message Passing (CHEMP) Receiver in Large-Scale MIMO Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6781619
 - **Type**: journal
 - **Published**: 2014
@@ -1074,6 +1312,8 @@
 
 ## Multidimensional Optimal Signal Constellation Sets and Symbol Mappings for Block-Interleaved Coded-Modulation Enabling Ultrahigh-Speed Optical Transport
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6844916
 - **Type**: journal
 - **Published**: 2014
@@ -1083,6 +1323,8 @@
 
 ## Low Complexity Optimal Soft-Input Soft-Output Demodulation of MSK Based on Factor Graph
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6819011
 - **Type**: journal
 - **Published**: 2014
@@ -1092,6 +1334,8 @@
 
 ## Channel Estimation for OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6814271
 - **Type**: journal
 - **Published**: 2014
@@ -1101,6 +1345,8 @@
 
 ## 2013 IEEE Information Theory Society Paper Award
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6690279
 - **Type**: journal
 - **Published**: 2014
@@ -1110,6 +1356,8 @@
 
 ## Performance evaluation of distributed video coding with different channel encoding techniques
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6868390
 - **Type**: conference
 - **Published**: 2014
@@ -1119,6 +1367,8 @@
 
 ## Design of systematic GIRA codes for CPM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955075
 - **Type**: conference
 - **Published**: 2014
@@ -1128,6 +1378,8 @@
 
 ## Cooperative relaying with low-density lattice coding and joint iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955124
 - **Type**: conference
 - **Published**: 2014
@@ -1137,6 +1389,8 @@
 
 ## Auto-configurable, Reliable, and Fault-Tolerant Cloud Storage with Dynamic Parameterization
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6903281
 - **Type**: conference
 - **Published**: 2014
@@ -1146,6 +1400,8 @@
 
 ## Implementation of encoders and decoding performance analysis of direct product convolutional codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7041834
 - **Type**: conference
 - **Published**: 2014
@@ -1155,6 +1411,8 @@
 
 ## A matrix based error correcting code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7107909
 - **Type**: conference
 - **Published**: 2014
@@ -1164,6 +1422,8 @@
 
 ## Scaling method to increase data rate with no degradation in Vector Symbol Decoding performance
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7091643
 - **Type**: conference
 - **Published**: 2014
@@ -1173,6 +1433,8 @@
 
 ## Secure code design for near field communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6983286
 - **Type**: conference
 - **Published**: 2014
@@ -1182,6 +1444,8 @@
 
 ## A New Soft Decoding Method for Systematic LT Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6843089
 - **Type**: conference
 - **Published**: 2014
@@ -1191,6 +1455,8 @@
 
 ## Physical-layer network coding via low density lattice codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6882678
 - **Type**: conference
 - **Published**: 2014
@@ -1200,6 +1466,8 @@
 
 ## A Chain Based Syndrome Coding Scheme for Secure Communication in the Wiretap Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7022770
 - **Type**: conference
 - **Published**: 2014
@@ -1209,6 +1477,8 @@
 
 ## Adaptive modulation and coding in networks with flexible spectrum allocation: An energy efficiency perspective
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6888108
 - **Type**: conference
 - **Published**: 2014
@@ -1218,6 +1488,8 @@
 
 ## Robust quantum error syndrome extraction by classical coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6874892
 - **Type**: conference
 - **Published**: 2014
@@ -1227,6 +1499,8 @@
 
 ## Concatenations of polar codes with outer BCH codes and convolutional codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7028538
 - **Type**: conference
 - **Published**: 2014
@@ -1236,6 +1510,8 @@
 
 ## Performance evaluation of IDMA implementation with physical layer network coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6923917
 - **Type**: conference
 - **Published**: 2014
@@ -1245,6 +1521,8 @@
 
 ## Lossless data hiding method using error correction code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7032838
 - **Type**: conference
 - **Published**: 2014
@@ -1254,6 +1532,8 @@
 
 ## Graph-based code construction for data storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979935
 - **Type**: conference
 - **Published**: 2014
@@ -1263,6 +1543,8 @@
 
 ## Coded modulation and approaching nonlinear Shannon limit
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6964213
 - **Type**: conference
 - **Published**: 2014
@@ -1272,6 +1554,8 @@
 
 ## Priority Based Pixel Domain Wyner-Ziv video coding using key frames
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6811366
 - **Type**: conference
 - **Published**: 2014
@@ -1281,6 +1565,8 @@
 
 ## Minimum distortion variance concatenated block codes for embedded source transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6785365
 - **Type**: conference
 - **Published**: 2014
@@ -1290,6 +1576,8 @@
 
 ## Performance of STBC-based time-frequency training OFDM over fast fading channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6779452
 - **Type**: conference
 - **Published**: 2014
@@ -1299,6 +1587,8 @@
 
 ## Design and implementation of a pipelined decoder for generalized concatenated codes format
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6994655
 - **Type**: conference
 - **Published**: 2014
@@ -1308,6 +1598,8 @@
 
 ## Dynamic redundancy allocation for video streaming using Sub-GOP based FEC code
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7051620
 - **Type**: conference
 - **Published**: 2014
@@ -1317,6 +1609,8 @@
 
 ## Micro Satellite Terminal-Based High Data Rate Communication for Rotary Wing Aircraft
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6957000
 - **Type**: conference
 - **Published**: 2014
@@ -1326,6 +1620,8 @@
 
 ## On using game theory to rate allocation in joint source-channel coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7011981
 - **Type**: conference
 - **Published**: 2014
@@ -1335,6 +1631,8 @@
 
 ## Lossy compression of exponential and laplacian sources using expansion coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875395
 - **Type**: conference
 - **Published**: 2014
@@ -1344,6 +1642,8 @@
 
 ## Minimizing embedding impact in steganography using polar codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6911224
 - **Type**: conference
 - **Published**: 2014
@@ -1353,6 +1653,8 @@
 
 ## A robust coded modulation for multimedia transmission in wireless channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6892535
 - **Type**: conference
 - **Published**: 2014
@@ -1362,6 +1664,8 @@
 
 ## MMT AL-FEC codes for networked distributed storage
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7024477
 - **Type**: conference
 - **Published**: 2014
@@ -1371,6 +1675,8 @@
 
 ## Influences of inaccurate estimation of noise variance in sum-product algorithm for DVB-T2 receiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6775894
 - **Type**: conference
 - **Published**: 2014
@@ -1380,6 +1686,8 @@
 
 ## ZigZag neighbor discovery in wireless networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875060
 - **Type**: conference
 - **Published**: 2014
@@ -1389,6 +1697,8 @@
 
 ## High throughput transmitter architecture for DVB-S2
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7005891
 - **Type**: conference
 - **Published**: 2014
@@ -1398,6 +1708,8 @@
 
 ## An exact solution to degree distribution optimization in LT codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6952164
 - **Type**: conference
 - **Published**: 2014
@@ -1407,6 +1719,8 @@
 
 ## Adaptive Modulation and Turbo Coding for 3GPP LTE Systems with Limited Feedback
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7022809
 - **Type**: conference
 - **Published**: 2014
@@ -1416,6 +1730,8 @@
 
 ## Multiple access analog fountain codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875217
 - **Type**: conference
 - **Published**: 2014
@@ -1425,6 +1741,8 @@
 
 ## An optimal code rate design of multilevel coded modulation for multimedia data transmission employing unequal error protection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7037005
 - **Type**: conference
 - **Published**: 2014
@@ -1434,6 +1752,8 @@
 
 ## Hybrid solid-state storage system with storage class memory and NAND flash memory for big-data application
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865318
 - **Type**: conference
 - **Published**: 2014
@@ -1443,6 +1763,8 @@
 
 ## Statistical analysis of RaptorQ failure probability applied to a data recovery software
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6996641
 - **Type**: conference
 - **Published**: 2014
@@ -1452,6 +1774,8 @@
 
 ## Secure compressed sensing over finite fields
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7084326
 - **Type**: conference
 - **Published**: 2014
@@ -1461,6 +1785,8 @@
 
 ## Joint time-frequency domain and code-aided carrier synchronization algorithm at low SNR
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7065110
 - **Type**: conference
 - **Published**: 2014
@@ -1470,6 +1796,8 @@
 
 ## Computer model for research of decoders for error-correction codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6893260
 - **Type**: conference
 - **Published**: 2014
@@ -1479,6 +1807,8 @@
 
 ## LLR Calculation Based on Interference Cancelation for Non-Orthogonal Multiple Access
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7022974
 - **Type**: conference
 - **Published**: 2014
@@ -1488,6 +1818,8 @@
 
 ## LLR Calculation Based on Interference Cancelation with Channel Estimation Error for Non-Orthogonal Multiple Access
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6966038
 - **Type**: conference
 - **Published**: 2014
@@ -1497,6 +1829,8 @@
 
 ## Novel BCH code design for mitigation of phase noise induced cycle slips in DQPSK systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6990024
 - **Type**: conference
 - **Published**: 2014
@@ -1506,6 +1840,8 @@
 
 ## Embedded cross-decoding scheme for multiple description based distributed source coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6952266
 - **Type**: conference
 - **Published**: 2014
@@ -1515,6 +1851,8 @@
 
 ## An adaptive modulation scheme for coded free-space optical systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6996841
 - **Type**: conference
 - **Published**: 2014
@@ -1524,6 +1862,8 @@
 
 ## Notes on the pseudoredundancy
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875342
 - **Type**: conference
 - **Published**: 2014
@@ -1533,6 +1873,8 @@
 
 ## IEEE 802.11AC MIMO transmitter baseband processing on customized VLIW processor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6855058
 - **Type**: conference
 - **Published**: 2014
@@ -1542,6 +1884,8 @@
 
 ## Distributed coding based on partial relay selection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6952163
 - **Type**: conference
 - **Published**: 2014
@@ -1551,6 +1895,8 @@
 
 ## A disaster prevention broadcasting based on data hiding scheme using complete complementary codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979800
 - **Type**: conference
 - **Published**: 2014
@@ -1560,6 +1906,8 @@
 
 ## Practical Limits of Rateless Codes in Multihop Relay Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7023059
 - **Type**: conference
 - **Published**: 2014
@@ -1569,6 +1917,8 @@
 
 ## Information, noise, coding, modulation: What about the brain?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6955107
 - **Type**: conference
 - **Published**: 2014
@@ -1578,6 +1928,8 @@
 
 ## Low-latency MAP demapper architecture for coded modulation with iterative decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865239
 - **Type**: conference
 - **Published**: 2014
@@ -1587,6 +1939,8 @@
 
 ## Resource allocation for secret key agreement by LLR thresholding over parallel channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6933491
 - **Type**: conference
 - **Published**: 2014
@@ -1596,6 +1950,8 @@
 
 ## Recursive Phase Estimation for Asymmetric M-PSK TCM Schemes in Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7023070
 - **Type**: conference
 - **Published**: 2014
@@ -1605,6 +1961,8 @@
 
 ## Efficient list decoder architecture for polar codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865312
 - **Type**: conference
 - **Published**: 2014
@@ -1614,6 +1972,8 @@
 
 ## A proposed iterative decoder for ATSC standard
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6916684
 - **Type**: conference
 - **Published**: 2014
@@ -1623,6 +1983,8 @@
 
 ## A review of spectrally efficient modulations for earth observation data downlink
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865963
 - **Type**: conference
 - **Published**: 2014
@@ -1632,6 +1994,8 @@
 
 ## Impact of size effects in local interconnects for future technology nodes: A study based on full-chip layouts
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6831831
 - **Type**: conference
 - **Published**: 2014
@@ -1641,6 +2005,8 @@
 
 ## Technology for next-generation digital terrestrial broadcasting — Field experiments of 8K Super Hi-Vision transmission using dual-polarized MIMO and ultra-multilevel OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6873478
 - **Type**: conference
 - **Published**: 2014
@@ -1650,6 +2016,8 @@
 
 ## Design of a receiver faster than Nyquist signalling in DVB-S2 standard
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6983353
 - **Type**: conference
 - **Published**: 2014
@@ -1659,6 +2027,8 @@
 
 ## Performance evaluation of lower layer system in cloud transmission for terrestrial DTV broadcasting
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6873534
 - **Type**: conference
 - **Published**: 2014
@@ -1668,6 +2038,8 @@
 
 ## A review on hyperspectral image compression
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6993136
 - **Type**: conference
 - **Published**: 2014
@@ -1677,6 +2049,8 @@
 
 ## High-resolution image transmission over MIMO-OFDM E-SDM system with JSCC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7034243
 - **Type**: conference
 - **Published**: 2014
@@ -1686,6 +2060,8 @@
 
 ## Estimates of Constrained Coded Modulation Capacity for Optical Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6839977
 - **Type**: conference
 - **Published**: 2014
@@ -1695,6 +2071,8 @@
 
 ## Performance limits of rateless codes in delay constrained multihop relay networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6881217
 - **Type**: conference
 - **Published**: 2014
@@ -1704,6 +2082,8 @@
 
 ## Constellation expansion: Theoretical limits and practical examples
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6876437
 - **Type**: conference
 - **Published**: 2014
@@ -1713,6 +2093,8 @@
 
 ## An advanced low complexity double error correction of an BCH decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6922218
 - **Type**: conference
 - **Published**: 2014
@@ -1722,6 +2104,8 @@
 
 ## Iterative turbo equalization technique to countervail fiber optic transmission impairments
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6850765
 - **Type**: conference
 - **Published**: 2014
@@ -1731,6 +2115,8 @@
 
 ## Using Erasure Codes to overcome reliability issues in energy-constrained sensor networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6814720
 - **Type**: conference
 - **Published**: 2014
@@ -1740,6 +2126,8 @@
 
 ## Enhanced packet delivery in delay limited rateless coded multihop networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7024864
 - **Type**: conference
 - **Published**: 2014
@@ -1749,6 +2137,8 @@
 
 ## A Software Defined Radio based implementation of the “Tower Overlay over LTE-A+” system
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6873514
 - **Type**: conference
 - **Published**: 2014
@@ -1758,6 +2148,8 @@
 
 ## BER investigation in satellite DVB-S2 service by modeling the transponder non-idealities
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7000859
 - **Type**: conference
 - **Published**: 2014
@@ -1767,6 +2159,8 @@
 
 ## Improving the DVB-T2 BICM performance by newly optimized Two-Dimensional Non-Uniform Constellations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7034316
 - **Type**: conference
 - **Published**: 2014
@@ -1776,6 +2170,8 @@
 
 ## Hardware architecture for list successive cancellation polar decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6865102
 - **Type**: conference
 - **Published**: 2014
@@ -1785,6 +2181,8 @@
 
 ## Performance Analysis of BPSK over Joint Fading and Two-Path Shadowing Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6966110
 - **Type**: conference
 - **Published**: 2014
@@ -1794,6 +2192,8 @@
 
 ## IEEE 802.11ac MIMO receiver baseband processing on customized VLIW processor
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6986092
 - **Type**: conference
 - **Published**: 2014
@@ -1803,6 +2203,8 @@
 
 ## A novel BWA system based on Time and Frequency domain United processing
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6850287
 - **Type**: conference
 - **Published**: 2014
@@ -1812,6 +2214,8 @@
 
 ## TTCM-Assisted Distributed Source-Channel Coding for Nakagami-m Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6966217
 - **Type**: conference
 - **Published**: 2014
@@ -1821,6 +2225,8 @@
 
 ## Outage Analysis of Decode-and-Forward Relaying System Allowing Intra-link Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6843144
 - **Type**: conference
 - **Published**: 2014
@@ -1830,6 +2236,8 @@
 
 ## Non-Orthogonal Multiple Access Using Intra-Beam Superposition Coding and SIC in Base Station Cooperative MIMO Cellular Downlink
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6966073
 - **Type**: conference
 - **Published**: 2014
@@ -1839,6 +2247,8 @@
 
 ## Achieve distributed, scalable and effective access control in cloud storage services
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7133794
 - **Type**: conference
 - **Published**: 2014
@@ -1848,6 +2258,8 @@
 
 ## Multiple Access and Waveforms for 5G: IDMA and Universal Filtered Multi-Carrier
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7022995
 - **Type**: conference
 - **Published**: 2014
@@ -1857,6 +2269,8 @@
 
 ## Low Complexity Linear Receivers for mmWave LOS-MIMO Systems with Uniform Circular Arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6966040
 - **Type**: conference
 - **Published**: 2014
@@ -1866,6 +2280,8 @@
 
 ## A multibit burst error detection and correction mechanism for application layer
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6868380
 - **Type**: conference
 - **Published**: 2014
@@ -1875,6 +2291,8 @@
 
 ## Performance evaluation of avionics communication systems with radio frequency interference
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6979420
 - **Type**: conference
 - **Published**: 2014
@@ -1884,6 +2302,8 @@
 
 ## System-Level Throughput of Non-Orthogonal Access with SIC in Cellular Downlink When Channel Estimation Error Exists
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7023117
 - **Type**: conference
 - **Published**: 2014
@@ -1893,6 +2313,8 @@
 
 ## DSP power balancing for multi-format WDM receiver
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6963872
 - **Type**: conference
 - **Published**: 2014
@@ -1902,6 +2324,8 @@
 
 ## Long Range Inter-band Radio with the Processed Surrogate Satellite Waveform
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6956812
 - **Type**: conference
 - **Published**: 2014
@@ -1911,6 +2335,8 @@
 
 ## EMC analysis between fixed service and broadcasting satellite service in the band 10.7–11.7GHz system component models
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6931060
 - **Type**: conference
 - **Published**: 2014
@@ -1920,6 +2346,8 @@
 
 ## DSP implementation of sqrt(M)-Best rotated QAM soft-demapper
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6855070
 - **Type**: conference
 - **Published**: 2014
@@ -1929,6 +2357,8 @@
 
 ## Very high throughput WLAN system for ultra HD 4K video streaming
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7065737
 - **Type**: conference
 - **Published**: 2014
@@ -1938,6 +2368,8 @@
 
 ## Cryptographie key generation from PUF data using efficient fuzzy extractors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6778915
 - **Type**: conference
 - **Published**: 2014
@@ -1947,6 +2379,8 @@
 
 ## Carrier Phase Error Estimation by Smoothing Filters
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6843078
 - **Type**: conference
 - **Published**: 2014
@@ -1956,6 +2390,8 @@
 
 ## A stochastic computation based integer DCT implementation in HEVC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6986172
 - **Type**: conference
 - **Published**: 2014
@@ -1965,6 +2401,8 @@
 
 ## Outage Analysis of Multiple-Antenna Cognitive Radios in TV White Space
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6942502
 - **Type**: conference
 - **Published**: 2014
@@ -1974,6 +2412,8 @@
 
 ## Low complexity millimeter-wave LOS-MIMO precoding systems for uniform circular arrays
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6952356
 - **Type**: conference
 - **Published**: 2014
@@ -1983,6 +2423,8 @@
 
 ## 60-GHz single-carrier coherent detection system with robust 16-QAM signal recovery
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6951991
 - **Type**: conference
 - **Published**: 2014
@@ -1992,6 +2434,8 @@
 
 ## Replica analysis and approximate message passing decoder for superposition codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6875082
 - **Type**: conference
 - **Published**: 2014
@@ -2001,6 +2445,8 @@
 
 ## Probabilistic signal shaping for bit-metric decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6874869
 - **Type**: conference
 - **Published**: 2014
@@ -2010,6 +2456,8 @@
 
 ## An energy-efficient solution for packet-based transmissions with QoS constraints in the multibeam satellite downlink
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6934572
 - **Type**: conference
 - **Published**: 2014
@@ -2019,6 +2467,8 @@
 
 ## Adaptive hybrid multi-user detector in CDMA using ECC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6923051
 - **Type**: conference
 - **Published**: 2014
@@ -2028,6 +2478,8 @@
 
 ## A survey of performance improvement methods for free-space optical communication systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7043491
 - **Type**: conference
 - **Published**: 2014
@@ -2037,6 +2489,8 @@
 
 ## Replenishing the Mars relay network
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6836354
 - **Type**: conference
 - **Published**: 2014
@@ -2046,6 +2500,8 @@
 
 ## XG-FAST: Towards 10 Gb/s copper access
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7063503
 - **Type**: conference
 - **Published**: 2014
@@ -2055,6 +2511,8 @@
 
 ## DVB-S2 spectrum efficiency improvement with hierarchical modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6884001
 - **Type**: conference
 - **Published**: 2014
@@ -2064,6 +2522,8 @@
 
 ## Impact of package delivery rate on the safety of highway vehicle platoons
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6856395
 - **Type**: conference
 - **Published**: 2014
@@ -2073,6 +2533,8 @@
 
 ## Capture analysis of mobile multi-packet networks adopting spatial reuse: An alternative study
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7037346
 - **Type**: conference
 - **Published**: 2014
@@ -2082,6 +2544,8 @@
 
 ## Enhanced List-based Group-wise overloaded receiver with application to satellite reception
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6884216
 - **Type**: conference
 - **Published**: 2014
@@ -2091,6 +2555,8 @@
 
 ## A generic C++ toolkit for the development of real-time-capable software defined radio applications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6776092
 - **Type**: conference
 - **Published**: 2014
@@ -2100,6 +2566,8 @@
 
 ## An error probability approach for quantifying physical layer security of MIMO-SDM systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6964137
 - **Type**: conference
 - **Published**: 2014
@@ -2109,6 +2577,8 @@
 
 ## IEEE 802.11ac WLANs: A performance evaluation of sphere decoding and lattice reduction MMSE-SIC MIMO detectors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7041835
 - **Type**: conference
 - **Published**: 2014
@@ -2118,6 +2588,8 @@
 
 ## Layered compress-and-forward cooperation in wireless multicast with M-ary PAM transmissions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7037487
 - **Type**: conference
 - **Published**: 2014
@@ -2127,6 +2599,8 @@
 
 ## A framework of APSK constellation labeling design for satellite transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6884002
 - **Type**: conference
 - **Published**: 2014
@@ -2136,6 +2610,8 @@
 
 ## Radio Science measurements in presence of data on optical and RF links
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6836324
 - **Type**: conference
 - **Published**: 2014
@@ -2145,6 +2621,8 @@
 
 ## Performance evaluation of single carrier 40-Gbit/s downstream for long-reach passive optical networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6855784
 - **Type**: conference
 - **Published**: 2014
@@ -2154,6 +2632,8 @@
 
 ## DVB-S2 standard evaluation on Ka-Band HTS in Peru for rainy conditions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6860399
 - **Type**: conference
 - **Published**: 2014
@@ -2163,6 +2643,8 @@
 
 ## Writing on dirty flash memory
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7028498
 - **Type**: conference
 - **Published**: 2014
@@ -2172,6 +2654,8 @@
 
 ## Table of contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7107900
 - **Type**: conference
 - **Published**: 2014
@@ -2181,6 +2665,8 @@
 
 ## Contents
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:7035611
 - **Type**: conference
 - **Published**: 2014
@@ -2190,6 +2676,8 @@
 
 ## Update-Efficiency and Local Repairability Limits for Capacity Approaching Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6804942
 - **Type**: journal
 - **Published**: 2014
@@ -2199,6 +2687,8 @@
 
 ## Fault-Tolerant Probabilistic Gradient-Descent Bit Flipping Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6868233
 - **Type**: journal
 - **Published**: 2014
@@ -2208,6 +2698,8 @@
 
 ## Short Length Trellis-Based Codes for Gaussian Multiple-Access Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6826631
 - **Type**: journal
 - **Published**: 2014
@@ -2217,6 +2709,8 @@
 
 ## Smart Decode-and-Forward Relaying with Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6665325
 - **Type**: journal
 - **Published**: 2014
@@ -2226,6 +2720,8 @@
 
 ## Secret Key Agreement by LLR Thresholding and Syndrome Feedback over AWGN Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6679193
 - **Type**: journal
 - **Published**: 2014
@@ -2235,6 +2731,8 @@
 
 ## Constrained Turbo Block Convolutional Codes for 100 G and Beyond Optical Transmissions
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6767056
 - **Type**: journal
 - **Published**: 2014
@@ -2244,6 +2742,8 @@
 
 ## Near-Capacity Joint Source and Channel Coding of Symbol Values from an Infinite Source Set Using Elias Gamma Error Correction Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6679360
 - **Type**: journal
 - **Published**: 2014
@@ -2253,6 +2753,8 @@
 
 ## A Simple Approximation for the Bit-Interleaved Coded Modulation Capacity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6784555
 - **Type**: journal
 - **Published**: 2014
@@ -2262,6 +2764,8 @@
 
 ## MDS Product Code Performance Estimations Under Header CRC Check Failures and Missing Syncs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6874518
 - **Type**: journal
 - **Published**: 2014
@@ -2271,6 +2775,8 @@
 
 ## Low-Complexity Decoding for RaptorQ Codes Using a Recursive Matrix Inversion Formula
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6733534
 - **Type**: journal
 - **Published**: 2014
@@ -2280,6 +2786,8 @@
 
 ## Catalytic Quantum Error Correction
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6778074
 - **Type**: journal
 - **Published**: 2014
@@ -2289,6 +2797,8 @@
 
 ## Block Markov Superposition Transmission with Bit-Interleaved Coded Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6784530
 - **Type**: journal
 - **Published**: 2014
@@ -2298,6 +2808,8 @@
 
 ## Ripple Design of LT Codes for BIAWGN Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6712181
 - **Type**: journal
 - **Published**: 2014
@@ -2307,6 +2819,8 @@
 
 ## Multi-Level Coded Modulation for 16-ary Constellations in Presence of Phase Noise
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6674994
 - **Type**: journal
 - **Published**: 2014
@@ -2316,6 +2830,8 @@
 
 ## Motion-Aware Mesh-Structured Trellis for Correlation Modelling Aided Distributed Multi-View Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6657783
 - **Type**: journal
 - **Published**: 2014
@@ -2325,6 +2841,8 @@
 
 ## Convergence Analysis of Iterative Decoding for Binary CEO Problem
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6799320
 - **Type**: journal
 - **Published**: 2014
@@ -2334,6 +2852,8 @@
 
 ## Maximum Likelihood Laplacian Correlation Channel Estimation in Layered Wyner-Ziv Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6690200
 - **Type**: journal
 - **Published**: 2014
@@ -2343,6 +2863,8 @@
 
 ## 200 Gb/s and Dual Wavelength 400 Gb/s Transmission over Transpacific Distance at 6.0 b/s/Hz Spectral Efficiency
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6620989
 - **Type**: journal
 - **Published**: 2014
@@ -2352,6 +2874,8 @@
 
 ## Ideal Forward Error Correction Codes for High-Speed Rail Multimedia Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6763072
 - **Type**: journal
 - **Published**: 2014
@@ -2361,6 +2885,8 @@
 
 ## Multiuser Lattice Coding for the Multiple-Access Relay Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6786435
 - **Type**: journal
 - **Published**: 2014
@@ -2370,6 +2896,8 @@
 
 ## Reversible Data Hiding in Encrypted JPEG Bitstream
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6784397
 - **Type**: journal
 - **Published**: 2014
@@ -2379,6 +2907,8 @@
 
 ## Improved Bounds on the Finite Length Scaling of Polar Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6905834
 - **Type**: journal
 - **Published**: 2014
@@ -2388,6 +2918,8 @@
 
 ## Least Squares Superposition Codes With Bernoulli Dictionary are Still Reliable at Rates up to Capacity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6776455
 - **Type**: journal
 - **Published**: 2014
@@ -2397,6 +2929,8 @@
 
 ## Reliable Cooperative Communications Based on Random Network Coding in Multi-Hop Relay WSNs
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6762827
 - **Type**: journal
 - **Published**: 2014
@@ -2406,6 +2940,8 @@
 
 ## A 5.4 $\mu{\rm W}$ Soft-Decision BCH Decoder for Wireless Body Area Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6805665
 - **Type**: journal
 - **Published**: 2014
@@ -2415,6 +2951,8 @@
 
 ## Power-efficiency considerations for adaptive long-haul optical transceivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6985901
 - **Type**: journal
 - **Published**: 2014
@@ -2424,6 +2962,8 @@
 
 ## Redundancy on Demand-Extending the Coverage Area of Terrestrial Broadcast via Broadband Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6812177
 - **Type**: journal
 - **Published**: 2014
@@ -2433,6 +2973,8 @@
 
 ## Optical Networking With Variable-Code-Rate Transceivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6674043
 - **Type**: journal
 - **Published**: 2014
@@ -2442,6 +2984,8 @@
 
 ## Packet Appending for BICM-ID
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6774420
 - **Type**: journal
 - **Published**: 2014
@@ -2451,6 +2995,8 @@
 
 ## Hybrid Automatic-Repeat-reQuest Systems for Cooperative Wireless Communications
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6578867
 - **Type**: journal
 - **Published**: 2014
@@ -2460,6 +3006,8 @@
 
 ## A Communication-Theoretic Framework for 2-DMR Channel Modeling: Performance Evaluation of Coding and Signal Processing Methods
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6774927
 - **Type**: journal
 - **Published**: 2014
@@ -2469,6 +3017,8 @@
 
 ## Performance Analysis and System Design for Hierarchical Modulated BICM-ID
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6809890
 - **Type**: journal
 - **Published**: 2014
@@ -2478,6 +3028,8 @@
 
 ## A Generalization of Omura's Decoding Algorithm and a Proof of Convergence
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6778085
 - **Type**: journal
 - **Published**: 2014
@@ -2487,6 +3039,8 @@
 
 ## Iterative Joint Detection, ICI Cancelation and Estimation of Multiple CFOs and Channels for DVB-T2 in MISO Transmission Mode
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6687230
 - **Type**: journal
 - **Published**: 2014
@@ -2496,6 +3050,8 @@
 
 ## Exact and Approximated Outage Probability Analyses for Decode-and-Forward Relaying System Allowing Intra-Link Errors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6891327
 - **Type**: journal
 - **Published**: 2014
@@ -2505,6 +3061,8 @@
 
 ## Design of OpenCL framework for embedded multi-core processors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6851999
 - **Type**: journal
 - **Published**: 2014
@@ -2514,6 +3072,8 @@
 
 ## Quasi-Static Multiple-Antenna Fading Channels at Finite Blocklength
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6802432
 - **Type**: journal
 - **Published**: 2014
@@ -2523,6 +3083,8 @@
 
 ## Performance of Space–Time–Frequency Coding Over Indoor Power Line Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6863631
 - **Type**: journal
 - **Published**: 2014
@@ -2532,6 +3094,8 @@
 
 ## Optimized Spoofing and Jamming a Cognitive Radio
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6840315
 - **Type**: journal
 - **Published**: 2014
@@ -2541,6 +3105,8 @@
 
 ## A low complexity soft-output detection algorithm for 2×2 multiple-input multiple-output multiband-ofdm systems using dual carrier modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6937313
 - **Type**: journal
 - **Published**: 2014
@@ -2550,6 +3116,8 @@
 
 ## PHY-Supported Frame Aggregation for Wireless Local Area Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6730933
 - **Type**: journal
 - **Published**: 2014
@@ -2559,6 +3127,8 @@
 
 ## On the Secrecy Capacity of the Wiretap Channel With Imperfect Main Channel Estimation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6894545
 - **Type**: journal
 - **Published**: 2014
@@ -2568,6 +3138,8 @@
 
 ## SUMIS: Near-Optimal Soft-In Soft-Out MIMO Detection With Low and Fixed Complexity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6730720
 - **Type**: journal
 - **Published**: 2014
@@ -2577,6 +3149,8 @@
 
 ## Co-Channel and Adjacent Channel Interference and Protection Issues for DVB-T2 and IEEE 802.22 WRAN Operation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6934969
 - **Type**: journal
 - **Published**: 2014
@@ -2586,6 +3160,8 @@
 
 ## Unshared Secret Key Cryptography
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6930805
 - **Type**: journal
 - **Published**: 2014
@@ -2595,6 +3171,8 @@
 
 ## Sliceable transponder architecture including multiwavelength source
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6850200
 - **Type**: journal
 - **Published**: 2014
@@ -2604,6 +3182,8 @@
 
 ## Coherent Multimode OAM Superpositions for Multidimensional Modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6755504
 - **Type**: journal
 - **Published**: 2014
@@ -2613,6 +3193,8 @@
 
 ## New iterative decoding algorithms of 2D product block codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6916585
 - **Type**: conference
 - **Published**: 17-19 Jan.
@@ -2622,6 +3204,8 @@
 
 ## Parametric curve for data reconstruction method for reliable communication
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6914445
 - **Type**: conference
 - **Published**: 15-18 Jan.
@@ -2631,6 +3215,8 @@
 
 ## End-to-End Energy Modeling and Analysis of Long-Haul Coherent Transmission Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6837441
 - **Type**: journal
 - **Published**: 15 Sept.15
@@ -2640,6 +3226,8 @@
 
 ## Iterative Receiver for Hybrid Asymmetrically Clipped Optical OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6901211
 - **Type**: journal
 - **Published**: 15 Nov.15,
@@ -2649,6 +3237,8 @@
 
 ## Staircase Codes With 6% to 33% Overhead
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6787025
 - **Type**: journal
 - **Published**: 15 May15, 
@@ -2658,6 +3248,8 @@
 
 ## A Silicon Photonic Integrated Packaged Coherent Receiver Front-End For Soft-Decision Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6937063
 - **Type**: journal
 - **Published**: 15 Dec.15,
@@ -2667,6 +3259,8 @@
 
 ## Status and Recent Advances on Forward Error Correction Technologies for Lightwave Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6805157
 - **Type**: journal
 - **Published**: 15 Aug.15,
@@ -2676,6 +3270,8 @@
 
 ## Bandwidth-Variable Transceivers based on Four-Dimensional Modulation Formats
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6803879
 - **Type**: journal
 - **Published**: 15 Aug.15,
@@ -2685,6 +3281,8 @@
 
 ## Simplified variable-scaled min sum LDPC decoder for irregular LDPC codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6940497
 - **Type**: conference
 - **Published**: 10-13 Jan.
@@ -2694,6 +3292,8 @@
 
 ## Efficient implementation of enhanced min-sum algorithm for DVB-S2 LDPC decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6776078
 - **Type**: conference
 - **Published**: 10-13 Jan.
@@ -2703,6 +3303,8 @@
 
 ## Improvement on a block-serial fully-overlapped QC-LDPC decoder for IEEE 802.11n
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6776079
 - **Type**: conference
 - **Published**: 10-13 Jan.
@@ -2712,6 +3314,8 @@
 
 ## Flexible Optical Networks: An Energy Efficiency Perspective
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6842600
 - **Type**: journal
 - **Published**: 1 Nov.1, 2
@@ -2721,6 +3325,8 @@
 
 ## Dimensioning BCH Codes for Coherent DQPSK Systems With Laser Phase Noise and Cycle Slips
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6872779
 - **Type**: journal
 - **Published**: 1 Nov.1, 2
@@ -2730,6 +3336,8 @@
 
 ## Programmable Transponder, Code and Differentiated Filter Configuration in Elastic Optical Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6805143
 - **Type**: journal
 - **Published**: 1 June1, 2
@@ -2739,6 +3347,8 @@
 
 ## Trading Regeneration and Spectrum Utilization in Code-Rate Adaptive Flexi-Grid Networks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6905711
 - **Type**: journal
 - **Published**: 1 Dec.1, 2
@@ -2748,6 +3358,8 @@
 
 ## Pilot-Tone Assisted Log-Likelihood Ratio for LDPC Coded CO-OFDM System
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6826532
 - **Type**: journal
 - **Published**: 1 Aug.1, 2
@@ -2757,6 +3369,8 @@
 
 ## Parity Check Encoded QPSK for Rate Adaptation in Coherent DSP-Based Receivers
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:6853387
 - **Type**: journal
 - **Published**: 1 Aug.1, 2

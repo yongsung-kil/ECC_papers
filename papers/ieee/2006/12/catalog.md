@@ -3,6 +3,8 @@
 
 ## Optimization of degree-profile matching interleavers for LDPC-coded modulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4027622
 - **Type**: journal
 - **Published**: December 2
@@ -12,6 +14,8 @@
 
 ## Improvements in belief-propagation decoding based on averaging information from decoder and correction of clusters of nodes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4027623
 - **Type**: journal
 - **Published**: December 2
@@ -21,6 +25,8 @@
 
 ## Does the Performance of LDPC Codes Depend on the Channel?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4026721
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -30,6 +36,8 @@
 
 ## Progressive Transmission of Images Over Fading Channels Using Rate-Compatible LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4011970
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -39,6 +47,8 @@
 
 ## Polynomial Time Low-Density Parity-Check Codes With Rates Very Close to the Capacity of the $q$-ary Random Deletion Channel for Large $q$
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4016309
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -48,6 +58,8 @@
 
 ## Layered Wyner–Ziv Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4011971
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -57,6 +69,8 @@
 
 ## Efficient Computation of EXIT Functions for Nonbinary Iterative Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4026725
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -66,6 +80,8 @@
 
 ## Decoding of Expander Codes at Rates Close to Capacity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4016277
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -75,6 +91,8 @@
 
 ## Multilevel 2-D Bar Codes: Toward High-Capacity Storage Modules for Multimedia Security and Management
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4014111
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -84,6 +102,8 @@
 
 ## Turbo Decoding as Iterative Constrained Maximum-Likelihood Sequence Detection
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4016320
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -93,6 +113,8 @@
 
 ## Reliable Video Transmission Using Codes Close to the Channel Capacity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4016101
 - **Type**: journal
 - **Published**: Dec. 2006
@@ -102,6 +124,8 @@
 
 ## Graphical Inference Methods for Fault Diagnosis based on Information from Unreliable Sensors
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150125
 - **Type**: conference
 - **Published**: 5-8 Dec. 2
@@ -111,6 +135,8 @@
 
 ## An FPGA Implementation of Array LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4145732
 - **Type**: conference
 - **Published**: 4-7 Dec. 2
@@ -120,6 +146,8 @@
 
 ## Memory-Efficient Accelerating Schedule for LDPC Decoder
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4145643
 - **Type**: conference
 - **Published**: 4-7 Dec. 2
@@ -129,6 +157,8 @@
 
 ## Reliability-Based Selective Repeat Hybrid ARQ Protocol on Low Density Parity Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4089316
 - **Type**: conference
 - **Published**: 29 Nov.-1 
@@ -138,6 +168,8 @@
 
 ## CTH09-2: A Time-Efficient Approach for Designing LDPC-Coded MIMO Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150712
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -147,6 +179,8 @@
 
 ## WLC16-2: Reliability-Based Hybrid ARQ (RB-HARQ) Schemes using Low-Density Parity-Check (LDPC) Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151335
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -156,6 +190,8 @@
 
 ## CTH08-4: Protograph LDPC Codes with Node Degrees at Least 3
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150708
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -165,6 +201,8 @@
 
 ## GEN03-5: Construction of Memory Circuits Using Unreliable Components Based on Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150789
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -174,6 +212,8 @@
 
 ## GEN04-4: Improved Runlength Control When Using Low-Density Parity-Check Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150794
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -183,6 +223,8 @@
 
 ## CTH08-5: Efficient Encoding and Termination of Low-Density Parity-Check Convolutional Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150709
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -192,6 +234,8 @@
 
 ## CTH08-2: EXIT Chart Analysis for Doubly Generalized LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150706
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -201,6 +245,8 @@
 
 ## GEN03-6: Investigation of Error Floors of Structured Low-Density Parity-Check Codes by Hardware Emulation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150790
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -210,6 +256,8 @@
 
 ## CTH02-1: High Speed Decoding of Serial Concatenated Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150671
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -219,6 +267,8 @@
 
 ## CTH14-6: Error Correction Using a Message-Passing Decoder to Process Cyclic Redundancy Checks
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150746
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -228,6 +278,8 @@
 
 ## CTH08-6: Context Based Decoding of Split-LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150710
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -237,6 +289,8 @@
 
 ## SAT02-3: Performance Analysis of LDPC-Coded PSK Signal Transmission over Non-Linear Satellite Channel in the Presence of Multiple Interferences
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151108
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -246,6 +300,8 @@
 
 ## SPC05-1: Coded Modulation for ISI Channels with LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151186
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -255,6 +311,8 @@
 
 ## WLC45-2: Application of Nonbinary LDPC Codes for Communication over Fading Channels Using Higher Order Modulations
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151508
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -264,6 +322,8 @@
 
 ## CTH02-4: When Does One Redundant Parity-Check Equation Matter?
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150674
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -273,6 +333,8 @@
 
 ## SPC04-3: Parallel Channel Estimator for Iterative MAP Receiver using Message-Passing Algorithm
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151182
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -282,6 +344,8 @@
 
 ## CTHp1-1: A Soft Decision Decoding Scheme for Long-Haul Optical Transmission Systems Based on the Instanton Approach
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150765
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -291,6 +355,8 @@
 
 ## GENp1-3: Detection and Decoding Schemes of Burst Erasures in Perpendicular Magnetic Recording Channel
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150805
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -300,6 +366,8 @@
 
 ## WLC44-3: Reduced-Complexity Decoding of Raptor Codes over Fading Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151503
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -309,6 +377,8 @@
 
 ## MMC02-6: Low Punctured Turbo Codes and Zero Motion Skip Encoding Strategy for Distributed Video Coding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150838
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -318,6 +388,8 @@
 
 ## WLC36-2: Convergence Acceleration of Iterative Signal Detection for MIMO System with Belief Propagation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151454
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -327,6 +399,8 @@
 
 ## CTH11-6: Performance Analysis of Frame Synchronization for Non-Uniformly Distributed Data Symbols
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150728
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -336,6 +410,8 @@
 
 ## WLC33-2: On Relaying in Cooperative Static Channels
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151436
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -345,6 +421,8 @@
 
 ## SAT03-2: Framing Efficiency Optimization for DVB-S2 Systems
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4151146
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -354,6 +432,8 @@
 
 ## CTH08-1: Construction of High Performance and Efficiently Encodable Nonbinary Quasi-Cyclic LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4150705
 - **Type**: conference
 - **Published**: 27 Nov.-1 
@@ -363,6 +443,8 @@
 
 ## Audio Watermark Enhanced by LDPC Coding for Air Transmission
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4041658
 - **Type**: conference
 - **Published**: 18-20 Dec.
@@ -372,6 +454,8 @@
 
 ## Interconnect-Efficient LDPC Code Design
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4243665
 - **Type**: conference
 - **Published**: 16-19 Dec.
@@ -381,6 +465,8 @@
 
 ## MAC Frame Design of Home Network Based On Low-Voltage PLC
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4237953
 - **Type**: conference
 - **Published**: 15-17 Dec.
@@ -390,6 +476,8 @@
 
 ## A real time programmable encoder for low density parity check code targeting a reconfigurable instruction cell architecture
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4042441
 - **Type**: conference
 - **Published**: 13-15 Dec.
@@ -399,6 +487,8 @@
 
 ## Root Locus Plots and Iterative Decoding
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4177969
 - **Type**: conference
 - **Published**: 13-15 Dec.
@@ -408,6 +498,8 @@
 
 ## Inversion-based hardware gaussian random number generator: A case study of function evaluation via hierarchical segmentation
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4042413
 - **Type**: conference
 - **Published**: 13-15 Dec.
@@ -417,6 +509,8 @@
 
 ## A DVB-S2 compliant LDPC decoder integrating the Horizontal Shuffle Scheduling
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212426
 - **Type**: conference
 - **Published**: 12-15 Dec.
@@ -426,6 +520,8 @@
 
 ## Abstract
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4212207
 - **Type**: conference
 - **Published**: 12-15 Dec.
@@ -435,6 +531,8 @@
 
 ## Trickle: Resilient Real-Time Video Multicasting for Dynamic Peers with Limited or Asymmetric Network Connectivity
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: ieee:4061193
 - **Type**: conference
 - **Published**: 11-13 Dec.

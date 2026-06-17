@@ -3,6 +3,8 @@
 
 ## Low-Resolution Precoding for Multi-Antenna Downlink Channels and OFDM
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2201.11202v2
 - **Type**: preprint
 - **Published**: 2022-01-26
@@ -12,6 +14,8 @@
 
 ## A Number Theoretic Approach to Cycles in LDPC Codes
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2201.11112v1
 - **Type**: preprint
 - **Published**: 2022-01-26
@@ -21,6 +25,8 @@
 
 ## Decoding Nonbinary LDPC Codes via Proximal-ADMM Approach (include convergence proofs)
 
+- **Status**: 미선별
+- **Reason**: N/A
 - **ID**: arxiv:2201.00370v1
 - **Type**: preprint
 - **Published**: 2022-01-02
