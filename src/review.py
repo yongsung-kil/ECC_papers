@@ -18,7 +18,6 @@ API를 호출하지 않는다. 대신:
 import argparse
 import json
 import re
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -158,15 +157,12 @@ def _pub_year(published: str | None) -> int:
     return int(m.group(0)) if m else 0
 
 
-KEEP_RUNS = 10   # _work/ 하위에 보존할 최근 실행 폴더 수(나머지 자동 삭제). DB가 영구 기록.
-
-
 def make_batches(limit: int, per: int, base_dir: str) -> dict:
     """미선별 논문을 실행 폴더(base_dir/{타임스탬프}/agent_NN.json)로 분할 — **최신 연도부터**.
 
     병렬 선별용. 메인은 초록을 읽지 않고 분할만 하며, 각 에이전트가 자기 파일만 읽는다.
-    판정 결과(judgments.json)도 같은 실행 폴더에 모으며, DB가 영구 기록이므로 최근
-    KEEP_RUNS개 실행만 남기고 오래된 폴더는 자동 삭제한다.
+    판정 결과(judgments.json)도 같은 실행 폴더에 모은다.
+    실행 폴더는 추적성을 위해 **모두 보존**한다(정리는 나중에 수동으로).
     """
     conn = get_conn()
     init_db(conn)
@@ -185,10 +181,6 @@ def make_batches(limit: int, per: int, base_dir: str) -> dict:
 
     base = PROJECT_ROOT / base_dir
     base.mkdir(parents=True, exist_ok=True)
-    # 오래된 실행 폴더 정리 (새 폴더 추가 후에도 ≤ KEEP_RUNS 유지)
-    runs = sorted(d for d in base.iterdir() if d.is_dir())
-    while len(runs) >= KEEP_RUNS:
-        shutil.rmtree(runs.pop(0), ignore_errors=True)
 
     run_dir = base / datetime.now().strftime("%Y%m%d_%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
