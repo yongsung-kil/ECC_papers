@@ -1,10 +1,10 @@
 # 선별(Phase 2) 진행 현황
 
-> 생성: 2026-06-17 11:43 · `python -m src.progress`로 갱신
+> 생성: 2026-06-18 13:41 · `python -m src.progress`로 갱신
 
 ## 요약
 - 전체 **22,225편** · 선별 완료 **994편** (4%)
-  - 통과(filtered_in) 354 / 제외(filtered_out) 640
+  - 통과(filtered_in) 329 / 제외(filtered_out) 665
 - 타입별 완료/전체:
   - conference: 381/14,534
   - journal: 428/6,567

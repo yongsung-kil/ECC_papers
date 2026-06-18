@@ -14,16 +14,20 @@
 그대로 갖다 쓴 수준이면, 도메인 불문(양자·무선·우주·스토리지 등) 제외.** 그 기법은 어차피
 순수 고전 논문에서 더 잘 잡힌다. **새 디코더·구성·HW를 제시할 때만 포함.**
 
+또한 포함 대상은 **바이너리 LDPC**에 한정한다.
+**비이진(non-binary / GF(q) / qudit) LDPC는 제외**한다 (NAND ECC는 바이너리 LDPC가 표준).
+
 ## 포함 (in)
 
 - **A. NAND/SSD/플래시 직접** — read-retry, LLR 양자화, retention, 3D TLC/QLC, 컨트롤러
-- **B. 스토리지 ECC 일반** — 디스크/erasure, storage용 비이진 LDPC
+- **B. 스토리지 ECC 일반** — 디스크/erasure, storage용 (바이너리) LDPC
 - **C. 이식 가능 디코더 알고리즘** — min-sum 변형, BP 개선, OSD, 신경망 디코더
 - **D. 이식 가능 HW 아키텍처** — FPGA/VLSI 디코더, 병렬화, permutation network
-- **E. 이식 가능 코드 설계** — QC/SC-LDPC 구성, girth·사이클 제거, error floor, 유한길이, 비이진
+- **E. 이식 가능 코드 설계** — QC/SC-LDPC 구성, girth·사이클 제거, error floor, 유한길이 (바이너리 한정)
 
 ## 제외 (out)
 
+- **비이진 LDPC (non-binary / GF(q) / qudit)** — NAND ECC는 바이너리 LDPC가 표준이므로 제외. **바이너리 LDPC만 포함**
 - **표준 부호·기법의 단순 재사용** — 표준 QC-LDPC를 그대로 쓰거나 교과서 수준 기법만 언급(새 기여 없음). 도메인 불문 제외
 - 양자 LDPC(qLDPC)·양자 EC, QKD·보안 — 순수 양자 EC 회로·직교성 전용은 제외
 - 소스 코딩 (압축·양자화, 예: BEQ) — 채널코딩 ECC가 아님
@@ -36,6 +40,7 @@
 
 ## 판단 절차
 
+0. **비이진(non-binary / GF(q) / qudit) LDPC면 즉시 제외.** (바이너리 LDPC만 포함 대상)
 1. 초록에서 **떼어낼 수 있는 기법**(디코더/HW/코드설계)을 먼저 찾는다.
    - 그 기법이 **새 기여**면 → **포함**(C/D/E).
    - **표준 부호·기법을 그대로 갖다 쓴 수준**이면(새 기여 없음) → **제외** (도메인 불문).
