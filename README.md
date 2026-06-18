@@ -62,5 +62,5 @@ _pm/             작업 관리 (TODO·DONE·roadmap)
 ## 현재 상태
 
 - **Phase 1 (수집)**: ✅ 완료 — 22,225편 (arXiv 1,124 + IEEE 21,101, 전부 저널·컨퍼런스/프리프린트)
-- **Phase 2 (선별)**: 도구·기준서 완성, 진행 예정
+- **Phase 2 (선별)**: 🔄 진행 중 — 진척은 `review_progress.md` 참조 (in/out 누적)
 - **Phase 3~4**: 예정
