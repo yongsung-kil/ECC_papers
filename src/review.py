@@ -158,32 +158,46 @@ def _pub_year(published: str | None) -> int:
     return int(m.group(0)) if m else 0
 
 
-def make_batches(limit: int, per: int, base_dir: str) -> dict:
-    """미선별 논문을 실행 폴더(base_dir/{타임스탬프}/agent_NN.json)로 분할 — **최신 연도부터**.
+def make_batches(limit: int, per: int, base_dir: str,
+                 year: int | None = None, tag: str | None = None) -> dict:
+    """미선별 논문을 실행 폴더(base_dir/{라벨}{타임스탬프}/agent_NN.json)로 분할.
 
     병렬 선별용. 메인은 초록을 읽지 않고 분할만 하며, 각 에이전트가 자기 파일만 읽는다.
-    판정 결과(judgments.json)도 같은 실행 폴더에 모은다.
-    실행 폴더는 추적성을 위해 **모두 보존**한다(정리는 나중에 수동으로).
+    판정 결과(judgments.json)도 같은 실행 폴더에 모은다. 실행 폴더는 모두 보존.
+
+    다중 세션 동시 진행:
+      - `year`를 지정하면 그 연도 미선별만 끌어온다 → **세션마다 다른 연도를 맡으면
+        배치가 겹치지 않는다**(연도 = 파티션 키).
+      - 폴더명에 연도·태그를 박아(`2017-A_타임스탬프`) 세션 간 폴더 충돌·혼동을 막는다.
     """
     conn = get_conn()
     init_db(conn)
     conn.create_function("pub_year", 1, _pub_year)
+    where = "f.paper_id IS NULL AND p.status = 'new'"
+    params: list = []
+    if year is not None:
+        where += " AND pub_year(p.published) = ?"
+        params.append(year)
+    params.append(limit)
     rows = conn.execute(
-        """
+        f"""
         SELECT p.id, p.source, p.title, p.abstract, p.published
         FROM papers p LEFT JOIN filter_results f ON p.id = f.paper_id
-        WHERE f.paper_id IS NULL AND p.status = 'new'
+        WHERE {where}
         ORDER BY pub_year(p.published) DESC, p.published DESC, p.id
         LIMIT ?
         """,
-        (limit,),
+        params,
     ).fetchall()
     conn.close()
 
     base = PROJECT_ROOT / base_dir
     base.mkdir(parents=True, exist_ok=True)
 
-    run_dir = base / datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 폴더명 라벨: {연도}[-{태그}]_{타임스탬프} (둘 다 없으면 타임스탬프만)
+    label = "-".join(str(x) for x in (year, tag) if x is not None)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = base / (f"{label}_{stamp}" if label else stamp)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     n_files = 0
@@ -195,8 +209,9 @@ def make_batches(limit: int, per: int, base_dir: str) -> dict:
         )
         n_files += 1
 
+    scope = f"{year}년 " if year is not None else ""
     rel = run_dir.relative_to(PROJECT_ROOT).as_posix()
-    print(f"미선별 {len(rows)}편 → {n_files}개 파일: {rel}/agent_NN.json (에이전트 {n_files}개)")
+    print(f"{scope}미선별 {len(rows)}편 → {n_files}개 파일: {rel}/agent_NN.json (에이전트 {n_files}개)")
     print(f"RUN_DIR={rel}")
     return {"papers": len(rows), "files": n_files, "run_dir": rel}
 
@@ -217,7 +232,11 @@ def main():
     p_batch.add_argument("-n", type=int, default=100, help="한 청크 편수(기본 100)")
     p_batch.add_argument("--per", type=int, default=10, help="에이전트당 편수(기본 10)")
     p_batch.add_argument("--dir", default="_work",
-                         help="출력 베이스 폴더(기본 _work, 하위에 타임스탬프 실행폴더 생성)")
+                         help="출력 베이스 폴더(기본 _work, 하위에 실행폴더 생성)")
+    p_batch.add_argument("--year", type=int, default=None,
+                         help="이 연도 미선별만 분할(다중 세션 시 세션별 연도 지정)")
+    p_batch.add_argument("--tag", default=None,
+                         help="실행폴더명에 붙일 태그(세션 구분용)")
 
     args = parser.parse_args()
 
@@ -230,7 +249,8 @@ def main():
     elif args.cmd == "stats":
         show_stats()
     elif args.cmd == "batch":
-        make_batches(limit=args.n, per=args.per, base_dir=args.dir)
+        make_batches(limit=args.n, per=args.per, base_dir=args.dir,
+                     year=args.year, tag=args.tag)
     else:
         parser.print_help()
 
