@@ -1,7 +1,8 @@
 # Phase 2 선별 Runbook (병렬 오케스트레이터)
 
 > 새 세션에서 **"REVIEW.md 읽고 진행해"** 라고 하면, 메인 Claude가 이 절차로 한 청크를 선별한다.
-> 멀티에이전트 **Workflow**를 쓴다. **확인 없이 바로 진행**한다(중간에 사용자에게 묻지 않음).
+> 멀티에이전트 **Workflow**를 쓴다 → 토큰을 많이 쓰므로 **Workflow 실행 전에만 사용자에게 확인**한다.
+> (그 외 단계는 묻지 않고 바로 진행)
 
 ## 파라미터 (여기 숫자만 바꾸면 됨)
 
@@ -27,7 +28,7 @@ PER   = 10    # 에이전트 1개가 맡는 편수
    출력의 **`RUN_DIR=...`** 경로(예: `_work/20260617_084500`)와 "에이전트 N개"의 **N**을 기억.
    **0편이면 → 선별 완료, 종료 보고.** (스크래치는 `_work/{타임스탬프}/`에 실행별로 모두 보존됨)
 
-2. **병렬 판정** (확인 없이 바로 Workflow 실행):
+2. **병렬 판정** (사용자 동의 후 Workflow 실행):
    ```
    Workflow({ scriptPath: "select_workflow.js",
               args: { dir: "<RUN_DIR>", nAgents: N, criteriaFile: "criteria/selection_criteria.md" } })
