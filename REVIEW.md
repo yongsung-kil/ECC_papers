@@ -1,8 +1,8 @@
 # Phase 2 선별 Runbook (병렬 오케스트레이터)
 
 > 새 세션에서 **"REVIEW.md 읽고 진행해"** 라고 하면, 메인 Claude가 이 절차로 한 청크를 선별한다.
-> 멀티에이전트 **Workflow**를 쓴다 → 토큰을 많이 쓰므로 **Workflow 실행 전에만 사용자에게 확인**한다.
-> (그 외 단계는 묻지 않고 바로 진행)
+> **배치 분할 + 병렬 판정(Workflow)까지는 묻지 않고 바로 진행**한다.
+> 판정 결과를 받은 뒤 **DB에 기록하기 전(3단계)에만 사용자에게 확인**한다.
 
 ## 파라미터 (여기 숫자만 바꾸면 됨)
 
@@ -28,7 +28,7 @@ PER   = 10    # 에이전트 1개가 맡는 편수
    출력의 **`RUN_DIR=...`** 경로(예: `_work/20260617_084500`)와 "에이전트 N개"의 **N**을 기억.
    **0편이면 → 선별 완료, 종료 보고.** (스크래치는 `_work/{타임스탬프}/`에 실행별로 모두 보존됨)
 
-2. **병렬 판정** (사용자 동의 후 Workflow 실행):
+2. **병렬 판정** (확인 없이 바로 Workflow 실행):
    ```
    Workflow({ scriptPath: "select_workflow.js",
               args: { dir: "<RUN_DIR>", nAgents: N, criteriaFile: "criteria/selection_criteria.md" } })
@@ -39,7 +39,8 @@ PER   = 10    # 에이전트 1개가 맡는 편수
    - **판정 수 < 청크 편수면** 에이전트가 일부를 누락한 것. 누락분은 `status='new'`로 남아
      **다음 청크에서 자동 재조회**되므로 그대로 진행하면 된다(보고만).
 
-3. **DB 기록** — `judgments`를 **`<RUN_DIR>/judgments.json`** 에 저장 후:
+3. **DB 기록** — 먼저 판정 결과(in/out 수, 샘플)를 **사용자에게 보고하고 기록 여부를 확인받는다.**
+   승인되면 `judgments`를 **`<RUN_DIR>/judgments.json`** 에 저장 후:
    ```bash
    PYTHONIOENCODING=utf-8 python -m src.review apply <RUN_DIR>/judgments.json
    ```
