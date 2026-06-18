@@ -44,8 +44,8 @@ def init_db(conn: sqlite3.Connection | None = None):
     -- Phase 2: 1차 선별 결과
     CREATE TABLE IF NOT EXISTS filter_results (
         paper_id        TEXT PRIMARY KEY REFERENCES papers(id),
-        relevance_score REAL,               -- 0.0 ~ 1.0
-        reason          TEXT,
+        relevance_score REAL,               -- (미사용) 과거 점수 컬럼; 현재는 in/out 이분 판정이라 NULL
+        reason          TEXT,               -- 판정 근거 한 줄
         filtered_at     TEXT NOT NULL
     );
 
