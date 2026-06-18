@@ -39,11 +39,17 @@ PER   = 10    # 에이전트 1개가 맡는 편수
    - **판정 수 < 청크 편수면** 에이전트가 일부를 누락한 것. 누락분은 `status='new'`로 남아
      **다음 청크에서 자동 재조회**되므로 그대로 진행하면 된다(보고만).
 
-3. **DB 기록** — 먼저 판정 결과(in/out 수, 샘플)를 **사용자에게 보고하고 기록 여부를 확인받는다.**
-   승인되면 `judgments`를 **`<RUN_DIR>/judgments.json`** 에 저장 후:
-   ```bash
-   PYTHONIOENCODING=utf-8 python -m src.review apply <RUN_DIR>/judgments.json
-   ```
+3. **검증 + DB 기록**:
+   - 먼저 `judgments`를 **`<RUN_DIR>/judgments.json`** 에 저장한 뒤 **무결성 검증**:
+     ```bash
+     PYTHONIOENCODING=utf-8 python -m src.review verify <RUN_DIR>
+     ```
+     (DB없는 id·배치밖 id·decision오류·중복을 검사. ❌ 하드에러면 **apply 금지**하고 사용자에게 보고.)
+   - 검증 통과(✅)면 판정 결과(in/out 수, 샘플)를 **사용자에게 보고하고 기록 여부를 확인받는다.**
+   - 승인되면:
+     ```bash
+     PYTHONIOENCODING=utf-8 python -m src.review apply <RUN_DIR>/judgments.json
+     ```
 
 4. **기준 변경 제안** — `criteria_suggestions`가 있으면 **최종 보고에 모아 적기만 한다.**
    기준서(`selection_criteria.md`) 본문은 **자동 수정하지 않는다**(사용자가 직접 판단). 멈추지 말고 계속 진행.

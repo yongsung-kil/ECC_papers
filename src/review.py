@@ -80,6 +80,78 @@ def show_stats():
     conn.close()
 
 
+def verify_run(run_dir: str) -> dict:
+    """DB 기록 전 judgments.json 무결성 검증 — agent가 잘못된 id를 줬는지 확인.
+
+    하드 에러(있으면 apply 금지):
+      - DB에 없는 id        → apply가 건너뛰어 판정 유실
+      - 배치 밖 id          → 실재하지만 담당 배치 아님 = 엉뚱한 논문에 적용 위험
+      - decision != in/out  → 무효 판정
+      - 중복 id             → 같은 논문 이중 판정
+    경고(에러 아님):
+      - 판정 누락(판정 < 할당) → 빠진 논문은 status='new'로 남아 다음 청크 재처리
+    """
+    rd = PROJECT_ROOT / run_dir
+    jf = rd / "judgments.json"
+    if not jf.exists():
+        print(f"[verify] ❌ judgments.json 없음: {run_dir}")
+        return {"ok": False, "reason": "no_judgments"}
+
+    judgments = json.loads(jf.read_text(encoding="utf-8"))
+    assigned = set()
+    for af in sorted(rd.glob("agent_*.json")):
+        for p in json.loads(af.read_text(encoding="utf-8")):
+            assigned.add(p["id"])
+
+    conn = get_conn()
+    init_db(conn)
+    db_ids = {r[0] for r in conn.execute("SELECT id FROM papers")}
+    conn.close()
+
+    bad_id, bad_dec, off_batch, dup = [], [], [], []
+    seen = set()
+    for it in judgments:
+        pid = it.get("id")
+        dec = (it.get("decision") or "").lower()
+        if pid in seen:
+            dup.append(pid)
+        seen.add(pid)
+        if pid not in db_ids:
+            bad_id.append(pid)
+            continue
+        if assigned and pid not in assigned:
+            off_batch.append(pid)
+        if dec not in ("in", "out"):
+            bad_dec.append(pid)
+
+    errors = len(bad_id) + len(bad_dec) + len(off_batch) + len(dup)
+    judged_assigned = len(seen & assigned) if assigned else None
+    missing = (len(assigned) - judged_assigned) if assigned else None
+
+    print(f"[verify] {run_dir} — 판정 {len(judgments)} / 할당 "
+          f"{len(assigned) if assigned else '?(agent파일없음)'}")
+    print(f"  DB없는 id {len(bad_id)} · 배치밖 id {len(off_batch)} · "
+          f"decision오류 {len(bad_dec)} · 중복 {len(dup)}")
+    for pid in bad_id[:10]:
+        print(f"    ❌ DB없는 id: {pid}")
+    for pid in off_batch[:10]:
+        print(f"    ❌ 배치밖 id(엉뚱한 적용 위험): {pid}")
+    for pid in bad_dec[:10]:
+        print(f"    ❌ decision 오류: {pid}")
+    for pid in dup[:10]:
+        print(f"    ❌ 중복 id: {pid}")
+    if missing:
+        print(f"  ⚠️ 판정 누락 {missing}편 (status='new'로 남아 다음 청크 재처리)")
+    if not assigned:
+        print("  ⚠️ agent_*.json이 없어 '배치밖/누락'은 검증 불가 (id·decision·중복만 확인)")
+
+    ok = errors == 0
+    print("[verify] " + ("✅ 통과 — apply 진행 가능" if ok
+                         else f"❌ 하드에러 {errors}건 — apply 금지"))
+    return {"ok": ok, "errors": errors, "bad_id": bad_id, "off_batch": off_batch,
+            "bad_dec": bad_dec, "dup": dup, "missing": missing}
+
+
 def _pub_year(published: str | None) -> int:
     """published 문자열에서 4자리 연도 추출(없으면 0). 정렬용."""
     m = re.search(r"(19|20)\d{2}", published or "")
@@ -136,6 +208,9 @@ def main():
     p_apply = sub.add_parser("apply", help="판단 결과(JSON) 적용")
     p_apply.add_argument("file", nargs="?", help="JSON 파일 경로(없으면 stdin)")
 
+    p_verify = sub.add_parser("verify", help="DB 기록 전 judgments.json 무결성 검증")
+    p_verify.add_argument("run_dir", help="실행 폴더(예: _work/20260618_144429)")
+
     sub.add_parser("stats", help="선별 현황")
 
     p_batch = sub.add_parser("batch", help="미선별 논문을 실행 폴더로 분할(병렬 선별용)")
@@ -149,6 +224,9 @@ def main():
     if args.cmd == "apply":
         raw = open(args.file, encoding="utf-8").read() if args.file else sys.stdin.read()
         apply_judgments(json.loads(raw))
+    elif args.cmd == "verify":
+        result = verify_run(args.run_dir)
+        sys.exit(0 if result["ok"] else 1)
     elif args.cmd == "stats":
         show_stats()
     elif args.cmd == "batch":
