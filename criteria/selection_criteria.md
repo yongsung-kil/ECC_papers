@@ -26,7 +26,7 @@
 - **A. NAND/SSD/플래시 직접** — read-retry, LLR 양자화, retention, 3D TLC/QLC, 컨트롤러
 - **B. 스토리지 ECC 일반** — 디스크/erasure, storage용 (바이너리) LDPC
 - **C. 이식 가능 디코더 알고리즘** — min-sum 변형, BP 개선, OSD, 신경망 디코더
-- **D. 이식 가능 HW 아키텍처** — FPGA/VLSI 디코더, 병렬화, permutation network
+- **D. 이식 가능 HW 아키텍처** — FPGA/VLSI 디코더, 병렬화, permutation network. **단 디지털 구현에 한정** — sum-product의 아날로그/혼합신호 회로 구현은 NAND 컨트롤러의 디지털 ECC HW로 이식성이 약하므로 제외(아래 제외 항목 참조)
 - **E. 이식 가능 코드 설계** — QC/SC-LDPC 구성, girth·사이클 제거, error floor, 유한길이 (바이너리 한정)
 
 ## 제외 (out)
@@ -40,8 +40,9 @@
 - **서베이/리뷰** — 원칙 제외. 단, 구체적 신규 디코더·구성·HW 기여나 정량 비교를 담으면 예외 포함
 - 소스 코딩 (압축·양자화, 예: BEQ) — 채널코딩 ECC가 아님
 - 무선/통신 응용 특이적 — LDPC가 부수 언급, 떼어낼 기법 없음
-- 순수 이론 bound·점근 임계 분석 — 디코더/HW/구성으로 안 이어짐. **spatial coupling / SC-LDPC의 threshold saturation·density evolution 증명도, 유한길이 구성·디코더 스케줄·HW로 이어지지 않는 점근 증명만이면 제외** (구체적 SC-LDPC 구성·윈도우 디코더·유한길이 설계 기여가 있으면 포함 E/C)
+- 순수 이론 bound — 디코더/HW/구성으로 안 이어짐
 - 소스-채널 결합(JSCC)·fountain/erasure·시맨틱 통신 — LDPC가 베이스라인, 떼어낼 ECC 기법 없음
+- **아날로그/혼합신호 LDPC 디코더** — sum-product의 아날로그 회로 구현은 디지털 NAND 컨트롤러 ECC HW로 이식성이 약해 제외. 단, 양자화·스케줄링 등 디지털로 떼어낼 디코더/HW 기법이 있으면 예외 포함(C/D)
 
 ## 판단 절차
 
