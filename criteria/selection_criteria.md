@@ -33,13 +33,14 @@
 
 - **비이진 LDPC (non-binary / GF(q) / qudit)** — NAND ECC는 바이너리 LDPC가 표준이므로 제외. **바이너리 LDPC만 포함**. 단, **채널/소스가 q-ary(비이진)여도 부호 자체가 바이너리 LDPC**이면 비이진 LDPC가 아니므로 부호 기준으로 판정한다(MLC/TLC NAND가 바로 이 형태 — 다중레벨 채널 + 바이너리 LDPC)
 - **비-LDPC 부호 (polar·turbo·RS·BCH 등)** — 원칙 제외. 단, 디코더 기법이 부호 비의존적이고 바이너리 LDPC BP에 그대로 이식되면 예외 포함(C)
+- **일반화 LDPC (GLDPC / DGLDPC, generalized constraint·variable 노드)** — constraint/variable 노드가 비-LDPC 대수부호(Hamming·BCH·RS 등)의 전용 디코딩(Chase·BDD·대수 SISO 등)에 의존하면 제외. 단, 바이너리 LDPC BP·메시지패싱이나 코드설계(girth·error floor·구성 등)에 그대로 이식되는 기여면 예외 포함(C/E)
 - **표준 부호·기법의 단순 재사용** — 표준 QC-LDPC를 그대로 쓰거나 교과서 수준 기법만 언급(새 기여 없음). 도메인 불문 제외
 - 양자 LDPC(qLDPC)·양자 EC, 보안 — **원칙 제외.** 단, 디코더·코드설계 기법이 **고전 바이너리 LDPC에서 유래**하고 양자 전용 개념(스태빌라이저·직교성·축퇴 등)에 **의존하지 않고 그대로 이식**되면 예외적 포함(C/E)
 - **QKD 정보조정(reconciliation)** — 고전 바이너리 LDPC를 쓰더라도 '채널 ECC가 아닌 정보조정'이라 원칙 제외. 단, 떼어낼 디코더 양자화·HW 기법이 있으면 예외 포함(C/D)
 - **서베이/리뷰** — 원칙 제외. 단, 구체적 신규 디코더·구성·HW 기여나 정량 비교를 담으면 예외 포함
 - 소스 코딩 (압축·양자화, 예: BEQ) — 채널코딩 ECC가 아님
 - 무선/통신 응용 특이적 — LDPC가 부수 언급, 떼어낼 기법 없음
-- 순수 이론 bound — 디코더/HW/구성으로 안 이어짐
+- 순수 이론 bound·점근 임계 분석 — 디코더/HW/구성으로 안 이어짐. **spatial coupling / SC-LDPC의 threshold saturation·density evolution 증명도, 유한길이 구성·디코더 스케줄·HW로 이어지지 않는 점근 증명만이면 제외** (구체적 SC-LDPC 구성·윈도우 디코더·유한길이 설계 기여가 있으면 포함 E/C)
 - 소스-채널 결합(JSCC)·fountain/erasure·시맨틱 통신 — LDPC가 베이스라인, 떼어낼 ECC 기법 없음
 
 ## 판단 절차
