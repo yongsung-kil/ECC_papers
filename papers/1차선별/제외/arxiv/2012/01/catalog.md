@@ -1,0 +1,13 @@
+# arXiv — 2012-01
+
+
+## Extended Extremes of Information Combining
+
+- **Status**: ❌
+- **Reason**: information combining 부등식 도출 도구 — 순수 이론 bound, 디코더/HW/구성으로 이어지지 않음
+- **ID**: arxiv:1201.6046v2
+- **Type**: preprint
+- **Published**: 2012-01-29
+- **Authors**: Lucas Boczkowski
+- **PDF**: https://arxiv.org/pdf/1201.6046v2
+- **Abstract**: Extremes of information combining inequalities play an important role in the analysis of sparse-graph codes under message-passing decoding. We introduce new tools for the derivation of such inequalities, and show by means of a concrete examples how they can be applied to solve some optimization problems in the analysis of low-density parity-check codes.

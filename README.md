@@ -58,7 +58,7 @@ criteria/        선별 기준서 (살아있는 문서)
 data/            papers.db (SQLite, 모든 메타데이터 단일 저장소)
 papers/          사람이 읽는 카탈로그
   원본/          전체 22,225편 (source / 연 / 월 / catalog.md·csv)
-  1차선별/       선별 통과분 + 알고리즘 기여 표기 + SUMMARY.md
+  1차선별/       통과/(in)·제외/(out) + SUMMARY.md (통과분엔 알고리즘 기여 표기)
 _pm/             작업 관리 (TODO·DONE·roadmap)
 ```
 

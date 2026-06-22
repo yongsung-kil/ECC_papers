@@ -1,0 +1,288 @@
+# IEEE Xplore — 2022-08
+
+
+## Experimental real-time GbE MIMO FSO under fog conditions with software defined GNU Radio platform-based adaptive switching
+
+- **Status**: ❌
+- **Reason**: FSO MIMO 실험 적응 스위칭 — LDPC 무관, 이식 기법 없음
+- **ID**: ieee:9840520
+- **Type**: journal
+- **Published**: August 202
+- **Authors**: Zun Htay, Carlos Guerra-Yanez, Zabih Ghassemlooy +3
+- **PDF**: https://ieeexplore.ieee.org/document/9840520
+- **Abstract**: In this paper, we demonstrate the first, to our knowledge, experimental implementation of a gigabit Ethernet multiple input single output free space optical (FSO) communications link using adaptive switching implemented in the software defined open-source software, GNU Radio, and analyze its performance. A fully functional FSO link with a feedback path is implemented using cost effective off-the-shelf components, i.e., media converters and small form-factor pluggable modules. We propose a switching mechanism at the transmitter to improve the link performance under different fog conditions and provide results for the proposed FSO system compared with a single FSO link. The real-time channel estimation is demonstrated and, based on the channel state information, adaptive switching is carried out in GNU Radio. We show that the proposed system under the heavy fog condition offers almost the same packet error rate under the clear channel but with a reduced data rate by about 100 Mbps (i.e., 600 Mbps).
+
+## Multiple-Layer Integrated Interleaved Codes: A Class of Hierarchical Locally Recoverable Codes
+
+- **Status**: ❌
+- **Reason**: RS/EII/LRC 기반 계층적 erasure 복구 코드. 패리티 행렬이 low-density라 언급되나 LDPC 디코더/구성 기법이 아닌 RS-erasure 코드라 NAND LDPC ECC에 이식할 기법 없음
+- **ID**: ieee:9756519
+- **Type**: journal
+- **Published**: Aug. 2022
+- **Authors**: Mario Blaum
+- **PDF**: https://ieeexplore.ieee.org/document/9756519
+- **Abstract**: The traditional definition of Integrated Interleaved (II) codes generally assumes that the component nested codes are either Reed-Solomon (RS) or shortened Reed-Solomon codes. By taking general classes of codes, we present a recursive construction of Extended Integrated Interleaved (EII) codes into multiple layers, a problem that brought attention in literature for II codes. The multiple layer approach allows for a hierarchical scheme where each layer of the code provides for a different locality. In particular, we present the erasure-correcting capability of the new codes and we show that they are ideally suited as Locally Recoverable codes (LRC) due to their hierarchical locality and the small finite field required by the construction. Properties of the multiple layer EII codes, like their minimum distance and dimension, as well as their erasure decoding algorithms, parity-check matrices and performance analysis, are provided and illustrated with examples. Finally, we will observe that the parity-check matrices of high layer EII codes have low density.
+
+## Nonlinear Transform Source-Channel Coding for Semantic Communications
+
+- **Status**: ❌
+- **Reason**: 비선형 변환 기반 deep JSCC(시맨틱 통신). LDPC ECC 기법 없음, JSCC 제외 대상
+- **ID**: ieee:9791398
+- **Type**: journal
+- **Published**: Aug. 2022
+- **Authors**: Jincheng Dai, Sixian Wang, Kailin Tan +4
+- **PDF**: https://ieeexplore.ieee.org/document/9791398
+- **Abstract**: In this paper, we propose a class of high-efficiency deep joint source-channel coding methods that can closely adapt to the source distribution under the nonlinear transform, it can be collected under the name nonlinear transform source-channel coding (NTSCC). In the considered model, the transmitter first learns a nonlinear analysis transform to map the source data into latent space, then transmits the latent representation to the receiver via deep joint source-channel coding. Our model incorporates the nonlinear transform as a strong prior to effectively extract the source semantic features and provide side information for source-channel coding. Unlike existing conventional deep joint source-channel coding methods, the proposed NTSCC essentially learns both the source latent representation and an entropy model as the prior on the latent representation. Accordingly, novel adaptive rate transmission and hyperprior-aided codec refinement mechanisms are developed to upgrade deep joint source-channel coding. The whole system design is formulated as an optimization problem whose goal is to minimize the end-to-end transmission rate-distortion performance under established perceptual quality metrics. Across test image sources with various resolutions, we find that the proposed NTSCC transmission method generally outperforms both the analog transmission using the standard deep joint source-channel coding and the classical separation-based digital transmission. Notably, the proposed NTSCC method can potentially support future semantic communications due to its content-aware ability and perceptual optimization goal.
+
+## Advanced Digital Signal Processing and Variable-Rate Coding for Unrepeatered Optical Transmission
+
+- **Status**: ❌
+- **Reason**: 광통신 DSP+가변율 SC-LDPC를 FEC로 사용하나 표준 SC-LDPC를 그대로 쓰는 응용 특이적 논문, 새 디코더/구성 기여 없음
+- **ID**: ieee:9795950
+- **Type**: journal
+- **Published**: Aug. 2022
+- **Authors**: José Hélio C. Júnior, Tiago Sutili, Rafael C. Figueiredo +1
+- **PDF**: https://ieeexplore.ieee.org/document/9795950
+- **Abstract**: In this paper, we evaluate the selective combination of algorithms for fiber nonlinearity compensation, transceiver impairments mitigation and variable-rate coding in unrepeatered optical transmission. A post-emphasis filter and a two-stage 4×4 multiple-input and multiple-output equalizer compensate the impact of bandwidth limitations and in-phase and quadrature skew. Nonlinear compensation is accomplished by a fast-converging adaptive digital back-propagation algorithm and maximum likelihood sequence estimation. Forward error correction is provided by a variable-rate spatially-coupled low-density parity-check code. The performance and complexity of the proposed digital subsystems are experimentally evaluated by the unrepeatered wavelength division multiplexing transmission of 17×200-Gb/s (DP-16QAM 32-GBd) channels over 350-km of large effective area and low-loss single-mode fibers. The experimental results for different combinations of algorithms elucidate the trade-off of complexity and performance in unrepeatered optical transmission.
+
+## Performance and Capacity Analysis of MDCSK-BICM for Impulsive Noise in PLC
+
+- **Status**: ❌
+- **Reason**: PLC 임펄스잡음용 protograph LDPC coded MDCSK-BICM, PEXIT 코드설계가 응용특이적 채널분포에 종속 — NAND 이식성 약함
+- **ID**: ieee:9599361
+- **Type**: journal
+- **Published**: Aug. 2022
+- **Authors**: Meiyuan Miao, Lin Wang, Guanrong Chen
+- **PDF**: https://ieeexplore.ieee.org/document/9599361
+- **Abstract**: To further mitigate the BER error floor of $M$-ary differential chaos shift keying (MDCSK) modulation for impulsive noise, a low-cost high-reliability coded modulation scheme without equalizations is desirable for impulsive noise. In this paper, a protograph-based low-density parity-check coded MDCSK-based bit-interleaved coded modulation (MDCSK-BICM) scheme is proposed for the scenario with impulsive noise obeying Bernoulli-Laplace distribution. Considering the Gaussian distribution of protograph extrinsic information transfer (PEXIT) and the benchmark of coding design, the U-shaped non-coherent capacity is derived with optimal code rate for square MDCSK, showing that the code rates are stable with $E_b/N_0$ increasing but still much lower than that of DS-16DQAM at code rate $>\!0.145$. The derived joint probability density function can be considered as approximately a Gaussian distribution, which is used to improve the impulsive noise fitted PEXIT. Finally, a new code under a novel principle is designed for better bit error rate performance based on the improved PEXIT analysis. Both PEXIT analysis and simulation results demonstrate that the proposed scheme achieves a better BER than that with a traditional scheme, and suggesting a research approach based on simple methods. This basic research work provides a guide to establish a framework and optimize the performance of transmission systems over practical power line communication.
+
+## Blind Recognition of LDPC Codes by Average LLR in Multi-Channels Based on CNN
+
+- **Status**: ❌
+- **Reason**: CNN 기반 LDPC 코드 blind recognition(부호 인식) — 디코딩/부호설계 아님, 떼어낼 ECC 기법 없음
+- **ID**: ieee:9955194
+- **Type**: conference
+- **Published**: 5-7 Aug. 2
+- **Authors**: Yongjie Zhao, Longqing Li, Junhao Ba +4
+- **PDF**: https://ieeexplore.ieee.org/document/9955194
+- **Abstract**: Coding and decoding play an essential role in communication systems and are the primary conditions to ensure the standard transmission of signals, which can increase stability and reliability after coding. Low Density Parity Check Code (LDPC) coding is a common form of coding, and its parallel iterative decoding algorithm based on a sparse matrix is less complex and more flexible than the Turbo algorithm. However, with the increasing number of protocols and channels, the traditional methods of LDPC codes recognition are not adaptable enough, a more flexible and applicable method is essential. In this paper, we propose a deep learning-based LDPC coding recognition method, which is more adaptable, has higher estimation accuracy than traditional algorithms and has a more straightforward data processing structure compared to 2-dimensional convolutional neural networks and fully connected networks. After training the data of the Additive White Gaussian Noise (AWGN) channel, Rayleigh channel and Rician channel, the network's performance is better in the test, and the estimation accuracy is better than the traditional algorithm.
+
+## Convolutional Neural Network-based Media Noise Prediction and Equalization for TDMR Turbo-detection with Write/Read TMR
+
+- **Status**: ❌
+- **Reason**: TDMR turbo-detection의 CNN 등화기/MNP가 핵심이고 LDPC는 표준 채널디코더로 부수 사용 — 떼어낼 LDPC 신규 기법 없음
+- **ID**: ieee:9918551
+- **Type**: conference
+- **Published**: 29-31 Aug.
+- **Authors**: Amirhossein Sayyafan, Ahmed Aboutaleb, Benjamin Belzer +2
+- **PDF**: https://ieeexplore.ieee.org/document/9918551
+- **Abstract**: This paper presents a turbo-detection system consisting of a convolutional neural network (CNN) based equalizer, a Bahl-Cocke-Jelinek-Raviv (BCJR) trellis detector, a CNN-based media noise predictor (MNP), and a low-density parity-check (LDPC) channel decoder for two-dimensional magnetic recording (TDMR). The BCJR detector, CNN MNP, and LDPC decoder iteratively exchange soft information to maximize the areal density (AD) subject to a bit error rate (BER) constraint. Simulation results employing a realistic grain switching probabilistic (GSP) media model show that the proposed system is quite robust to track-misregistration (TMR). Compared to a I-D pattern-dependent noise prediction (PDNP) baseline with soft intertrack interference (ITI) subtraction, the system achieves 0.34% AD gain with read-TMR alone and 0.69% with write- and read-TMR together.
+
+## Performance Evaluation of Classic McEliece Post Quantum Cryptography
+
+- **Status**: ❌
+- **Reason**: Classic McEliece 코드기반 PQC 전력소모 평가 — LDPC ECC 디코더/구성 기여 없음, 암호 응용
+- **ID**: ieee:10202276
+- **Type**: conference
+- **Published**: 29-30 Aug.
+- **Authors**: Lingeshwaran B, Avtar Singh
+- **PDF**: https://ieeexplore.ieee.org/document/10202276
+- **Abstract**: Classic cryptography algorithms have become more fragile and vulnerable to modern attacks. The advancement of quantum computers and its attacks are now a big threat to the classic cryptography which uses hard mathematical calculation for security, that leads to the commence of the post quantum cryptography which are resistant to the quantum attacks. National Institute of Standardization and Technology is in process of standardizing the post quantum cryptography algorithm based on different factors like encapsulation, decapsulation time, keypair generation time, speed etc. In this paper we will discuss about the performance evaluation of post quantum cryptography algorithms especially the power consumption of Classic McEliece algorithm and its different variation which comes under code-based cryptography. The evaluated results are tabulated and categorized based on the different principles used and the factors leading to major power consumption is identified.
+
+## Secure Image Communication using Systematic-LT Codes over AWGN Channel
+
+- **Status**: ❌
+- **Reason**: Systematic-LT(fountain/erasure) 코드 + AES 이미지 보안 전송, LDPC ECC 아님이며 떼어낼 기법 없음
+- **ID**: ieee:9909507
+- **Type**: conference
+- **Published**: 26-28 Aug.
+- **Authors**: Guru Prasanth Sarvepalli, Sivaraman Rethinam, Bodempudi Naga Siva Prasad +1
+- **PDF**: https://ieeexplore.ieee.org/document/9909507
+- **Abstract**: Luby Transform codes (LT) are rate less erasure codes potentially employed for data transmission over communication networks and data storage. Systematic LT codes (SLT) has advantage over LT code in unequal error protection of packet. SLT codes are designed using Robust soliton distribution (RSD), Sparse Degree Distribution (SDD) and Novel Degree Distribution (NDD). Further, SLT codes have been used as channel coding technique to transfer AES encrypted Image on BPSK over AWGN channel. BER in the range of 10−6 for SNR levels of 2dB have been achieved in SDD and NDD using soft decoding of 6 iterations for R−1 = 3.5. While analyzing the performance of SLT Codes, it has been observed that BER decreases drastically from 10−1 to 10−6 for SNR variation from 0.5dB to 2dB. Image quality analysis has been performed using Mean Squared Error (MSE), Peak Signal to Noise Ratio (PSNR), Number of Pixel Changing Rate (NPCR) and Unified Average Changing Intensity (UACI) for RSD, SDD & NDD between these power levels.
+
+## Performance of PSA Kalman Filters for Phase Noise Compensation in High-Order QAM OFDM Systems
+
+- **Status**: ❌
+- **Reason**: QAM OFDM 위상잡음 Kalman 보상, LDPC는 부수적 ECC 베이스라인 — 떼어낼 LDPC 기법 없음
+- **ID**: ieee:9906479
+- **Type**: conference
+- **Published**: 24-26 Aug.
+- **Authors**: Ryota Kuribayashi, Mamoru Sawahashi, Norifumi Kamiya
+- **PDF**: https://ieeexplore.ieee.org/document/9906479
+- **Abstract**: This paper presents an iterative phase noise compensation (PNC) method that utilizes pilot symbol assisted (PSA) PNC and subsequently an iterative Kalman filter in orthogonal frequency division multiplexing radio backhaul links. There are two options for the presented iterative PNC depending on the type of Kalman filter employed. One is an extended Kalman filter (EKF) and the other is an unscented Kalman filter (UKF). The latter is expected to perform better than the former since the PNC problem is nonlinear. We compare the bit error rate (BER) performance of iterative PNC employing the EKF and UKF. Computer simulation results show that no distinct difference in the BER is observed between the EKF PNC and UKF PNC associated with PSA PNC for 256QAM and 1024QAM schemes, where a low-density parity-check (LDPC) code with the coding rate of 8/9 is used for error correction. We also show that PSA-EKF and PSA-UKF PNC are effective in achieving a low BER such as 10−8 in a time-varying phase noise channel for LDPC-coded 256QAM and 1024QAM schemes.
+
+## Bit Error Rate Performance of OFDM Using Hierarchical Modulation in 3GPP TDL Channel Model
+
+- **Status**: ❌
+- **Reason**: OFDM 계층변조 BER 분석 — LDPC 미언급/통신 응용, NAND 이식 기법 없음
+- **ID**: ieee:9906481
+- **Type**: conference
+- **Published**: 24-26 Aug.
+- **Authors**: Daiki Mitamura, Mamoru Sawahashi, Yoshihisa Kishiyama
+- **PDF**: https://ieeexplore.ieee.org/document/9906481
+- **Abstract**: This paper presents the average bit error rate (BER) performance of orthogonal frequency division multiplexing using two-layer and three-layer hierarchical modulation (HM) schemes in a multipath Rayleigh fading channel based on a 3GPP tapped delay line channel model. In HM, the basic information bits should be demodulated and decoded using all the users within a cell satisfying the BER requirement. Hence, we investigate non-uniform quadrature amplitude modulation constellations so that the loss in the required average received signal-to-noise power ratio (SNR) satisfying the average BER of the basic information bits for HM is minimized compared to that using the original constellation with which only the basic information bits are transmitted. We also investigate the distance from a cell site in the coverage area for the information bits of each layer based on the path loss equations in the Urban Macro and Rural Macro scenarios in terms of the required average received SNR achieving the average BER of 10−3.
+
+## Efficient ECC Architecture for Data Storage Memory Applications
+
+- **Status**: ❌
+- **Reason**: 메모리 ECC지만 LDPC가 아닌 2-D BCH/Berlekamp-Massey HW — LDPC 디코더 기법 없음
+- **ID**: ieee:9972043
+- **Type**: conference
+- **Published**: 24-25 Aug.
+- **Authors**: Nithesh gupta Chebrolu, Sumanth Sakkara, P. Cyril Prasanna Raj +1
+- **PDF**: https://ieeexplore.ieee.org/document/9972043
+- **Abstract**: In this wireless environment when a message is transmitted the information gets corrupted due to inter symbol interference and noise. The information also gets corrupted due to scaling of memory devices, hence the efficiency of the transmission decreases due to the corruption of the data. The error correction techniques process the received data which are temporarily stored in memory. Memories like SRAM and DRAM memory cells will store the data temporarily before processed by Error Correction Codes (ECCs). In this paper an efficient architecture for 2-D BCH ECC of size 15 x 15, with an error correction capability of 2 x 2, in the frequency domain are developed. The 2-D BCH encoder is designed and implemented using the conjugate class properties of finite fields to a reduction of number of gates. With the help of Inverse Discrete Finite Field Fourier Transform (IDFFFT) and Discrete Finite Field Fourier Transform (DFFFT) the data is converted from frequency domain to time domain and wise versa. The modified 2-D BCH decoder is designed with the help of Modified BM algorithm to reduce the resource utilization. The results of the encoder and decoder are illustrated in this paper. The proposed Modified Berlekamp's Massey (MBM) algorithm utilizes 77.3% lesser LUT's and 65.82% of dynamic power consumption lesser compared to Berlekamp's Massey (BM) algorithm. The proposed architecture is suitable for power and area efficient memory applications.
+
+## Spatially Coupled Generalized LDPC Codes Over Burst Erasure Channels
+
+- **Status**: ❌
+- **Reason**: SC-GLDPC over burst erasure — erasure 채널·표준 SC-LDPC 대비 GLDPC 슈퍼체크노드, NAND 채널코딩 기법 떼어내기 어려움(애매하나 erasure 응용 특이)
+- **ID**: ieee:9909157
+- **Type**: conference
+- **Published**: 21-23 Aug.
+- **Authors**: Xing He, Yang Liu, Bin Wang +1
+- **PDF**: https://ieeexplore.ieee.org/document/9909157
+- **Abstract**: In this paper, we present two types of spatially coupled generalized low density parity check (SC-GLDPC) codes to combat burst erasures. Compared with the spatially coupled low density parity check (SC-LDPC) codes, SC-GLDPC codes introduce the super check nodes instead of the standard single parity check constraints, which is beneficial to the burst erasure corrections. To evaluate the capability against burst erasures, density evolution algorithm for SC-GLDPC codes is proposed, which can be used to compute the maximum length of the consecutive burst erasures when transmitted over the burst erasure channels. Density evolution analysis results show that the burst erasure correction performances of these two types of SC-GLDPC codes are better than SC-LDPC codes while Type-2 SC-GLDPC codes perform better than Type-1 SC-GLDPC codes. To demonstrate the excellent asymptotic performances, we also simulate the finite-length performances of these two types of SC-GLPDC codes over burst erasure channels along with SC-LDPC codes for comparison. Simulation results show that the finite-length performances are consistent with the asymptotic performances obtained by density evolution.
+
+## Research of Error Control Coding and Decoding
+
+- **Status**: ❌
+- **Reason**: 여러 부호(LDPC 포함) 원리 개관·시뮬레이션 수준, 떼어낼 새 디코더·구성·HW 기여 없음
+- **ID**: ieee:9919106
+- **Type**: conference
+- **Published**: 20-21 Aug.
+- **Authors**: Liwei Huang, Yulin Chen, Hui Huang
+- **PDF**: https://ieeexplore.ieee.org/document/9919106
+- **Abstract**: Error control technology improves the reliability and validity of communication transmission. Linear block code, cyclic code, convolutional code, LDPC code and CRC are commonly used. In this paper, the principles of these codes are analysed, simulations of encoding and decoding are experimented. According to the simulation results, it is concluded that error control coding is helpful to reduce the error rate of the communication system.
+
+## LDPC Channel Coding in Coplanar MIMO Ultraviolet Communication System
+
+- **Status**: ❌
+- **Reason**: UV 통신에 표준 OMS/NMS min-sum을 그대로 적용, 새 기여 없음
+- **ID**: ieee:9900999
+- **Type**: conference
+- **Published**: 12-15 Aug.
+- **Authors**: Junyang Ji, Ping Su, Jianshe Ma +2
+- **PDF**: https://ieeexplore.ieee.org/document/9900999
+- **Abstract**: The low-density parity-check code (LDPC) is used in this paper to implement a coplanar multiple-input multiple - output (MIMO) Ultraviolet (UV) communication system. This paper compares the performance of different receiver combining methods in the coplanar MIMO UV communication system and simulates the performance of the improved LDPC minimum sum decoding algorithms in the UV communication system. The results show that the offset minimum sum (OMS) and the normalized minimum sum (NMS) decoding algorithms outperform the minimum sum (MS) decoding algorithm in terms of bit error ratio (BER), and the receivers with the maximum ratio combination performs the best.
+
+## A PAPR Reduction scheme Based on Nonlinear Companding Transform and LDPC-coded for a Coherent Optical GFDM system
+
+- **Status**: ❌
+- **Reason**: GFDM 광통신 PAPR 저감(NCT+LDPC), LDPC는 베이스라인 부호화일 뿐 이식 ECC 기법 없음
+- **ID**: ieee:9901270
+- **Type**: conference
+- **Published**: 12-15 Aug.
+- **Authors**: Xiangyu Liu, Qi Zhang, Xiangjun Xin +5
+- **PDF**: https://ieeexplore.ieee.org/document/9901270
+- **Abstract**: A P APR reduction method based on nonlinear-companding-transform (NCT) and LDPC-coded is proposed to reduce high P APR of GFDM systems. This scheme utilizes the performance complementarity of NCT and LDPC-coded to effectively achieve superposition of advantages. An 80-Gbaud PDM-CO-GFDM system employing the proposed scheme is set up. When CCDF is 1e-2 and $\mu$ is 2, P APR is reduced by 5.16 dB compared with original GFDM scheme (GFDM-LDPC scheme). When BER is 1e-2, OSNR is reduced by 3.1 dB compared with original GFDM scheme, 3.9 dB compared with GFDM-NCT scheme, -0.5 dB compared with GFDM-LDPC scheme. Simulation results show that the proposed scheme has better performances in reducing the P APR and BER for GFDM.
+
+## Performance Analysis of LDPC Coding under Multiple Scattering in Ultraviolet Communication
+
+- **Status**: ❌
+- **Reason**: UV 통신 LDPC 성능분석(반복횟수·FOV), 표준 LDPC 적용일 뿐 새 기법 없음
+- **ID**: ieee:9901155
+- **Type**: conference
+- **Published**: 12-15 Aug.
+- **Authors**: Axin Du, Jianguo Liu, Yuehui Wang +4
+- **PDF**: https://ieeexplore.ieee.org/document/9901155
+- **Abstract**: Low-density parity-check (LDPC) codes are applied to multiple scattering communication channels based on Monte Carlo (MC) method. A simulated Ultraviolet (UV) communication system based on binary phase shift keying (BPSK) modulation is built. The effects of different decoding algorithms, number of iterations, and different receiver field-of-view (FOV) angles on the performance of the UV communication system are analyzed, respectively.
+
+## Probabilistically Shaped High-order QAM Coherent Optical Communication
+
+- **Status**: ❌
+- **Reason**: 확률성형 QAM 광통신, LDPC/ECC 기법 없음
+- **ID**: ieee:9901006
+- **Type**: conference
+- **Published**: 12-15 Aug.
+- **Authors**: Fengchu Cao, Mingyi Gao, Weidong Shao +2
+- **PDF**: https://ieeexplore.ieee.org/document/9901006
+- **Abstract**: Probabilistically shaped (PS) high-order QAM coherent optical communication is attractive for large-capacity fiber transmission due to its high spectrum efficiency and sensitivity. In this work, we present its principle and key features in detail.
+
+## Design of Non-punctured Protograph LDPC Codes for JSCC Systems over Partial Response Channels
+
+- **Status**: ❌
+- **Reason**: JSCC+PR 채널용 비펑처 프로토그래프 LDPC 설계 — 소스-채널 결합/PR 채널 특이적, NAND ECC 베이스라인 외 떼어낼 기법 약함
+- **ID**: ieee:9896703
+- **Type**: conference
+- **Published**: 11-13 Aug.
+- **Authors**: Ying Sun, Shiwei Zhu, Sanya Liu +1
+- **PDF**: https://ieeexplore.ieee.org/document/9896703
+- **Abstract**: Traditional protograph low-density parity-check (PLDPC) codes with punctured nodes perform poorly over partial response (PR) channels. Therefore, several good PLDPC codes without punctured nodes have been designed so far over PR channels. However, these codes are based on the separate coding structure and neglect the residual redundancy left by source coding. So in this paper, based on the joint source-channel coding (JSCC) system, three new types of rate-1/2 non-punctured PLDPC codes are designed for PR channels. Higher rate channel codes are further designed by code lengthening from one of the proposed codes. The joint protograph extrinsic information transfer (JPEXIT) algorithm is also used to calculate the decoding threshold of the system. Both the JPEXIT analysis and the bit-error-rate (BER) simulation results show that in the JSCC system over PR channels, three new codes all possess performance improvement in the water-fall region compared to existing non-punctured PLDPC codes, especially one of them can also obtain a very low error floor. Also for the higher rate channel codes, no error floors are observed down to BER=10−6.
+
+## A Spatially Coupled PAC Coding Scheme and Its List Decoding
+
+- **Status**: ❌
+- **Reason**: Spatially coupled PAC 부호(극부호 계열)+SCL 디코딩, LDPC 아님 — 이식할 LDPC 기법 없음
+- **ID**: ieee:9896664
+- **Type**: conference
+- **Published**: 11-13 Aug.
+- **Authors**: Siyu Ying, Shan Jin, Zhaoyang Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/9896664
+- **Abstract**: In order to promote the reliability and efficiency of transport block (TB)-based transmission, we propose a new class of spatially coupled Polarization-Adjusted Convolutional (PAC) coding scheme in this paper. In the proposed scheme, several consecutive code blocks (CBs) in each TB are coupled by the register states at the end of the encoding of each CB, and a depth-first successive-cancellation list (SCL)-based decoder is used for decoding. The proposed spatially coupled PAC codes introduce little coding complexity at the encoding side, and the coupling procedure is able to significantly mitigate the TB error rate (TBER), which are validated by extensive simulation results.
+
+## Deep Learning Based Constellation Rearrangement Design in Hybrid ARQ System
+
+- **Status**: ❌
+- **Reason**: HARQ 콘스텔레이션 재배열 오토인코더, ECC/LDPC 기법 아님
+- **ID**: ieee:9896677
+- **Type**: conference
+- **Published**: 11-13 Aug.
+- **Authors**: Bo Cao, Ming Jiang, Chunming Zhao +1
+- **PDF**: https://ieeexplore.ieee.org/document/9896677
+- **Abstract**: This paper proposes a constellation rearrangement autoencoder (CoRe-AE) for hybrid automatic repeat request (HARQ) system through a learning-based neural network. Two identical autoencoder networks are used in the CoRe-AE scheme respectively corresponding to the first data transmission and the retransmission. It can both optimize the bit mapping and the geometric shaping of the constellation points during the two transmissions. It is shown that the bit error rate (BER) performances of our constellations learned by CoRe-AE are noticeably better than those of the regular square quadrature amplitude modulation (QAM) and some well-known geometric shaped constellations with conventional constellation rearrangement (CoRe) scheme in HARQ systems.
+
+## Bit-wise Detection for OTFS Modulation via Message Passing Algorithm
+
+- **Status**: ❌
+- **Reason**: OTFS 신호검출용 메시지패싱, 채널 특이적 검출기로 NAND LDPC 디코더로 이식할 새 기여 없음
+- **ID**: ieee:9896692
+- **Type**: conference
+- **Published**: 11-13 Aug.
+- **Authors**: Bowen Wang, Nanxi Li, Shan Yang +5
+- **PDF**: https://ieeexplore.ieee.org/document/9896692
+- **Abstract**: The orthogonal time frequency space (OTFS) modulation as a promising signal representation attracts growing attention for integrated sensing and communication. This paper devotes to signal detection for OTFS system. Notice the characteristics of high dimension and sparsity of OTFS channel, we propose a bit-wise message passing (MP) algorithm to support Soft-Input Soft-Output detection. We leverage the channel sparsity to simplify the factor graph, and approximate the discrete messages with continuous Gaussian distribution to facilitate message updating. Simulations in various cases validate the outperformance of the proposed algorithm contrast to existed symbol-wise MP and linear detectors.
+
+## A Low Complexity Iterative Receiving Method Based on Message Passing in π/4-DQPSK Modulated Frequency-Hopping Communications
+
+- **Status**: ❌
+- **Reason**: π/4-DQPSK 주파수도약 통신 MPA 기반 위상추정+복조 — 통신 응용 특이적, 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:9880747
+- **Type**: conference
+- **Published**: 11-13 Aug.
+- **Authors**: Liuqing Yang, Yuehong Gao, Zhiyuan Lin +2
+- **PDF**: https://ieeexplore.ieee.org/document/9880747
+- **Abstract**: A low complexity iterative receiving scheme is proposed for $\pi$ /4-DQPSK modulated frequency-hopping communication systems relying on message passing algorithm (MPA), where the receiving process is converted to the joint phase estimation and decoding process. Due to short duration of each hop pulse, coherent demodulation which costs much pilot overhead will reduce the system transmission efficiency. Besides, differential demodulation will lose bit error performance. In order to approximate the theoretically optimal performance with low pilot overhead and low complexity, this paper proposes a low complexity joint phase estimation and decoding iterative algorithm. We simplify the process of message passing and approximate the calculation of some probability messages, which omit lots of computation. Simulation results demonstrate that the proposed algorithm can reduce computational complexity by more than 60% compared with conventional MPA, and can also improve bit error performance by more than 1dB with only 4 pilot symbols per hop compared with differential demodulation.
+
+## Min-Max Hamming Distance Considerations for Activation Pattern Design in Index Modulation
+
+- **Status**: ❌
+- **Reason**: 무선 IM/OFDM 활성화 패턴 설계가 핵심, LDPC는 부수 시뮬레이션 코드일 뿐 떼어낼 ECC 기법 없음
+- **ID**: ieee:9880838
+- **Type**: conference
+- **Published**: 11-13 Aug.
+- **Authors**: Yinglin Chen, Tongyang Xu, Izzat Darwazeh
+- **PDF**: https://ieeexplore.ieee.org/document/9880838
+- **Abstract**: Index modulation (IM) has been widely studied showing promising performance over traditional communication systems. Index pattern plays an important role since its activation methodology determines bit error rate (BER), spectral efficiency (SE) and energy efficiency (EE). This work proposes efficient index activation patterns according to a min-max Hamming distance metric for both orthogonal frequency division multiplexing (OFDM) and non-orthogonal spectrally efficient FDM (SEFDM). Simulations of low-density parity-check (LDPC) coded IM systems in both additive white Gaussian noise (AWGN) and frequency selective channels are provided. Results reveal that the proposed index activation patterns in IM systems lead to improved BER and SE compared to that in traditional OFDM systems. Moreover, peak-to-average power ratio (PAPR) distribution results are presented to demonstrate the EE advantage of the proposed IM systems over OFDM systems.
+
+## Block Markov Superposition Transmission of Algebraic QC-LDPC Codes for Optical Fiber Communications
+
+- **Status**: ❌
+- **Reason**: 광통신용 BMST+표준 대수적 QC-LDPC 결합, 표준 QC-LDPC를 컴포넌트로 재사용 수준이고 BMST는 NAND ECC 비이식적
+- **ID**: ieee:9880606
+- **Type**: conference
+- **Published**: 11-12 Aug.
+- **Authors**: Juewei Wang, Chao Chen, Xiao Ma
+- **PDF**: https://ieeexplore.ieee.org/document/9880606
+- **Abstract**: In this paper, a new forward error correcting (FEC) scheme is proposed for optical fiber communication system, which takes the algebraic quasi-cyclic low-density parity-check (QC-LDPC) codes as the component codes in the block Markov superposition transmission (BMST) system. The excellent error-correction ability of the algebraic QC-LDPC codes is then further improved by the use of BMST coding. The encoding algorithm and the two-stage decoding algorithm are also presented, both having linear complexity. It is predicted that, for the simulated high-rate codes, the frame error rate (FER) can be lower than 10−17 in the high signal-to-noise (SNR) region according to the numerical results. The excellent performance in error-correction and decoding latency suggests that the proposed scheme may find applications in optical fiber communications.
+
+## OAMP for Low Complexity Detection in Large-Scale LDS Systems
+
+- **Status**: ❌
+- **Reason**: LDS 다중사용자 검출에 OAMP 적용, LDPC ECC 디코더/구성 아님(검출기), 떼어낼 ECC 기법 없음
+- **ID**: ieee:9870582
+- **Type**: conference
+- **Published**: 1-5 Aug. 2
+- **Authors**: Haifeng Wen, Qu Luo, Weijie Yua +2
+- **PDF**: https://ieeexplore.ieee.org/document/9870582
+- **Abstract**: This paper focuses on the low-complexity multiuser detection of coded low-density signature (LDS) systems where the numbers of resources and users are both large. Typically, the detection complexity using the conventional message passing algorithm grows exponentially with the number of users occupied at each resource, making it unaffordable for large-scale LDS systems. To address this problem, we propose to apply orthogonal approximate message passing (OAMP) to detect LDS symbols with polynomial complexity. The numerical results demonstrate the superiority of the proposed method in terms of the error performance over the traditional turbo receiver.

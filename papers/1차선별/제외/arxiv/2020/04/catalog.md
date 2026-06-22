@@ -1,0 +1,57 @@
+# arXiv — 2020-04
+
+
+## Combining hard and soft decoders for hypergraph product codes
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC(하이퍼그래프 곱 부호) BP+small-set-flip 하이브리드 — 양자 전용 부호/디코더로 고전 바이너리 NAND에 이식 어려움
+- **ID**: arxiv:2004.11199v2
+- **Type**: preprint
+- **Published**: 2020-04-23
+- **Authors**: Antoine Grospellier, Lucien Grouès, Anirudh Krishna +1
+- **PDF**: https://arxiv.org/pdf/2004.11199v2
+- **Abstract**: Hypergraph product codes are a class of constant-rate quantum low-density parity-check (LDPC) codes equipped with a linear-time decoder called small-set-flip (SSF). This decoder displays sub-optimal performance in practice and requires very large error correcting codes to be effective. In this work, we present new hybrid decoders that combine the belief propagation (BP) algorithm with the SSF decoder. We present the results of numerical simulations when codes are subject to independent bit-flip and phase-flip errors. We provide evidence that the threshold of these codes is roughly 7.5% assuming an ideal syndrome extraction, and remains close to 3% in the presence of syndrome noise. This result subsumes and significantly improves upon an earlier work by Grospellier and Krishna (arXiv:1810.03681). The low-complexity high-performance of these heuristic decoders suggests that decoding should not be a substantial difficulty when moving from zero-rate surface codes to constant-rate LDPC codes and gives a further hint that such codes are well-worth investigating in the context of building large universal quantum computers.
+
+## High-throughput GPU layered decoder of multi-edge type low density parity check codes in continuous-variable quantum key distribution systems
+
+- **Status**: ❌
+- **Reason**: CV-QKD 정보조정용 비이진 multi-edge QC-LDPC GPU 디코더 — 비이진 LDPC + QKD reconciliation으로 이중 제외
+- **ID**: arxiv:2004.09084v1
+- **Type**: preprint
+- **Published**: 2020-04-20
+- **Authors**: Yang Li, Xiaofang Zhang, Yong Li +4
+- **PDF**: https://arxiv.org/pdf/2004.09084v1
+- **Abstract**: The decoding throughput in the postprocessing is one of the bottlenecks for a continuous-variable quantum key distribution (CV-QKD) system. In this paper, we propose a layered decoder to decode quasi-cyclic multi-edge type LDPC (QC-METLDPC) codes based on graphic processing unit (GPU) in continuous-variable quantum key distribution (CV-QKD) systems. We optimize the storage method of the parity check matrix, merge the sub-matrices which are unrelated, and decode multiple codewords in parallel on GPU. Simulation results demonstrate that the average decoding speed of LDPC codes with three typical code rates, i.e., 0.1, 0.05 and 0.02, is up to 64.11Mbits/s, 48.65Mbits/s and 39.51Mbits/s, respectively, when decoding 128 codewords of length 106 simultaneously without early termination.
+
+## Decodable quantum LDPC codes beyond the $\sqrt{n}$ distance barrier using high dimensional expanders
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 부호 구성(고차원 expander/Ramanujan complex 최소거리·디코더) — 양자 전용 구성으로 제외
+- **ID**: arxiv:2004.07935v1
+- **Type**: preprint
+- **Published**: 2020-04-16
+- **Authors**: Shai Evra, Tali Kaufman, Gilles Zémor
+- **PDF**: https://arxiv.org/pdf/2004.07935v1
+- **Abstract**: Constructing quantum LDPC codes with a minimum distance that grows faster than a square root of the length has been a major challenge of the field. With this challenge in mind, we investigate constructions that come from high-dimensional expanders, in particular Ramanujan complexes. These naturally give rise to very unbalanced quantum error correcting codes that have a large $X$-distance but a much smaller $Z$-distance. However, together with a classical expander LDPC code and a tensoring method that generalises a construction of Hastings and also the Tillich-Zemor construction of quantum codes, we obtain quantum LDPC codes whose minimum distance exceeds the square root of the code length and whose dimension comes close to a square root of the code length. When the ingredient is a 3-dimensional Ramanujan complex, we show that its 2-systole behaves like a square of the log of the complex size, which results in an overall quantum code of minimum distance $n^{1/2}\log n$, and sets a new record for quantum LDPC codes. When we use a 2-dimensional Ramanujan complex, or the 2-skeleton of a 3-dimensional Ramanujan complex, we obtain a quantum LDPC code of minimum distance $n^{1/2}\log^{1/2}n$. We then exploit the expansion properties of the complex to devise the first polynomial time algorithm that decodes above the square root barrier for quantum LDPC codes.
+
+## Cellular automaton decoders for topological quantum codes with noisy measurements and beyond
+
+- **Status**: ❌
+- **Reason**: 위상학적 양자부호용 cellular automaton(sweep rule) 디코더 — 양자 신드롬/측정오류 전용으로 고전 BP에 비이식
+- **ID**: arxiv:2004.07247v2
+- **Type**: preprint
+- **Published**: 2020-04-15
+- **Authors**: Michael Vasmer, Dan E. Browne, Aleksander Kubica
+- **PDF**: https://arxiv.org/pdf/2004.07247v2
+- **Abstract**: We propose an error correction procedure based on a cellular automaton, the sweep rule, which is applicable to a broad range of codes beyond topological quantum codes. For simplicity, however, we focus on the three-dimensional (3D) toric code on the rhombic dodecahedral lattice with boundaries and prove that the resulting local decoder has a non-zero error threshold. We also numerically benchmark the performance of the decoder in the setting with measurement errors using various noise models. We find that this error correction procedure is remarkably robust against measurement errors and is also essentially insensitive to the details of the lattice and noise model. Our work constitutes a step towards finding simple and high-performance decoding strategies for a wide range of quantum low-density parity-check codes.
+
+## A Polynomial Interpolation based Quantum Key Reconciliation Protocol: Error Correction without Information Leakage
+
+- **Status**: ❌
+- **Reason**: QKD 키조정용 다항식 보간 기반 비-LDPC 프로토콜 — reconciliation + 비-LDPC로 제외(LDPC는 비교 대상일 뿐)
+- **ID**: arxiv:2004.07061v1
+- **Type**: preprint
+- **Published**: 2020-04-15
+- **Authors**: Gunes Karabulut Kurt, Enver Ozdemir, Neslihan Aysen Ozkirisci +2
+- **PDF**: https://arxiv.org/pdf/2004.07061v1
+- **Abstract**: In this work, we propose a novel key reconciliation protocol for the quantum key distribution (QKD). Based on Newton's polynomial interpolation, the proposed protocol aims to correct all erroneous bits at the receiver without revealing information to the eavesdropper. We provide the exact frame error rate (FER) expression of the proposed protocol. The inherent nature of the proposed algorithm ensures correcting all erroneous bits if the algorithm succeeds. We present an information-theoretical proof that the revealed information during the key reconciliation process is equal to zero. We also provide a numerical comparison of our algorithm with the asymptotic performance of the error-correcting codes and two exemplary low-density-parity-check (LDPC) codes. The results highlight that our algorithm provides superior performance when compared to the LDPC codes, regardless of the distance between Alice and Bob. Furthermore, the proposed key reconciliation protocol is usable for the longer quantum link distances than the state-of-the-art protocols.

@@ -70,4 +70,5 @@
 
 - 상세 분류 기준: [../../CLASSIFICATION.md](../../CLASSIFICATION.md)
 - 판정 기준서: [../../criteria/selection_criteria.md](../../criteria/selection_criteria.md)
-- 월별 카탈로그: `1차선별/{arxiv,ieee}/{연}/{월}/catalog.md`
+- 통과 카탈로그: `1차선별/통과/{arxiv,ieee}/{연}/{월}/catalog.md`
+- 제외 카탈로그: `1차선별/제외/{arxiv,ieee}/{연}/{월}/catalog.md`

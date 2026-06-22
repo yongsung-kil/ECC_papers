@@ -1,0 +1,57 @@
+# arXiv — 2012-04
+
+
+## Performance of Polar Codes on wireless communications Channel
+
+- **Status**: ❌
+- **Reason**: Polar codes on wireless channel; non-LDPC, LDPC only as comparison baseline, no decoder technique transferable to binary LDPC BP
+- **ID**: arxiv:1204.6106v1
+- **Type**: preprint
+- **Published**: 2012-04-27
+- **Authors**: Peng Shi, Shengmei Zhao, Bei Wang
+- **PDF**: https://arxiv.org/pdf/1204.6106v1
+- **Abstract**: We discuss the performance of polar codes, the capacity-achieving channel codes, on wireless communication channel in this paper. By generalizing the definition of Bhattacharyya Parameter in discrete memoryless channel, we present the special expression of the parameter for Gaussian and Rayleigh fading the two continuous channels, including the recursive formulas and the initial values. We analyze the applications of polar codes with the defined parameter over Rayleigh fading channel by transmitting image and speech. By comparing with low density parity-check codes(LDPC) at the same cases, our simulation results show that polar codes have better performance than that of LDPC codes. Polar codes will be good candidate for wireless communication channel.
+
+## High Performance Error Correction for Quantum Key Distribution using Polar Codes
+
+- **Status**: ❌
+- **Reason**: Polar codes for QKD reconciliation; non-LDPC + QKD reconciliation, both excluded, no NAND-transferable LDPC technique
+- **ID**: arxiv:1204.5882v3
+- **Type**: preprint
+- **Published**: 2012-04-26
+- **Authors**: Paul Jouguet, Sébastien Kunz-Jacques
+- **PDF**: https://arxiv.org/pdf/1204.5882v3
+- **Abstract**: We study the use of polar codes for both discrete and continuous variables Quantum Key Distribution (QKD). Although very large blocks must be used to obtain the efficiency required by quantum key distribution, and especially continuous variables quantum key distribution, their implementation on generic x86 CPUs is practical. Thanks to recursive decoding, they exhibit excellent decoding speed, much higher than large, irregular Low Density Parity Check (LDPC) codes implemented on similar hardware, and competitive with implementations of the same codes on high-end Graphic Processing Units (GPUs).
+
+## Correction Trees as an Alternative to Turbo Codes and Low Density Parity Check Codes
+
+- **Status**: ❌
+- **Reason**: Correction trees as convolutional-like alternative to LDPC/turbo; non-LDPC sequential-decoding paradigm, not transferable to binary LDPC BP
+- **ID**: arxiv:1204.5317v2
+- **Type**: preprint
+- **Published**: 2012-04-24
+- **Authors**: Jarosław Duda, Paweł Korus
+- **PDF**: https://arxiv.org/pdf/1204.5317v2
+- **Abstract**: The rapidly improving performance of modern hardware renders convolutional codes obsolete, and allows for the practical implementation of more sophisticated correction codes such as low density parity check (LDPC) and turbo codes (TC). Both are decoded by iterative algorithms, which require a disproportional computational effort for low channel noise. They are also unable to correct higher noise levels, still below the Shannon theoretical limit. In this paper, we discuss an enhanced version of a convolutional-like decoding paradigm which adopts very large spaces of possible system states, of the order of $2^{64}$. Under such conditions, the traditional convolution operation is rendered useless and needs to be replaced by a carefully designed state transition procedure. The size of the system state space completely changes the correction philosophy, as state collisions are virtually impossible and the decoding procedure becomes a correction tree. The proposed decoding algorithm is practically cost-free for low channel noise. As the channel noise approaches the Shannon limit, it is still possible to perform correction, although its cost increases to infinity. In many applications, the implemented decoder can essentially outperform both LDPC and TC. This paper describes the proposed correction paradigm and theoretically analyzes the asymptotic correction performance. The considered encoder and decoder were verified experimentally for the binary symmetric channel. The correction process remains practically cost-free for channel error rates below 0.05 and 0.13 for the 1/2 and 1/4 rate codes, respectively. For the considered resource limit, the output bit error rates reach the order of $10^{-3}$ for channel error rates 0.08 and 0.18. The proposed correction paradigm can be easily extended to other communication channels; the appropriate generalizations are also discussed in this study.
+
+## Improved Quantum LDPC Decoding Strategies For The Misidentified Quantum Depolarizing Channel
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 디코딩 전략(depolarizing channel 채널 미스매치)으로 양자 전용 채널 모델에 의존; 고전 바이너리 채널 ECC로 그대로 이식 불가
+- **ID**: arxiv:1204.4223v2
+- **Type**: preprint
+- **Published**: 2012-04-18
+- **Authors**: Yixuan Xie, Jun Li, Robert Malaney +1
+- **PDF**: https://arxiv.org/pdf/1204.4223v2
+- **Abstract**: Quantum cryptography via key distribution mechanisms that utilize quantum entanglement between sender-receiver pairs will form the basis of future large-scale quantum networks. A key engineering challenge in such networks will be the ability to correct for decoherence effects in the distributed entanglement resources. It is widely believed that sophisticated quantum error correction codes, such as quantum low-density parity-check (LDPC) codes, will be pivotal in such a role. However, recently the importance of the channel mismatch effect in degrading the performance of deployed quantum LDPC codes has been pointed out. In this work we help remedy this situation by proposing new quantum LDPC decoding strategies that can significantly reduce performance degradation by as much as $50\%$. Our new strategies for the quantum LDPC decoder are based on previous insights from classical LDPC decoders in mismatched channels, where an asymmetry in performance is known as a function of the estimated channel noise. We show how similar asymmetries carry over to the quantum depolarizing channel, and how an estimate of the depolarization flip parameter weighted to larger values leads to significant performance improvement.
+
+## Ultra Low Complexity Soft Output Detector for Non-Binary LDPC Coded Large MIMO Systems
+
+- **Status**: ❌
+- **Reason**: Soft-output MIMO detector for non-binary LDPC coded large MIMO; non-binary LDPC excluded, detector is MIMO-specific
+- **ID**: arxiv:1204.4151v1
+- **Type**: preprint
+- **Published**: 2012-04-18
+- **Authors**: Puripong Suthisopapan, Anupap Meesomboon, Kenta Kasai +1
+- **PDF**: https://arxiv.org/pdf/1204.4151v1
+- **Abstract**: The theoretic results of MIMO capacity tell us that the higher the number of antennas are employed, the higher the transmission rate is. This makes MIMO systems with hundreds of antennas very attractive but one of the major problems that obstructs such large dimensional MIMO systems from the practical realization is a high complexity of the MIMO detector. We present in this paper the new soft output MIMO detector based on matched filtering that can be applied to the large MIMO systems which are coded by the powerful non-binary LDPC codes. The per-bit complexity of the proposed detector is just 0.28% to that of low complexity soft output MMSE detector and scales only linearly with a number of antennas. Furthermore, the coded performances with small information length 800 bits are within 4.2 dB from the associated MIMO capacity.

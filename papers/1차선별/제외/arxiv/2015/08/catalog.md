@@ -1,0 +1,13 @@
+# arXiv — 2015-08
+
+
+## Iterative detection and decoding for SCMA systems with LDPC codes
+
+- **Status**: ❌
+- **Reason**: SCMA-LDPC 결합 iterative detection/decoding — 무선 다중접속 응용 특이적, LDPC는 베이스라인이며 떼어낼 ECC 기법 없음
+- **ID**: arxiv:1508.00680v1
+- **Type**: preprint
+- **Published**: 2015-08-04
+- **Authors**: Baicen Xiao, Kexin Xiao, Shutian Zhang +3
+- **PDF**: https://arxiv.org/pdf/1508.00680v1
+- **Abstract**: Sparse code multiple access (SCMA) is a promising multiplexing approach to achieve high system capacity. In this paper, we develop a novel iterative detection and decoding scheme for SCMA systems combined with Low-density Parity-check (LDPC) decoding. In particular, we decompose the output of the message passing algorithm (MPA) based SCMA multiuser detection into intrinsic part and prior part. Then we design a joint detection and decoding scheme which iteratively exchanges the intrinsic information between the detector and the decoder, yielding a satisfied performance gain. Moreover, the proposed scheme has almost the same complexity compared to the traditional receiver for LDPC-coded SCMA systems. As numerical results demonstrate, the proposed scheme has a substantial gain over the traditional SCMA receiver on AWGN channels and Rayleigh fading channels.

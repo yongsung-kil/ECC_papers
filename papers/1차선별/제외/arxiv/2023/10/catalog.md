@@ -1,0 +1,79 @@
+# arXiv — 2023-10
+
+
+## Simple Constructions of Unique Neighbor Expanders from Error-correcting Codes
+
+- **Status**: ❌
+- **Reason**: expander 그래프로부터 unique neighbor expander 구성하는 순수 그래프 이론, 디코더/HW/실용 LDPC 코드 설계로 이어지지 않음
+- **ID**: arxiv:2310.19149v2
+- **Type**: preprint
+- **Published**: 2023-10-29
+- **Authors**: Swastik Kopparty, Noga Ron-Zewi, Shubhangi Saraf
+- **PDF**: https://arxiv.org/pdf/2310.19149v2
+- **Abstract**: In this note, we give very simple constructions of unique neighbor expander graphs starting from spectral or combinatorial expander graphs of mild expansion. These constructions and their analysis are simple variants of the constructions of LDPC error-correcting codes from expanders, given by Sipser-Spielman [SS96] (and Tanner [Tan81]), and their analysis. We also show how to obtain expanders with many unique neighbors using similar ideas.   There were many exciting results on this topic recently, starting with Asherov-Dinur [AD23] and Hsieh-McKenzie-Mohanty-Paredes [HMMP23], who gave a similar construction of unique neighbor expander graphs, but using more sophisticated ingredients (such as almost-Ramanujan graphs) and a more involved analysis. Subsequent beautiful works of Cohen-Roth-TaShma [CRT23] and Golowich [Gol23] gave even stronger objects (lossless expanders), but also using sophisticated ingredients.   The main contribution of this work is that we get much more elementary constructions of unique neighbor expanders and with a simpler analysis.
+
+## Low-Complexity and Information-Theoretic Optimal Memory AMP for Coded Generalized MIMO
+
+- **Status**: ❌
+- **Reason**: GMIMO 수신기용 MAMP — LDPC는 베이스라인일 뿐, 떼어낼 LDPC 디코더/코드 설계 기법 없음 (무선 응용 특이)
+- **ID**: arxiv:2310.17943v1
+- **Type**: preprint
+- **Published**: 2023-10-27
+- **Authors**: Yufei Chen, Lei Liu, Yuhao Chi +2
+- **PDF**: https://arxiv.org/pdf/2310.17943v1
+- **Abstract**: This paper considers a generalized multiple-input multiple-output (GMIMO) with practical assumptions, such as massive antennas, practical channel coding, arbitrary input distributions, and general right-unitarily-invariant channel matrices (covering Rayleigh fading, certain ill-conditioned and correlated channel matrices). Orthogonal/vector approximate message passing (OAMP/VAMP) has been proved to be information-theoretically optimal in GMIMO, but it is limited to high complexity. Meanwhile, low-complexity memory approximate message passing (MAMP) was shown to be Bayes optimal in GMIMO, but channel coding was ignored. Therefore, how to design a low-complexity and information-theoretic optimal receiver for GMIMO is still an open issue. In this paper, we propose an information-theoretic optimal MAMP receiver for coded GMIMO, whose achievable rate analysis and optimal coding principle are provided to demonstrate its information-theoretic optimality. Specifically, state evolution (SE) for MAMP is intricately multi-dimensional because of the nature of local memory detection. To this end, a fixed-point consistency lemma is proposed to derive the simplified variational SE (VSE) for MAMP, based on which the achievable rate of MAMP is calculated, and the optimal coding principle is derived to maximize the achievable rate. Subsequently, we prove the information-theoretic optimality of MAMP. Numerical results show that the finite-length performances of MAMP with optimized LDPC codes are about 1.0 - 2.7 dB away from the associated constrained capacities. It is worth noting that MAMP can achieve the same performance as OAMP/VAMP with 0.4% of the time consumption for large-scale systems.
+
+## Non-Clifford and parallelizable fault-tolerant logical gates on constant and almost-constant rate homological quantum LDPC codes via higher symmetries
+
+- **Status**: ❌
+- **Reason**: 3-manifold 위상학적 homological 양자 LDPC + fault-tolerant 논리 게이트 — 순수 양자, 고전 이식 불가
+- **ID**: arxiv:2310.16982v3
+- **Type**: preprint
+- **Published**: 2023-10-25
+- **Authors**: Guanyu Zhu, Shehryar Sikander, Elia Portnoy +2
+- **PDF**: https://arxiv.org/pdf/2310.16982v3
+- **Abstract**: We study parallel fault-tolerant quantum computing for families of homological quantum low-density parity-check (LDPC) codes defined on 3-manifolds with constant or almost-constant encoding rate. We derive generic formula for a transversal $T$ gate of color codes on general 3-manifolds, which acts as collective non-Clifford logical CCZ gates on any triplet of logical qubits with their logical-$X$ membranes having a $\mathbb{Z}_2$ triple intersection at a single point. The triple intersection number is a topological invariant, which also arises in the path integral of the emergent higher symmetry operator in a topological quantum field theory: the $\mathbb{Z}_2^3$ gauge theory. Moreover, the transversal $S$ gate of the color code corresponds to a higher-form symmetry supported on a codimension-1 submanifold, giving rise to exponentially many addressable and parallelizable logical CZ gates. A construction of constant-depth circuits of the above logical gates via cup product cohomology operation is also presented for three copies of identical toric codes on arbitrary 3-manifolds. We have developed a generic formalism to compute the triple intersection invariants for 3-manifolds. We further develop three types of LDPC codes supporting such logical gates: (1) A quasi-hyperbolic code from the product of 2D hyperbolic surface and a circle, with almost-constant rate $k/n=O(1/\log(n))$ and $O(\log(n))$ distance; (2) A homological fibre bundle code with $O(1/\log^{\frac{1}{2}}(n))$ rate and $O(\log^{\frac{1}{2}}(n))$ distance; (3) A specific family of 3D hyperbolic codes: the Torelli mapping torus code, constructed from mapping tori of a pseudo-Anosov element in the Torelli subgroup, which has constant rate while the distance scaling is currently unknown. We then show a generic constant-overhead scheme for applying a parallelizable universal gate set with the aid of logical-$X$ measurements.
+
+## The Physics of (good) LDPC Codes I. Gauging and dualities
+
+- **Status**: ❌
+- **Reason**: good LDPC를 게이지 이론/물성 관점으로 해석하는 물리 이론 — 디코더/HW/실용 코드 구성으로 안 이어짐
+- **ID**: arxiv:2310.16032v1
+- **Type**: preprint
+- **Published**: 2023-10-24
+- **Authors**: Tibor Rakovszky, Vedika Khemani
+- **PDF**: https://arxiv.org/pdf/2310.16032v1
+- **Abstract**: Low-depth parity check (LDPC) codes are a paradigm of error correction that allow for spatially non-local interactions between (qu)bits, while still enforcing that each (qu)bit interacts only with finitely many others. On expander graphs, they can give rise to ``good codes'' that combine a finite encoding rate with an optimal scaling of the code distance, which governs the code's robustness against noise. Such codes have garnered much recent attention due to two breakthrough developments: the construction of good quantum LDPC codes and good locally testable classical LDPC codes, using similar methods. Here we explore these developments from a physics lens, establishing connections between LDPC codes and ordered phases of matter defined for systems with non-local interactions and on non-Euclidean geometries. We generalize the physical notions of Kramers-Wannier (KW) dualities and gauge theories to this context, using the notion of chain complexes as an organizing principle. We discuss gauge theories based on generic classical LDPC codes and make a distinction between two classes, based on whether their excitations are point-like or extended. For the former, we describe KW dualities, analogous to the 1D Ising model and describe the role played by ``boundary conditions''. For the latter we generalize Wegner's duality to obtain generic quantum LDPC codes within the deconfined phase of a Z_2 gauge theory. We show that all known examples of good quantum LDPC codes are obtained by gauging locally testable classical codes. We also construct cluster Hamiltonians from arbitrary classical codes, related to the Higgs phase of the gauge theory, and formulate generalizations of the Kennedy-Tasaki duality transformation. We use the chain complex language to discuss edge modes and non-local order parameters for these models, initiating the study of SPT phases in non-Euclidean geometries.
+
+## Check-Agnosia based Post-Processor for Message-Passing Decoding of Quantum LDPC Codes
+
+- **Status**: ❌
+- **Reason**: out 정정(감사): stabilizer-inactivation 기반 후처리로 양자 전용 개념(스태빌라이저)에 의존 → 기준상 제외. (원판정 in, Phase2 검수에서 정정)
+- **ID**: arxiv:2310.15000v3
+- **Type**: preprint
+- **Published**: 2023-10-23
+- **Authors**: Julien du Crest, Francisco Garcia-Herrero, Mehdi Mhalla +2
+- **PDF**: https://arxiv.org/pdf/2310.15000v3
+- **Abstract**: The inherent degeneracy of quantum low-density parity-check codes poses a challenge to their decoding, as it significantly degrades the error-correction performance of classical message-passing decoders. To improve their performance, a post-processing algorithm is usually employed. To narrow the gap between algorithmic solutions and hardware limitations, we introduce a new post-processing algorithm with a hardware-friendly orientation, providing error correction performance competitive to the state-of-the-art techniques. The proposed post-processing, referred to as check-agnosia, is inspired by stabilizer-inactivation, while considerably reducing the required hardware resources, and providing enough flexibility to allow different message-passing schedules and hardware architectures. We carry out a detailed analysis for a set of Pareto architectures with different tradeoffs between latency and power consumption, derived from the results of implemented designs on an FPGA board. We show that latency values close to one microsecond can be obtained on the FPGA board, and provide evidence that much lower latency values can be obtained for ASIC implementations. In the process, we also demonstrate the practical implications of the recently introduced t-covering layers and random-order layered scheduling.
+
+## Viderman's algorithm for quantum LDPC codes
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC(hypergraph product) 전용 디코더(Viderman 일반화) — erasure 변환이 양자 스태빌라이저 구조에 의존, 고전 바이너리 NAND로 이식 어려움
+- **ID**: arxiv:2310.07868v1
+- **Type**: preprint
+- **Published**: 2023-10-11
+- **Authors**: Anirudh Krishna, Inbal Livni Navon, Mary Wootters
+- **PDF**: https://arxiv.org/pdf/2310.07868v1
+- **Abstract**: Quantum low-density parity-check (LDPC) codes, a class of quantum error correcting codes, are considered a blueprint for scalable quantum circuits. To use these codes, one needs efficient decoding algorithms. In the classical setting, there are multiple efficient decoding algorithms available, including Viderman's algorithm (Viderman, TOCT 2013). Viderman's algorithm for classical LDPC codes essentially reduces the error-correction problem to that of erasure-correction, by identifying a small envelope $L$ that is guaranteed to contain the error set.   Our main result is a generalization of Viderman's algorithm to quantum LDPC codes, namely hypergraph product codes (Tillich, Zémor, IEEE T-IT, 2013). This is the first erasure-conversion algorithm that can correct up to $Ω(D)$ errors for constant-rate quantum LDPC codes, where $D$ is the distance of the code. In that sense, it is also fundamentally different from existing decoding algorithms, in particular from the small-set-flip algorithm (Leverrier, Tillich, Zémor, FOCS, 2015). Moreover, in some parameter regimes, our decoding algorithm improves on the decoding radius of existing algorithms. We note that we do not yet have linear-time erasure-decoding algorithms for quantum LDPC codes, and thus the final running time of the whole decoding algorithm is not linear; however, we view our linear-time envelope-finding algorithm as an important first step.
+
+## Symmetry-enforced many-body separability transitions
+
+- **Status**: ❌
+- **Reason**: 양자 다체계 혼합상태 분리성 전이 물리 연구 — qLDPC를 NLTS 예시로만 언급, 디코더/코드설계 기여 없음
+- **ID**: arxiv:2310.07286v2
+- **Type**: preprint
+- **Published**: 2023-10-11
+- **Authors**: Yu-Hsueh Chen, Tarun Grover
+- **PDF**: https://arxiv.org/pdf/2310.07286v2
+- **Abstract**: We study quantum many-body mixed states with a symmetry from the perspective of separability, i.e., whether a mixed state can be expressed as an ensemble of short-range entangled (SRE) symmetric pure states. We provide evidence for 'symmetry-enforced separability transitions' in a variety of states, where in one regime the mixed state is expressible as a convex sum of symmetric SRE pure states, while in the other regime, such a representation is not feasible. We first discuss Gibbs state of Hamiltonians that exhibit spontaneous breaking of a discrete symmetry, and argue that the associated thermal phase transition can be thought of as a symmetry-enforced separability transition. Next, we study cluster states in various dimensions subjected to local decoherence, and identify several distinct mixed-state phases and associated separability phase transitions, which also provides an alternate perspective on recently discussed 'average SPT order'. We also study decohered p+ip superconductors, and find that if the decoherence breaks the fermion parity explicitly, then the resulting mixed state can be expressed as a convex sum of non-chiral states, while a fermion-parity preserving decoherence results in a phase transition at a non-zero threshold that corresponds to spontaneous breaking of fermion parity. Finally, we briefly discuss systems that satisfy NLTS (no low-energy trivial state) property, such as the recently discovered good LDPC codes, and argue that the Gibbs state of such systems exhibits a temperature-tuned separability transition.

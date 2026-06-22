@@ -1,0 +1,79 @@
+# arXiv — 2024-01
+
+
+## Bounded-degree Low Rank Parity Check Codes
+
+- **Status**: ❌
+- **Reason**: rank-metric LRPC(코드기반 암호용) — 비이진 GF(q^m) 랭크메트릭 코드로 바이너리 LDPC ECC 아님
+- **ID**: arxiv:2401.15195v2
+- **Type**: preprint
+- **Published**: 2024-01-26
+- **Authors**: Ermes Franch, Chunlei Li
+- **PDF**: https://arxiv.org/pdf/2401.15195v2
+- **Abstract**: Low-rank parity-check (LRPC) codes are the rank-metric analogue of low-density parity-check codes and they found important applications in code-based cryptography. In this paper we investigate a sub-family of LRPC codes, which have a parity-check matrix defined over a subspace $\calV_{α,d}=\Span{\Fq}{1,α, \ldots, α^{d-1}}\subsetneq \Fqm$, where $\Fqm$ is the finite field of $q^m$ elements and $d$ is a positive integer significantly smaller than $m $; and they are termed bounded-degree LRPC (BD-LRPC) codes. These codes are the same as the standard LRPC codes of density $2$ when the degree $d=2$, while for degree $d>2$ they constitute a proper subset of LRPC codes of density $d$. Exploiting the structure of $\calV_{α,d}$, the BD-LRPC codes of degree $d$ can uniquely correct errors of rank weight $r$ when $n-k \geq r + u$ for certain $u \geq 1$, in contrast to the condition $n-k\geq dr$ required for the standard LRPC codes. This underscores the superior decoding capability of the BD-LRPC codes. Moreover, as the code length $n\rightarrow \infty$, when $n/m\rightarrow 0$, the BD-LRPC codes with a code rate of $R=k/n$ can be uniquely decodable with radius $ρ=r/n$ approaching the Singleton bound $1-R$ by letting $ε=u/n\rightarrow 0$; and when $n/m$ is a constant, the BD-LRPC codes can have unique decoding radius $ρ= 1-R-ε$ for a small $ε$, allowing for $ρ>(1-R)/2$ with properly chosen parameters.   This superior decoding capability is theoretically proved for the case $d=2$ and confirmed by experimental results for $d>2$.
+
+## Friendly Attacks to Improve Channel Coding Reliability
+
+- **Status**: ❌
+- **Reason**: 송신측 코드워드 섭동(friendly attack)으로 신뢰성 개선 — LDPC BP는 그래디언트 계산 대상일 뿐, 디코더·코드설계 자체 새 기여 없음(송신 전처리)
+- **ID**: arxiv:2401.14184v1
+- **Type**: preprint
+- **Published**: 2024-01-25
+- **Authors**: Anastasiia Kurmukova, Deniz Gunduz
+- **PDF**: https://arxiv.org/pdf/2401.14184v1
+- **Abstract**: This paper introduces a novel approach called "friendly attack" aimed at enhancing the performance of error correction channel codes. Inspired by the concept of adversarial attacks, our method leverages the idea of introducing slight perturbations to the neural network input, resulting in a substantial impact on the network's performance. By introducing small perturbations to fixed-point modulated codewords before transmission, we effectively improve the decoder's performance without violating the input power constraint. The perturbation design is accomplished by a modified iterative fast gradient method. This study investigates various decoder architectures suitable for computing gradients to obtain the desired perturbations. Specifically, we consider belief propagation (BP) for LDPC codes; the error correcting code transformer, BP and neural BP (NBP) for polar codes, and neural BCJR for convolutional codes. We demonstrate that the proposed friendly attack method can improve the reliability across different channels, modulations, codes, and decoders. This method allows us to increase the reliability of communication with a legacy receiver by simply modifying the transmitted codeword appropriately.
+
+## Fault tolerance of stabilizer channels
+
+- **Status**: ❌
+- **Reason**: 스태빌라이저 채널 fault tolerance 형식론 — 양자 EC(surface/LDPC codes) 전용, 고전 LDPC ECC로 떼어낼 기법 없음
+- **ID**: arxiv:2401.12017v2
+- **Type**: preprint
+- **Published**: 2024-01-22
+- **Authors**: Michael E. Beverland, Shilin Huang, Vadym Kliuchnikov
+- **PDF**: https://arxiv.org/pdf/2401.12017v2
+- **Abstract**: Stabilizer channels are stabilizer circuits that implement logical operations while mapping from an input stabilizer code to an output stabilizer code. They are widely used to implement fault tolerant error correction and logical operations in stabilizer codes such as surface codes and LDPC codes, and more broadly in subsystem, Floquet and space-time codes. We introduce a rigorous and general formalism to analyze the fault tolerance properties of any stabilizer channel under a broad class of noise models. This includes rigorous but easy-to-work-with definitions and algorithms for the fault distance and hook faults for stabilizer channels. The generalized notion of hook faults which we introduce, defined with respect to an arbitrary subset of a circuit's faults rather than a fixed phenomenological noise model, can be leveraged for fault-tolerant circuit design. Additionally, we establish necessary conditions such that channel composition preserves the fault distance. We apply our framework to design and analyze fault tolerant stabilizer channels for surface codes, revealing novel aspects of fault tolerant circuits.
+
+## Codebook-enabled Generative End-to-end Semantic Communication Powered by Transformer
+
+- **Status**: ❌
+- **Reason**: Transformer 기반 생성형 시맨틱 통신 — LDPC는 JPEG+LDPC 베이스라인 비교군일 뿐, 떼어낼 ECC 기법 없음
+- **ID**: arxiv:2402.16868v2
+- **Type**: preprint
+- **Published**: 2024-01-22
+- **Authors**: Peigen Ye, Yaping Sun, Shumin Yao +3
+- **PDF**: https://arxiv.org/pdf/2402.16868v2
+- **Abstract**: Codebook-based generative semantic communication attracts increasing attention, since only indices are required to be transmitted when the codebook is shared between transmitter and receiver. However, due to the fact that the semantic relations among code vectors are not necessarily related to the distance of the corresponding code indices, the performance of the codebook-enabled semantic communication system is susceptible to the channel noise. Thus, how to improve the system robustness against the noise requires careful design. This paper proposes a robust codebook-assisted image semantic communication system, where semantic codec and codebook are first jointly constructed, and then vector-to-index transformer is designed guided by the codebook to eliminate the effects of channel noise, and achieve image generation. Thanks to the assistance of the high-quality codebook to the Transformer, the generated images at the receiver outperform those of the compared methods in terms of visual perception. In the end, numerical results and generated images demonstrate the advantages of the generative semantic communication method over JPEG+LDPC and traditional joint source channel coding (JSCC) methods.
+
+## LDPC-cat codes for low-overhead quantum computing in 2D
+
+- **Status**: ❌
+- **Reason**: 양자 컴퓨팅용 qLDPC-cat code 아키텍처; cat qubit·스태빌라이저 등 양자 전용 개념 의존, 고전 바이너리 LDPC에 이식할 디코더/구성 기여 없음
+- **ID**: arxiv:2401.09541v2
+- **Type**: preprint
+- **Published**: 2024-01-17
+- **Authors**: Diego Ruiz, Jérémie Guillaud, Anthony Leverrier +2
+- **PDF**: https://arxiv.org/pdf/2401.09541v2
+- **Abstract**: Quantum low-density parity-check (qLDPC) codes are a promising construction for drastically reducing the overhead of fault-tolerant quantum computing (FTQC) architectures. However, all of the known hardware implementations of these codes require advanced technologies, such as long-range qubit connectivity, high-weight stabilizers, or multi-layered chip layouts. An alternative approach to reduce the hardware overhead of fault-tolerance is to use bosonic cat qubits where bit-flip errors are exponentially suppressed by design. In this work, we combine both approaches and propose an architecture based on cat qubits concatenated in classical LDPC codes correcting for phase-flips. We find that employing such phase-flip LDPC codes provides two major advantages. First, the hardware implementation of the code can be realised using short-range qubit interactions in 2D and low-weight stabilizers, which makes it readily compatible with current superconducting circuit technologies. Second, we demonstrate how to implement a fault-tolerant universal set of logical gates with a second layer of cat qubits while maintaining the local connectivity. We conduct a numerical brute force optimisation of these classical codes to find the ones with the best encoding rate for algorithmically relevant code distances. We discover that some of the best codes benefit from a cellular automaton structure. This allows us to define families of codes with high encoding rates and distances. Finally, we numerically assess the performance of our codes under circuit-level noise. Assuming a physical phase-flip error probability $ε\approx 0.1\%$, our $[165+8\ell, 34+2\ell, 22]$ code family allows to encode $100$ logical qubits with a total logical error probability (including both logical phase-flip and bit-flip) per cycle and per logical qubit $ε_L \leq 10^{-8}$ on a $758$ cat qubit chip.
+
+## Small Quantum Codes from Algebraic Extensions of Generalized Bicycle Codes
+
+- **Status**: ❌
+- **Reason**: 양자 generalized bicycle code 구성; 패리티체크 행렬 대수 조작이 양자 코드·스태빌라이저에 종속, 고전 바이너리 LDPC로 이식되는 새 기법 아님
+- **ID**: arxiv:2401.07583v1
+- **Type**: preprint
+- **Published**: 2024-01-15
+- **Authors**: Nikolaos Koukoulekidis, Fedor Šimkovic, Martin Leib +1
+- **PDF**: https://arxiv.org/pdf/2401.07583v1
+- **Abstract**: Quantum error correction is rapidly seeing first experimental implementations, but there is a significant gap between asymptotically optimal error-correcting codes and codes that are experimentally feasible. Quantum LDPC codes range from the surface code, which has a vanishing encoding rate, to very promising codes with constant encoding rate and linear distance. In this work, motivated by current small-scale experimental quantum processing units, we devise small quantum codes that are inspired by a subset of quantum LDPC codes, known as generalized bicycle (GB) codes. We introduce a code construction based on algebraic manipulation of the parity-check matrix of GB codes, rather than manipulation of Tanner graphs. Our construction leads to families of quantum LDPC codes of small size, and we demonstrate numerically that their performance scales comparably to the performance of surface codes for similar sizes under a phenomenological noise model. The advantage of our code family is that they encode many logical qubits in one code, at the expense of non-local connectivity. We then explore three variants of the code construction focusing on reducing the long-range connectivity by bringing it closer to the current experimental capabilities of short-range connectivity devices.
+
+## Lift-Connected Surface Codes
+
+- **Status**: ❌
+- **Reason**: 양자 surface code(lifted product) 구성; qLDPC 전용으로 양자 개념 의존, 고전 바이너리 LDPC ECC로 떼어낼 기법 없음
+- **ID**: arxiv:2401.02911v2
+- **Type**: preprint
+- **Published**: 2024-01-05
+- **Authors**: Josias Old, Manuel Rispler, Markus Müller
+- **PDF**: https://arxiv.org/pdf/2401.02911v2
+- **Abstract**: We use the recently introduced lifted product to construct a family of Quantum Low Density Parity Check Codes (QLDPC codes). The codes we obtain can be viewed as stacks of surface codes that are interconnected, leading to the name lift-connected surface (LCS) codes. LCS codes offer a wide range of parameters - a particularly striking feature is that they show interesting properties that are favorable compared to the standard surface code. For example, already at moderate numbers of physical qubits in the order of tens, LCS codes of equal size have lower logical error rate or similarly, require fewer qubits for a fixed target logical error rate. We present and analyze the construction and provide numerical simulation results for the logical error rate under code capacity and phenomenological noise. These results show that LCS codes attain thresholds that are comparable to corresponding (non-connected) copies of surface codes, while the logical error rate can be orders of magnitude lower, even for representatives with the same parameters. This provides a code family showing the potential of modern product constructions at already small qubit numbers. Their amenability to 3D-local connectivity renders them particularly relevant for near-term implementations.

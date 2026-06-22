@@ -1,0 +1,222 @@
+# IEEE Xplore — 2026-03
+
+
+## Multiuser Ordered Symbol Switch (MOSS) GRAND Decoding With NOMA: Low-Latency Hardware Design and Implementation
+
+- **Status**: ❌
+- **Reason**: GRAND 디코더 NOMA 다중사용자용 - GRAND는 LDPC 아니고 NOMA/SIC 무선 특이, 이식 기법 없음
+- **ID**: ieee:11316213
+- **Type**: journal
+- **Published**: March 2026
+- **Authors**: Arslan Hassan, Muhammad Adeel Pasha, Momin Uppal
+- **PDF**: https://ieeexplore.ieee.org/document/11316213
+- **Abstract**: High-rate short-length error correction codes are crucial for ultralow-latency communication (ULLC) applications prevalent in next-generation communication systems. Recent promising developments in this regard include the code-agnostic family of guessing random additive noise decoding (GRAND) decoders. However, they are not directly applicable to multiuser communication scenarios (e.g., in 5G and 6G) characterized by nonorthogonal multiple access (NOMA). To address this gap, we propose a novel multiuser ordered symbol switch (MOSS)-GRAND decoder operating on symbols (instead of bits) to jointly decode the information of a pair of users accessing the channel using NOMA. We also propose a NOMA-successive interference cancellation (SIC) decoder as a conventional straightforward adaptation of GRAND-based decoders to the NOMA setup. Comparing MOSS-GRAND with NOMA-SIC, we show that the former is amenable to higher throughput due to parallelization and is therefore preferred over the latter for the target ULLC applications. The algorithm is translated into a low-latency hardware architecture, where the distance between the received message and all candidate codewords is calculated in parallel to optimize performance. The experimental results demonstrate that the MOSS-GRAND decoder provides improvements between  $5.70\times $  and  $117.51\times $  in throughput, with area reductions between  $1.88\times $  and  $789.79\times $  compared to traditional GRAND-based decoders adapted for NOMA. This makes MOSS-GRAND an ideal candidate for ULLC applications on resource-constrained platforms, such as the Internet of Things (IoT) nodes.
+
+## A Low-Complexity Serial List Viterbi Decoder of CRC-Aided TBCC for Broadcasting Services in 6G
+
+- **Status**: ❌
+- **Reason**: CRC-TBCC용 직렬 리스트 비터비 디코더 - LDPC 아니고 트렐리스 기반, NAND LDPC ECC로 이식할 기법 없음
+- **ID**: ieee:11195178
+- **Type**: journal
+- **Published**: March 2026
+- **Authors**: Dongming Pi, Shancheng Zhao
+- **PDF**: https://ieeexplore.ieee.org/document/11195178
+- **Abstract**: In 6G broadcasting, there is an urgent need of a high-performance short-length channel code for hyper-reliable and low-latency communications (HRLLC). Among the available options, cyclic redundancy check-aided tail-biting convolutional code (CRC-TBCC) is recognized as a competitive candidate. To further enhance the competitiveness of CRC-TBCCs, this paper aims to design low-complexity serial list Viterbi decoders (SLVDs) for them. In the proposed decoder, we first apply regular sectionalization on the original trellis to obtain the sectionalized trellis (ST) and then remove all edges whose log-likelihood ratios (LLRs) are below a given threshold to obtain the edge-reduced ST (E-ST). The resulting decoder is termed E-ST-SLVD. We show that there exists an efficient method to determine the desired threshold for ST. We then analyze the decoding complexity the proposed decoder and the interrelationships among key parameters influencing decoding complexity. We finally present extensive numerical results to show that, with appropriate sectionalization length and threshold, the E-ST-SLVD admits a lower complexity than the original SLVD. Meanwhile, we have compared the decoding complexities of several competitive short-length codes for broadcasting to show the advantage of the proposed decoder. These result makes CRC-TBCC an attractive candidate for integrated broadcasting and mobile services in 6G.
+
+## Electro-Optical Reed–Muller Code Decoders Based on Integrated Optics
+
+- **Status**: ❌
+- **Reason**: 광집적회로 기반 Reed-Muller 디코더 - LDPC 아니고 전기광학 HW 특이, NAND로 이식 불가
+- **ID**: ieee:11214382
+- **Type**: journal
+- **Published**: March 2026
+- **Authors**: Zhenye Zhao, Fuhao Yu, Wei Jiang +1
+- **PDF**: https://ieeexplore.ieee.org/document/11214382
+- **Abstract**: Forward error correction (FEC) techniques are widely used in various communication systems, including 4G/5G wireless communication, Internet, optical communication, etc. FEC en/decoders are normally implemented with silicon-based circuits and their power consumption and throughput are usually the crucial concerns. Photonic approaches have demonstrated extraordinary potential for some computation-hungry applications like neural networks. In this work, an on-chip electro-optical circuit is proposed to perform FEC decoding tasks with high integration potential and low power consumption characteristics. Leveraging optical computing-friendly algorithmic transformations and a meticulously crafted optical path design, an electro-optical decoder for Reed-Muller (RM) codes is presented. We show by simulation that our proposed decoders achieve a significant computational benefit in energy consumption compared to the standard Dumer’s recursive decoder without an appreciable performance penalty. This on-chip FEC decoder provides a potential solution for improving future FEC hardware with enhanced performance. It may be suitable for optical communication systems to lower the bit error rate at the front end.
+
+## Improving Wi-Fi Cooperative Broadcast With Fine-Grained Channel Estimation
+
+- **Status**: ❌
+- **Reason**: Wi-Fi 협력 브로드캐스트 채널추정(CFO/채널탭) - LDPC 무관, NAND ECC와 무관한 무선 특이 기법
+- **ID**: ieee:11202445
+- **Type**: journal
+- **Published**: March 2026
+- **Authors**: Lizhao You, Yizhe Wang, Shuoling Liu +3
+- **PDF**: https://ieeexplore.ieee.org/document/11202445
+- **Abstract**: Cooperative broadcast is an efficient approach to improve Wi-Fi broadcast performance in crowded scenarios with densely deployed access points (APs). However, existing concurrent transmission MAC protocols cannot perfectly synchronize APs for the receiving user, and the superimposed channels at users vary over time due to multi-path effects with different carrier frequency offsets (CFOs) from the APs. Traditional channel estimation methods, which treat the superimposed channels as a whole and use a portion of the superimposed channels to derive the rest, are unsuitable. To solve the problem, we propose a fine-grained channel estimation approach that first estimates channel taps and CFOs of each AP, and then reconstructs the superimposed channels. We first study a benchmark channel estimation algorithm that utilizes a widely adopted compressed sensing (CS) technique. However, through analysis and simulations, we show that the CS-based algorithm suffers from high correlation problems in the constructed sensing matrix and the non-sparse channel problem in practice, leading to an estimation error floor at high SNRs. To solve these problems, we present a two-stage channel estimation algorithm. It first estimates the CFOs by identifying the most likely CFO combination matching the received signals, and then estimates the time-domain channel taps. Simulation and experimental results show that the two-stage channel estimation algorithm achieves much lower bit error rate (BER) and packet error rate (PER) than the traditional IEEE 802.11 approach, and the two-stage algorithm outperforms the CS-based algorithm, especially at high SNRs. The network-layer simulation results further demonstrate that, empowered by the proposed two-stage channel estimation algorithm, the cooperative broadcast scheme improves throughput by at least 1.4× (up to 46.8×) compared with the unicast-based broadcast schemes, and by approximately 0.6× to 0.8× compared with the simple uncooperative broadcast scheme.
+
+## Design and Performance Analysis of a Highly Reliable Satellite Channel Communication System
+
+- **Status**: ❌
+- **Reason**: 위성 QPSK 시스템에 기성 LDPC 부수 사용, 떼어낼 디코더/HW/코드설계 기법 없음
+- **ID**: ieee:11485464
+- **Type**: conference
+- **Published**: 6-8 March 
+- **Authors**: Shaokang Duan, Keyu Liu, Dingwen Kang +3
+- **PDF**: https://ieeexplore.ieee.org/document/11485464
+- **Abstract**: To address the challenges posed by complex channel environments to signal transmission reliability in satellite communications, this paper designs and implements a highly reliable quadrature phase shift keying (QPSK) communication system. The system integrates a low-density parity-check (LDPC) code as the channel coding scheme, employs Root Raised Cosine to optimize spectral efficiency, and incorporates an adaptive equalization mechanism to suppress multipath effects. Using the MATLAB simulation platform, a system framework encompassing the complete transmitter, channel model, and receiver was constructed. Performance evaluation was conducted under conditions of additive Gaussian white noise combined with frequency-selective fading. Simulation results demonstrate that the proposed coded modulation system achieves a coding gain of 2-3 dB compared to an uncoded system at a performance threshold of 10-3 bit error rate (BER). In multipath interference environments, adaptive equalization effectively restores signal integrity, transforming constellation diagrams from severely scattered states to clearly distinguishable patterns. While maintaining a spectral efficiency of 2 bits/s/Hz, the system significantly enhances satellite link transmission reliability, demonstrating strong engineering applicability.
+
+## Both Sides Shifted Fountain Code
+
+- **Status**: ❌
+- **Reason**: Fountain/ZDF 소거채널 코드, 떼어낼 LDPC 디코더/HW/코드설계 기법 없음 (정정 ECC가 아닌 분수 코드)
+- **ID**: ieee:11518658
+- **Type**: conference
+- **Published**: 28-30 Marc
+- **Authors**: Yoshihiro Murayama, Takayuki Nozaki
+- **PDF**: https://ieeexplore.ieee.org/document/11518658
+- **Abstract**: This paper proposes a fountain coding system by improving the zigzag decodable fountain (ZDF) codes. The main idea of the proposed fountain code is applying shift operation to precoding. Simulation results show that the proposed fountain coding system reduces the decoding erasure rates in both the waterfall region and the error floor region, at only a slight cost in decoding time, compared to ZDF codes.
+
+## Design of Linear APSK Constellation Shaping for LDPC Coded Physical-Layer Network Coding
+
+- **Status**: ❌
+- **Reason**: APSK 컨스텔레이션 셰이핑+물리계층 네트워크코딩 무선 응용 특이적, LDPC가 부수적이고 이식 기법 없음
+- **ID**: ieee:11504542
+- **Type**: conference
+- **Published**: 27-29 Marc
+- **Authors**: Xiang Zou, Fengmao Lin, Changwei Shi +3
+- **PDF**: https://ieeexplore.ieee.org/document/11504542
+- **Abstract**: In this paper, we propose a physical-layer shaped network coding (PLSNC) scheme that integrates physical-layer network coding (PLNC) with constellation shaping for amplitude phase-shift keying (APSK) systems. Two source nodes employ low-density parity-check (LDPC) and linear shaping codes to prevent ambiguous detection. By biasing a subset of the LDPC output toward zeros, lower-energy symbols are transmitted more frequently. This characteristic enables the relay to directly recover the shaped network codeword without decoding individual nodes' shaping bits. Furthermore, we investigate the design criteria for linear shaping codes and introduce an iterative decoding architecture comprising the APSK demodulator, shaping decoder, and LDPC decoder. Simulation results demonstrate that the proposed scheme significantly improves both error performance and shaping gain compared to conventional unshaped systems.
+
+## Project-Based Flipped Classroom Reform with Interactive and Collaborative Approaches
+
+- **Status**: ❌
+- **Reason**: 공학교육 플립러닝 교수법 논문으로 ECC와 무관
+- **ID**: ieee:11521105
+- **Type**: conference
+- **Published**: 27-29 Marc
+- **Authors**: Ning Ye, Xiaoshi Song, Rong Geng +1
+- **PDF**: https://ieeexplore.ieee.org/document/11521105
+- **Abstract**: This paper presents a novel project-based flipped classroom model that synthesizes two core innovations: Guided Learning-Mutual Growth and Symbiotic Co-Creation. The three-stage, four-dimensional teaching architecture integrates teacher demonstration, collaborative research, and student-led practice with competency development in critical thinking, engineering implementation, innovation breakthroughs, and collaborative leadership. By embedding authentic industrial case studies and implementing AI-assisted scaffolding, the framework enables dynamic optimization of instruction and competency cultivation. The model demonstrates significant empirical outcomes: students achieve an autonomous task completion rate of 85% or higher, which notably exceeds the 51% observed in traditional classrooms. Furthermore, team innovation proposal acceptance shows a 60% increase from a baseline of 34%, while enterprise evaluation of job-role alignment improves by 40% from a baseline of 27%. These results validate the effectiveness of applying the gradual release of responsibility teaching theory to engineering education.
+
+## Efficient Error Control Coding using A Novel SPDEC Scheme with Soft-Decision Decoding
+
+- **Status**: ❌
+- **Reason**: SPDEC/BCH 단·이중오류정정 코드와 LFSR HW, LDPC 디코더/HW로 이식할 기법 없는 BCH 특이 설계
+- **ID**: ieee:11537695
+- **Type**: conference
+- **Published**: 26-28 Marc
+- **Authors**: M M Raghavendra, Suman Turpati, T.Syed Akheel +3
+- **PDF**: https://ieeexplore.ieee.org/document/11537695
+- **Abstract**: Reliable communication in modern digital systems demands effective error detection and correction mechanisms to counteract channel noise and interference; therefore, Error Correcting Codes (ECCs) are essential for preserving data integrity. This research presents a new Single and Partial Double Error Correcting (SPDEC) code, to modify all the errors of single-bit and selectively address double-bit, thereby achieving an efficient balance between redundancy and error-correcting capabilities.The PDEC component of the SPDEC framework is realized through parity-check matrices (H-matrices) for both 4-bit and 8-bit word lengths, enabling an examination of complexity-performance trade-offs. Furthermore, Soft Decision Decoding (SDD) is utilized to improve reliability by leveraging probabilistic information derived from the received signal. To support the practical hardware implementation of multi-level error protection, the system uses a BCH(15,7) encoder-memory-decoder design, which complements the advanced coding method. The BCH encoder employs polynomial division via an LFSR-based structure to expand 7-bit data into a 15-bit codeword, thereby ensuring single-error correction and multi-error detection. After the codeword is created, it's stored and then retrieved using a synchronous memory module. This method mimics how communication and data storage work in the real world. Following this, the BCH decoder calculates syndromes to identify potential error patterns, which then guides the correction process. Therefore, the SPDEC framework, when combined with BCH hardware, offers a strong, scalable, and efficient solution for digital communication systems that require high reliability. This results in better coding gains, fewer error floors, and the ability to be used in both wired and wireless systems.
+
+## Diffusion-Guided Feature Selection via Nishimori Temperature: Noise-Based Spectral Embedding
+
+- **Status**: ❌
+- **Reason**: Bethe-Hessian/Nishimori 기반 특징선택(차원축소)일 뿐 LDPC ECC와 무관, 떼어낼 디코더/HW/코드설계 기법 없음
+- **ID**: ieee:11476758
+- **Type**: conference
+- **Published**: 25-27 Marc
+- **Authors**: Vasiliy S. Usatyuk, Denis A. Sapozhnikov, Sergey I. Egorov
+- **PDF**: https://ieeexplore.ieee.org/document/11476758
+- **Abstract**: We introduce Noise-Based Spectral Embedding (NBSE), a diffusion-based framework for selecting informative features from high-dimensional data. NBSE first builds a sparse similarity graph on the objects, then determines the Nishimori temperature-the critical point at which the Bethe-Hessian matrix becomes singular-and extracts its smallest eigenvector. This eigenvector corresponds to the slowest mode of a heat diffusion process whose time scale is set automatically by statistical physics. Repeating the procedure for every original feature yields an $L$-dimensional embedding that quantifies how each feature participates in the diffusion on the graph. By transposing the data matrix and applying NBSE to the features themselves we obtain a low-dimensional representation of the feature space, revealing natural groups of redundant or semantically related dimensions. Selecting one representative per group provides a principled, non-greedy dimensionality reduction that preserves classification performance while discarding up to 70% of the original features. Experiments on deep-network embeddings (MobileNetV2 and EfficientNet-B4) demonstrate that NBSE consistently outperforms classical ANOVA $F$-test selection and random sampling. Specifically, on MobileNetV2, spectral selection exhibits high stability with accuracy fluctuations no greater than 5% under feature reduction, whereas original data methods lose up to $\mathbf{2 5 {\%}}$. On EfficientNet-B4, the proposed synergy of Nishimori temperature spectral embedding and specialized selection limits accuracy loss to less than 1% even at 70% feature reduction (30% retention), outperforming baseline methods by up to 6.8%.
+
+## Efficient Implementation of Non-Binary LDPC Codes for on-Chip Systems
+
+- **Status**: ❌
+- **Reason**: [기준개정:비이진제외] 비이진 LDPC 코드 온칩 HW 구현 — Trellis 구조 활용 FPGA 합성, 이식 가능한 비이진 LDPC HW 아키텍처(D/E)
+- **ID**: ieee:11502739
+- **Type**: conference
+- **Published**: 16-18 Marc
+- **Authors**: Y. Sugandhi Naidu, P. Vijaya Lakshmi
+- **PDF**: https://ieeexplore.ieee.org/document/11502739
+- **Abstract**: On Chip memories in semiconductor dies become increasingly vulnerable to errors. These errors can be triggered during communication by various environment factors. Multiple Error Correction techniques are there for error detection and correction which can identify and fix corrupted data via a communication channel. The primary objective is to enhance the hardware performance in order to achieve high error correcting rate, efficiency, and low area. The study investigates the operational efficiency of these error-correcting codes across diverse communication situations. Various Low Density Parity Check code methods exists for error detection and correction. By using smart design structures like Trellis, our study seeks to improve the dependability and efficiency of communication systems. The proposed methodology is simulated and synthesized using Xilinx Vivado and was executed through Verilog Hardware Description Language (HDL).
+
+## Sparsely repeated 21.7 Tb/s Net-Rate Transoceanic Transmission with 266 km Ultra-Long Spans Enabled by Low IMI and Low loss Hollow Core Fiber
+
+- **Status**: ❌
+- **Reason**: HCF 기반 트랜스오션 WDM 전송 논문, ECC/LDPC 기법 없음
+- **ID**: ieee:11525062
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: Rajiv Boddeda, Carina Castineiras Carrero, Haïk Mardoyan +6
+- **PDF**: https://ieeexplore.ieee.org/document/11525062
+- **Abstract**: We demonstrate 21.7-Tb/s net-rate transmission across 6660-km with 266-km ultra-long spans of HCF. By exploiting a newly designed GTA-ST-HCF, high-power booster, and adaptive channel rates, we realize WDM transoceanic transmission with fewer than 30 repeaters.
+
+## Technologies for Very High Speed PON
+
+- **Status**: ❌
+- **Reason**: 50Gb/s 이상 PON 기술 개요 논문으로 ECC/LDPC 관련 내용 없음
+- **ID**: ieee:11524648
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: Doutje van Veen, Vincent Houtsma
+- **PDF**: https://ieeexplore.ieee.org/document/11524648
+- **Abstract**: Overview and analysis of possible technologies and architectures for Very High Speed PON which will feature line rates above 50 Gb/s per wavelength. We specifically focus on cost-effective schemes and co-existence with previous PON generations.
+
+## Coherent Free-Space Optical Communications with Concurrent Turbulence Characterization in a Terrestrial Urban Link
+
+- **Status**: ❌
+- **Reason**: 도심 FSO 링크 대기 난류 측정 실증 논문, ECC/LDPC 기법 없음
+- **ID**: ieee:11524762
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: Vincent Van Vliet, Menno Van Den Hout, Kadir Gümüş +2
+- **PDF**: https://ieeexplore.ieee.org/document/11524762
+- **Abstract**: We present a 19-day joint measurement of optical turbulence and coherent data communications over a 4.6 km urban FSO link, providing empirical insights into turbulence effects on the performance of fiber-coupled coherent communication systems.
+
+## LightGBM-Assisted Rapid QBER Prediction and Adaptive Joint Multi-Parameter Optimisation for QKD-Classical Coexistence Transmission
+
+- **Status**: ❌
+- **Reason**: QKD 비밀키율 개선 및 QBER 예측 논문으로 보안/양자 통신 특이적, 이식 가능한 LDPC 디코더·코드설계 기법 없음
+- **ID**: ieee:11524318
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: Xun Zhu, Qianhui Guo, Zhuoming Yang +10
+- **PDF**: https://ieeexplore.ieee.org/document/11524318
+- **Abstract**: We propose a rapid QBER prediction and a joint optimisation scheme for QKD-classical coexistence, experimentally achieving accurate QBER estimation of 5.85e-5 mean-squared-error and 23.8% secret-key rate improvement under large QBER fluctuations from 2.6% to 13.9%.
+
+## 153.8 Tb/s O-Band Coherent Transmission over SMF with Low-Complexity DSP
+
+- **Status**: ❌
+- **Reason**: O-Band WDM 전송 DSP 논문, ECC/LDPC 기법 없음
+- **ID**: ieee:11525352
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: Romulo Aparecido, Jiaqian Yang, Zelin Gan +11
+- **PDF**: https://ieeexplore.ieee.org/document/11525352
+- **Abstract**: We demonstrate record 153.8 Tb/s (50.3 km) and 141.1 Tb/s (75.5 km) O-band (16.5 THz) WDM transmission with simplified DSP using geometrically-shaped 256QAM without chromatic dispersion compensation and a short 7-tap adaptive equaliser.
+
+## DAS over a 585-km EDFA-repeatered Link with Co-propagating 15.8-Tb/s Transmission
+
+- **Status**: ❌
+- **Reason**: DAS+WDM 광전송 실증 논문, ECC/LDPC 기법 없음
+- **ID**: ieee:11525138
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: R. A. Colares, D. Orsuti, R. S. Luís +13
+- **PDF**: https://ieeexplore.ieee.org/document/11525138
+- **Abstract**: We demonstrate joint 15.8-Tb/s transmission and distributed acoustic sensing over 585 km with 20 m spatial resolution using bidirectional repeater units, achieving a strain noise $ < 0.4{\text{ n}}\varepsilon /\sqrt {{\text{Hz}}} $. The link includes 90 km of field-deployed fiber.
+
+## Virtualisation in Optical Access Networks: Challenges and PHY Softwarization
+
+- **Status**: ❌
+- **Reason**: 광 접속망 PHY 가상화·소프트웨어화 리뷰 논문, LDPC 관련 없음
+- **ID**: ieee:11525056
+- **Type**: conference
+- **Published**: 15-19 Marc
+- **Authors**: Takahiro Suzuki, Jun-ichi Kani, Tatsuya Shimada
+- **PDF**: https://ieeexplore.ieee.org/document/11525056
+- **Abstract**: The virtualisation of optical access networks is being studied, including not only control functions but also PHY functions, to realize flexibility and high efficiency. We review challenges and recent progress in virtualisation and PHY softwarization.
+
+## Performance Evaluation of BCH, LDPC, and Turbo Codes in LTE-Based MIMO-OFDM Systems Using 64-QAM
+
+- **Status**: ❌
+- **Reason**: LTE MIMO-OFDM에서 BCH/LDPC/Turbo 코드 BER 비교 시뮬레이션으로, 표준 LDPC를 베이스라인으로만 사용하며 새로운 디코더·HW·코드설계 기법이 없음.
+- **ID**: ieee:11508460
+- **Type**: conference
+- **Published**: 14-15 Marc
+- **Authors**: Hasan M. Redha, Samir Jasim Mohammed
+- **PDF**: https://ieeexplore.ieee.org/document/11508460
+- **Abstract**: This paper evaluates the BER performance of an LTE-based MIMO-OFDM system using QAM modulation under different channel coding and antenna configurations. The performance of BCH, LDPC, and Turbo coding schemes was investigated in comparison with an uncoded baseline. The influence of spatial diversity on the reliability of the system is evaluated with two MIMO configurations, $2 \times 2$ and $4 \times 4$. The system is developed using MATLAB/Simulink and orthogonal space-time block coding (OSTBC) for spatial processing. For the $2 \times 2$ configuration, the Alamouti scheme is applied, and for the $4 \times 4$ configuration, the rate 1/2 OSTBC is used. Simulations are performed in a Rayleigh fading channel with additive white Gaussian noise for different SNR values. The results from the simulations show that the addition of channel coding improves the performance of the system with respect to the bit error rate (BER) and is better than the system in the uncoded state. Utilization of Turbo coding achieved the best results among the different channel codes analyzed, and LDPC and BCH coding methods followed. Furthermore, the configuration of $4 \times 4$ MIMO in the spatial diversity is better than the $2 \times 2$ configuration. Combining MIMO-OSTBC with channel coding improves the reliability of wireless communication systems based on LTE technology, confirming the results from the simulations.
+
+## Analysis of Channel Encoders and Energy Characteristics Performance of Lora in IoT Applications
+
+- **Status**: ❌
+- **Reason**: LoRa IoT 채널 코딩 비교(LDPC·Polar·터보); LDPC는 비교 대상 중 하나일 뿐 이식 가능한 기법 없음
+- **ID**: ieee:11461043
+- **Type**: conference
+- **Published**: 10-12 Marc
+- **Authors**: Konstantin Yu. Ryumshin, Angela I. Sattarova
+- **PDF**: https://ieeexplore.ieee.org/document/11461043
+- **Abstract**: This article presents a comparative analysis of the performance of various channel coding methods in LoRa communication systems for the Internet of Things applications. The research was performed in channels with additive white Gaussian noise and wireless underwater communication channels. A comprehensive analysis of low-density parity check, polar and turbo codes has been carried out, identified optimal ranges of applications: turbo codes were optimal at low signal-to noise ratios $(-5 \mathrm{~dB})$, polar codes were optimal at average SNR values ($-3--1$ dB), and LDPC were optimal if SNRs was higher (more than 3 dB). Research of the power performance of LoRa compared to traditional discrete phase modulation has shown an advantage of LoRa by $0.5-1.5 \mathrm{~dB}$. An estimation of the energy of subscriber radio links of satellite IoT systems was performed, which determined the minimum protection against interference on the Earth-Satellite line at least $\mathbf{6 - 8 ~ d B}$. The results of the research are kept practical importance in context of design of LoRa/LoRaWAN communication systems for surface IoT networks, underwater monitoring systems and satellite Internet of Things systems.

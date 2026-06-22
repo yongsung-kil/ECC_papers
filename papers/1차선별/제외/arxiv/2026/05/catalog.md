@@ -1,0 +1,156 @@
+# arXiv — 2026-05
+
+
+## SAT, MaxSAT, and SMT for QLDPC Distance Computation: A Large-Scale Empirical Study
+
+- **Status**: ❌
+- **Reason**: QLDPC distance 계산(SAT/MaxSAT); 양자 코드 검증 도구라 제외
+- **ID**: arxiv:2606.12445v1
+- **Type**: preprint
+- **Published**: 2026-05-29
+- **Authors**: Yu-Fang Chen, Seyed Mohammad Reza Jafari, Ching-Yi Lai
+- **PDF**: https://arxiv.org/pdf/2606.12445v1
+- **Abstract**: Exact distance computation for quantum LDPC (QLDPC) codes plays a central role in validating candidate fault-tolerant quantum-code constructions, yet the computational structure of this problem remains poorly understood. Despite substantial recent progress in QLDPC design, it remains unclear which algorithmic principles govern the practical scalability of exact distance computation and which classes of exact solvers are best suited to this task. To address these questions, we conduct a systematic study of SAT- and MaxSAT-based formulations for exact QLDPC distance computation across representative codes. We further compare these formulations against several established exact-distance approaches in order to better understand the algorithmic landscape of exact QLDPC distance computation. Our study challenges and refines several prevailing intuitions about exact QLDPC distance computation. First, despite the XOR-rich structure of QLDPC parity checks, practical scalability appears to be governed more by the handling of cardinality constraints and optimization bounds than by parity reasoning alone. Accordingly, XOR-aware reasoning does not provide a systematic advantage across our benchmark suite. Second, Brouwer-Zimmermann-style search, long regarded as the benchmark paradigm for exact distance computation in sparse classical codes, no longer maintains its traditional scalability advantage in the QLDPC setting. This finding challenges the expectation that techniques successful for sparse classical codes remain dominant for QLDPC codes. Third, substantial qualitative differences arise even among MaxSAT solvers themselves. Branch-and-bound MaxSAT significantly outperforms unsat-core-based MaxSAT on challenging benchmarks, demonstrating that solver architecture and optimization strategy play a decisive role in practical scalability.
+
+## OTA Characterization of Dual-User IEEE 802.11be EHT-MU Under Transmit-Chain Imbalance
+
+- **Status**: ❌
+- **Reason**: IEEE 802.11be 무선 OTA 측정; LDPC vs BCC 부수 언급, 떼어낼 기법 없음
+- **ID**: arxiv:2605.26995v1
+- **Type**: preprint
+- **Published**: 2026-05-26
+- **Authors**: Mir Lodro, Francesco Raimondo, Geoffrey S. Hilton +2
+- **PDF**: https://arxiv.org/pdf/2605.26995v1
+- **Abstract**: This paper presents a controlled over-the-air (OTA) characterization of dual-user IEEE 802.11be Extremely High Throughput Multi-User (EHT-MU) transmission under transmit-chain imbalance. The objective is to determine whether attenuation applied to one access-point transmit chain produces packet-global degradation or appears primarily as stream-dependent payload degradation after receiver processing. Measurements are performed in a shielded RF enclosure using two NI USRP-2953R and NI USRP-2942R software-defined radios, with one USRP generating a dual-user non-OFDMA EHT-MU waveform and the other implementing synchronized dual-branch packet recovery. A calibrated attenuation sweep is applied to the second AP transmit chain (TX2), and performance is evaluated using bit error rate (BER), EHT-Data error vector magnitude (EVM), control-field success probability, payload-success probability, and subcarrier-level EVM distributions. The results show that the stream decoded as User~1 remains at the BER floor over the tested range, while the stream decoded as User~2 exhibits progressive EVM degradation followed by threshold-like BER and payload-success collapse. Common signaling fields remain recoverable, indicating that the dominant observed failure mode is stream-local at the receiver output than the packet-global. Replacing User~2 binary convolutional coding (BCC) with low density parity check (LDPC) coding delays the BER and payload-success collapse by approximately \(5\)~dB of TX2 attenuation, demonstrating a measurable coding-dependent robustness margin for the more sensitive stream.
+
+## Quantum non-demolition measurements as a practical primitive for fault-tolerant computation against biased noise
+
+- **Status**: ❌
+- **Reason**: 바이어스 노이즈 양자 fault-tolerant용 QND Z측정 프리미티브 — 양자EC, NAND LDPC로 이식할 기법 없음
+- **ID**: arxiv:2605.24262v1
+- **Type**: preprint
+- **Published**: 2026-05-22
+- **Authors**: Christophe Vuillot, Diego Ruiz, Jérémie Guillaud +1
+- **PDF**: https://arxiv.org/pdf/2605.24262v1
+- **Abstract**: Leveraging noise bias, where phase-flip errors dominate over bit-flips, can drastically reduce the hardware overhead of fault-tolerant quantum computation, but existing approaches require bias-preserving CNOT gates whose implementation remains experimentally challenging and is provably impossible for strictly two-dimensional systems. We show that high-fidelity quantum non-demolition (QND) multi-qubit Pauli $Z$ measurements provide an equally powerful yet more accessible primitive. We demonstrate that such measurements can fully replace bias-preserving CNOT gates for compiling all operations required by bias-tailored error correction, including stabilizer measurements for repetition codes, XZZX surface codes, and LDPC codes. We propose concrete physical implementations of this primitive for two platforms: solid-state nuclear spins coupled to electron spin ancillas, and dissipatively stabilized superconducting cat qubits. Through circuit-level numerical simulations, we show that an asymmetric XZZX surface code implemented with weight-four QND $Z$ measurements achieves a phase-flip threshold of $\sim\!1.25\%$ and provides a qubit overhead reduction of up to $6\times$ compared to a bias-unaware surface code at noise bias $η= 10^4$. In the regime of very large bias, a repetition code with QND $Z$ measurements attains a threshold of $\sim\!2.3\%$ and achieves overhead comparable to that of a bias-preserving CNOT scheme, without requiring such a gate. Our results establish QND multi-$Z$ measurements as a practical and hardware-efficient route to fault-tolerant quantum computation for a broad class of biased-noise platforms.
+
+## Concatenating Algebraic Codes over High-Rate Quantum LDPC Codes
+
+- **Status**: ❌
+- **Reason**: 양자 EC 부호 연접·qudit 리스트 디코딩 — NAND로 이식할 고전 디코더/HW 없음
+- **ID**: arxiv:2605.21898v1
+- **Type**: preprint
+- **Published**: 2026-05-21
+- **Authors**: Adam Wills, Michael E. Beverland, Lev S. Bishop +4
+- **PDF**: https://arxiv.org/pdf/2605.21898v1
+- **Abstract**: Different quantum error correction schemes trade off overhead, error suppression, and hardware connectivity. Code concatenation can relax these tradeoffs by using an outer code whose non-local connectivity is supplied by logical operations of an inner code rather than directly by hardware. Prior works showed that this can reduce memory overhead for local low-rate inner codes such as the surface code. Here, we study concatenation over non-local, high-rate inner codes. Such inner codes experience correlated errors among the many logical qubits in a single codeblock. We handle this by treating each block as a single logical Galois qudit, enabling concatenation with algebraic outer codes with excellent parameters and, crucially, list decoders. In particular, we consider a memory system formed by concatenating quantum Reed-Solomon outer codes over the gross code. For fault-tolerant syndrome extraction, we develop a Galois qudit Shor scheme using "time-like" Reed-Solomon protection against measurement errors. Interestingly, a lightweight fault tolerance scheme, that would fail for qubits, works well for large-alphabet qudits, suggesting a very different theory of fault tolerance for such qudits. The whole protocol is optimised via improved bicycle instruction logical error rates, novel compilation strategies, and recent decoder post-selection rules.   At uniform $10^{-3}$ physical noise, the concatenated gross code reaches the teraquop regime, which it previously could not access, with a lower space overhead than the $288$-qubit two-gross code, while offering several advantages from the engineering standpoint. Beyond our main case study, we believe the core ideas of Galois qudits, quantum Reed-Solomon outer codes, and list decoding, will prove generically powerful and highly transferable ideas across high-rate quantum architectures.
+
+## Forced Gap Post-Selection for Quantum LDPC Codes and their Operations
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 후처리 post-selection 전략 — 양자 EC 전용, 이식 기법 없음
+- **ID**: arxiv:2605.20346v1
+- **Type**: preprint
+- **Published**: 2026-05-19
+- **Authors**: Adam Wills, Theodore J. Yoder, Isaac Chuang
+- **PDF**: https://arxiv.org/pdf/2605.20346v1
+- **Abstract**: We develop a simple and general post-selection strategy for high-rate quantum codes that is transferrable across decoders. After an initial baseline run, the decoder is re-run once per logical observable, and forced in these latter runs to provide a solution where the given observable has the complementary outcome. Shots are rejected that find logically complementary solutions with similar likelihoods compared to the baseline. Using the Relay-BP decoder, we benchmark the strategy on the $72$-qubit and $144$-qubit bivariate bicycle codes, as well as surgery gadgets for the latter. In comparison to previous post-selection strategies, our results offer an improved logical error rate by over a factor of $4$ on the same circuit and physical error rate, and at the same rate of post-selection. Our strategies are also lightweight, relying only on FPGA-friendly belief propagation, whereas the previous best used repeated rounds of a high-latency BP-OSD decoder.
+
+## Perception-Aware Video Semantic Communication
+
+- **Status**: ❌
+- **Reason**: 비디오 시맨틱 통신(소스코딩/코덱), LDPC는 베이스라인 언급뿐
+- **ID**: arxiv:2605.19397v1
+- **Type**: preprint
+- **Published**: 2026-05-19
+- **Authors**: Yinhuan Huang, Zhijin Qin
+- **PDF**: https://arxiv.org/pdf/2605.19397v1
+- **Abstract**: Ultra-high-resolution streaming and emerging immersive services are driving rapidly increasing wireless video traffic. However, perceptually pleasing video transmission over bandwidth-limited and latency-constrained wireless links remains challenging for conventional separated source-channel systems, which primarily target bit-level reliability and often suffer performance degradation under short-blocklength transmission. In addition, pixel-level distortion optimization does not necessarily align with human perception, while existing learned video codecs may incur high complexity and raise deployment issues. This paper proposes PVSC, a perception-aware video semantic communication framework for real-time wireless video transmission. PVSC eliminates explicit motion-vector transmission and exploits spatio-temporal feature coding to generate compact and channel-robust symbol streams. It also specifies side-information formatting, reference-buffer management, and lightweight rate control, enabling stable receiver-side reconstruction and bandwidth-adaptive inference with a single model. Extensive experiments demonstrate that PVSC achieves superior performance across diverse datasets, resolutions, GOP configurations, and channel conditions. Compared with the engineered ``VTM + 5G LDPC'' baseline, PVSC saves up to about 75% and 87% bandwidth at comparable LPIPS and DISTS, respectively, while enabling real-time inference on a single NVIDIA RTX 4090 GPU.
+
+## Translation-invariant quantum low-density parity-check codes from compactified fracton models
+
+- **Status**: ❌
+- **Reason**: fracton 기반 병진불변 양자 LDPC 순수 이론 — 채널 ECC 아님
+- **ID**: arxiv:2605.19298v1
+- **Type**: preprint
+- **Published**: 2026-05-19
+- **Authors**: Cassandra M. Hopkin, Victor V. Albert, Dominic J. Williamson
+- **PDF**: https://arxiv.org/pdf/2605.19298v1
+- **Abstract**: Quantum error-correcting codes with translation symmetry and local checks have been studied extensively, leading to a wide variety of fracton codes in three or more dimensions which lack a complete unifying picture. Recently, the study of translation-invariant codes with long-range checks has revealed impressive performance for small fixed-size instances in two dimensions. Here, we provide a unifying picture for a large family of translation-invariant codes, both local and long-range, that captures many fracton codes and all Abelian Two-Block Group Algebra (A2BGA) codes, including the Bivariate Bicycle (BB) codes. The balanced product structure of A2BGA codes leads to a local parent code that is a hypergraph product fracton model in a higher dimension. Different compactifications of a parent code produce a wide variety of descendant codes which provides a unifying picture for their properties. In particular, all BB codes with the same check weight are derived from a single parent hypergraph product fracton model. This construction allows us to extend Wang and Pryadko's code-parameter bounds for Generalized Bicycle codes to A2BGA codes. We conjecture that the transversal gates and energy barriers of the translation-invariant descendant codes are limited by those of their parent fracton models.
+
+## Maximum Likelihood Decoding of Quantum Error Correction Codes
+
+- **Status**: ❌
+- **Reason**: 양자 EC 최대우도복호 리뷰 — 양자 신드롬 디코딩 전용
+- **ID**: arxiv:2605.17230v1
+- **Type**: preprint
+- **Published**: 2026-05-17
+- **Authors**: Hanyan Cao, Ge Yan, Yuxuan Du +1
+- **PDF**: https://arxiv.org/pdf/2605.17230v1
+- **Abstract**: Quantum error correction (QEC) is indispensable for realizing fault-tolerant quantum computation, yet its effectiveness hinges critically on the classical decoding algorithm that interprets noisy syndrome measurements. Among all possible decoding strategies, maximum likelihood decoding (MLD) is provably optimal, since it identifies the logical group with largest likelihood by summing over all possible errors within logical class consistent with the observed syndrome. Despite its optimality, MLD is computationally intractable in general (#P-hard), motivating a rich landscape of exact and approximate algorithms. In this topical review, we provide a unified perspective on MLD by surveying recent advances through three complementary lenses: statistical mechanics, tensor networks, and artificial intelligence. From the statistical mechanics viewpoint, the MLD problem maps onto evaluating partition functions of disordered spin models, enabling exact solutions for certain codes and noise models as well as threshold estimation via phase-transition analysis. From the tensor network perspective, approximate contraction of tensor networks on the code's factor graph yields decoders that closely approach MLD accuracy with polynomial computational cost. From the artificial intelligence perspective, neural-network-based decoders, including autoregressive generative models and recurrent transformers, learn to approximate the MLD distribution from data, achieving high accuracy with the parallelism afforded by modern hardware accelerators. We discuss the connections among these three approaches, review their application to both simulated and experimental quantum hardware, and outline open challenges including real-time decoding, scalability to large code distances, and generalization to high-rate quantum low-density parity-check codes.
+
+## Clifford-deformed zero-rate LDPC codes with 50% biased noise thresholds
+
+- **Status**: ❌
+- **Reason**: Clifford-deformed 양자 LDPC 바이어스 노이즈 임계값 — 양자 EC
+- **ID**: arxiv:2605.15348v1
+- **Type**: preprint
+- **Published**: 2026-05-14
+- **Authors**: Jagannath Das, Sayandip Dhara, Pedro Medina +2
+- **PDF**: https://arxiv.org/pdf/2605.15348v1
+- **Abstract**: Applying single-qubit Clifford unitaries to a Pauli stabilizer code produces a Clifford-deformed variant whose stabilizers remain Pauli operators, but with locally rotated Pauli axes. Such deformations provide a simple way to tailor a fixed code to anisotropic noise, and have enabled unusually high thresholds under strongly biased dephasing. In this work, we discuss zero-rate quantum low-density parity-check (LDPC) codes, for which there exist Clifford-deformed variants where the number of biased logical operators scales slower than the distance, or there exists a basis of logical operators whose overlap satisfies certain scaling conditions; in this case, the code-capacity threshold for the Clifford-deformed variant under i.i.d. pure dephasing noise approaches 50%. This property provably explains previously known code examples with 50% biased noise thresholds, such as XY surface code, XZZX surface code, color code, as well as some 3D Clifford-deformed codes. As a concrete new example, we study Clifford deformations of the tile codes of Ref. [1]. Similar to the phase diagram of 50% thresholds for random Clifford deformations of the surface code in Ref. [2], we find a similar phase diagram for the tile codes. We also construct several translationally invariant deformations of the tile code with 50% thresholds, and present numerical evidence for improved performance at finite bias and under circuit-level noise. In the circuit-level setting, performance is governed by the residual bias after a full syndrome-extraction cycle, linking our simulations to phenomenological models commonly used to study Clifford-deformed codes. We estimate this residual bias for different qubit platforms by modeling microscopic implementations of tile-code syndrome extraction.
+
+## Univariate Bicycle Quantum LDPC Codes: Explicit Logical Structure and Distance Bounds
+
+- **Status**: ❌
+- **Reason**: Univariate Bicycle 양자 LDPC 부호 구성·거리 한계 — 양자 EC
+- **ID**: arxiv:2605.14173v1
+- **Type**: preprint
+- **Published**: 2026-05-13
+- **Authors**: Sheida Rabeti, Hessam Mahdavifar
+- **PDF**: https://arxiv.org/pdf/2605.14173v1
+- **Abstract**: We introduce univariate bicycle (UB) codes, a structured subclass of generalized bicycle (GB) quantum low-density parity-check (LDPC) codes obtained via a Frobenius relation. This construction reduces the code design space from a two-polynomial search in GB codes to a single-polynomial search, while preserving sparsity. We provide an explicit algebraic characterization of the logical coset spaces by constructing a basis for the logical quotient space, yielding a complete parametrization of logical operators. Leveraging this structure, we derive upper bounds on the minimum distance by relating structured logical representatives to cycle-density properties of associated circulant matrices. Finally, simulation results for short- to medium-length UB codes (block lengths ranging from a few hundred to approximately $10^3$) demonstrate competitive performance relative to existing GB and bivariate bicycle (BB) codes despite the additional algebraic restriction.
+
+## A Deep Learning-based Receiver for Asynchronous Grant-Free Random Access in Control-to-Control Networks
+
+- **Status**: ❌
+- **Reason**: 무선 그랜트프리 랜덤액세스 DL 수신기, LDPC는 부수적·이식 기법 없음
+- **ID**: arxiv:2605.12180v1
+- **Type**: preprint
+- **Published**: 2026-05-12
+- **Authors**: Massimo Battaglioni, Edoardo Carnevali, Dania De Crescenzo +3
+- **PDF**: https://arxiv.org/pdf/2605.12180v1
+- **Abstract**: In this paper, we study grant-free, asynchronous control-to-control (C2C) communications in an indoor scenario with a shared wireless channel. Each communication node transmits command units, each consisting of a variable-length low-density parity-check (LDPC)--coded payload preceded by a start sequence and followed by a tail sequence. Due to the asynchronous nature of the access, transmissions from different nodes are not aligned over time. As a result, each receiving controller observes the superposition of multiple command units transmitted by different nodes over a receiver-defined superframe interval. Each node transmits one or more replicas of the same command unit. We propose a receiver architecture in which the detection of command unit boundaries (start/tail sequences) is carried out by a single convolutional neural network (CNN) operating directly on the received signal. We show that, while start-sequence detection must rely only on the received waveform, tail-sequence detection can additionally exploit the soft information produced by the LDPC decoder, together with channel estimates. Finally, once commands units are successfully decoded, successive interference cancellation (SIC) can be applied. Simulation results demonstrate that the receiver we propose achieves reliable packet-boundary identification and a low end-to-end packet loss rate, even under uncoordinated and high-traffic operating conditions.
+
+## Non-binary LDPC codes for Data Storage
+
+- **Status**: ❌
+- **Reason**: [기준개정:비이진제외] 데이터 스토리지용 비이진 LDPC 코드, 최소거리/이레이저 분석 — 스토리지 ECC + 비이진 코드설계(B/E)
+- **ID**: arxiv:2605.08500v2
+- **Type**: preprint
+- **Published**: 2026-05-08
+- **Authors**: Irina Bocharova, Boris Kudryashov, Henk D. L. Hollmann +1
+- **PDF**: https://arxiv.org/pdf/2605.08500v2
+- **Abstract**: In modern data storage systems, non-binary LDPC codes for recovering from disk failures are increasingly considered strong competitors to MDS codes such as Reed-Solomon codes. Since disk failures can be modeled as erasures, we analyze non-binary LDPC codes over a $q$-ary field in the $q$-ary erasure channel, relative to MDS codes. Our focus is on non-binary LDPC codes whose parity-check matrix is obtained by replacing the non-zero entries of a binary base matrix by elements of a $q$-ary finite field. For such LDPC codes, we introduce the notion of ultimate distance, which upper-bounds their minimum distance. We derive a random-coding bound on the number of non-correctable erasure patterns for the Gallager ensemble of regular non-binary LDPC codes under maximum-likelihood decoding. An algorithm for finding the ultimate distance is presented. A low-complexity algorithm for searching for the minimum distance of the non-binary LDPC code is proposed. Finally, we construct examples of non-binary LDPC codes achieving the ultimate distance.
+
+## Design and Analysis of Quantum Dual-Containing CSS LDPC Codes based on Quasi-Dyadic Matrices
+
+- **Status**: ❌
+- **Reason**: 양자 CSS LDPC(qLDPC) 부호 구성 — 양자 EC는 제외 카테고리. 떼어낼 이식형 디코더/HW 없음(표준 binary BP만 언급).
+- **ID**: arxiv:2605.03631v2
+- **Type**: preprint
+- **Published**: 2026-05-05
+- **Authors**: Alessio Baldelli, Marco Baldi, Massimo Battaglioni +2
+- **PDF**: https://arxiv.org/pdf/2605.03631v2
+- **Abstract**: Building scalable quantum computers requires quantum error-correcting codes that enable reliable operations in the presence of noise. Motivated by such need, this paper introduces two constructions of high-rate, quantum dual-containing (DC) Calderbank-Shor-Steane (CSS) low-density parity-check (LDPC) codes based on quasi-dyadic matrices. Their DC structure enables the transversal implementation of the Hadamard gate, and, jointly with the sparsity of their parity-check matrices enable low-complexity decoding via a standard binary belief-propagation algorithm. We provide several theoretical results concerning the cycle properties of these CSS codes. We also investigate their automorphism groups as well as their minimum distance. Furthermore, through numerical simulations, we show that the quantum CSS LDPC codes obtained through these constructions achieve better finite-length error rate performance than existing DC codes across different block lengths and code rates.
+
+## Improved Rate-versus-Distance Upper Bounds for LDPC Codes
+
+- **Status**: ❌
+- **Reason**: LDPC rate-distance 상한 순수 이론 bound — 디코더/HW/구성으로 안 이어짐, 제외.
+- **ID**: arxiv:2605.01213v1
+- **Type**: preprint
+- **Published**: 2026-05-02
+- **Authors**: Chong Shangguan, Yulin Yang
+- **PDF**: https://arxiv.org/pdf/2605.01213v1
+- **Abstract**: LDPC codes play a vital role in coding theory and practical error correction. A central problem in this direction is to understand their rate--distance tradeoff. In this paper, we introduce a new framework for estimating ball sizes in the coset graphs of LDPC codes. The key new object is the coset-weight generating function, which encodes the minimum Hamming weights of all cosets of a linear code. Rather than estimating coset balls directly, we upper-bound this generating function through a local growth analysis for codes spanned by low-weight vectors. This framework sharpens the previous ball-size estimate of Iceland and Samorodnitsky. Combined with a general method of Friedman and Tillich that relates balls in coset graphs to sizes of error-correcting codes, it further improves the upper bounds on the rate of LDPC codes for a significant range of relative distances.

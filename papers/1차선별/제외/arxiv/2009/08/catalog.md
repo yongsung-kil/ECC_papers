@@ -1,0 +1,35 @@
+# arXiv — 2009-08
+
+
+## Sharp approximation for density dependent Markov chains
+
+- **Status**: ❌
+- **Reason**: 밀도의존 마르코프체인의 점근근사 순수이론(BEC peeling 유한크기 스케일링) - 디코더/HW/구성으로 안 이어지는 이론 bound
+- **ID**: arxiv:0908.2088v1
+- **Type**: preprint
+- **Published**: 2009-08-14
+- **Authors**: Kamil Szczegot
+- **PDF**: https://arxiv.org/pdf/0908.2088v1
+- **Abstract**: Consider a sequence (indexed by n) of Markov chains Z^n in R^d characterized by transition kernels that approximately (in n) depend only on the rescaled state n^{-1} Z^n. Subject to a smoothness condition, such a family can be closely coupled on short time intervals to a Brownian motion with quadratic drift. This construction is used to determine the first two terms in the asymptotic (in n) expansion of the probability that the rescaled chain exits a convex polytope. The constant term and the first correction of size n^{-1/6} admit sharp characterization by solutions to associated differential equations and an absolute constant. The error is smaller than O(n^{-b}) for any b < 1/4.   These results are directly applied to the analysis of randomized algorithms at phase transitions. In particular, the `peeling' algorithm in large random hypergraphs, or equivalently the iterative decoding scheme for low-density parity-check codes over the binary erasure channel is studied to determine the finite size scaling behavior for irregular hypergraph ensembles.
+
+## Problems in application of LDPC codes to information reconciliation in quantum key distribution protocols
+
+- **Status**: ❌
+- **Reason**: QKD 정보조정(reconciliation) 서베이성 논문, 채널 ECC 아님, 떼어낼 신규 디코더/HW 기법 없음 — 원칙 제외
+- **ID**: arxiv:0908.2042v2
+- **Type**: preprint
+- **Published**: 2009-08-14
+- **Authors**: Ryutaroh Matsumoto
+- **PDF**: https://arxiv.org/pdf/0908.2042v2
+- **Abstract**: The information reconciliation in a quantum key distribution protocol can be studied separately from other steps in the protocol. The problem of information reconciliation can be reduced to that of distributed source coding. Its solution by LDPC codes is reviewed. We list some obstacles preventing the LDPC-based distributed source coding from becoming a more favorable alternative to the Cascade protocol for information reconciliation in quantum key distribution protocols. This exposition does not require knowledge of the quantum theory.
+
+## Exposing Pseudoweight Layers in Regular LDPC Code Ensembles
+
+- **Status**: ❌
+- **Reason**: 의사무게(pseudoweight) 분포 점근 성장률 순수 이론 분석, 디코더/HW/구성으로 안 이어지는 bound
+- **ID**: arxiv:0908.1298v1
+- **Type**: preprint
+- **Published**: 2009-08-10
+- **Authors**: Mark F. Flanagan
+- **PDF**: https://arxiv.org/pdf/0908.1298v1
+- **Abstract**: A solution is presented for the asymptotic growth rate of the AWGN-pseudoweight distribution of regular low-density parity-check (LDPC) code ensembles for a selected graph cover degree M >= 1. The evaluation of the growth rate requires solution of a system of 2M+1 nonlinear equations in 2M+1 unknowns. Simulation results for the pseudoweight distribution of two regular LDPC code ensembles are presented for graph covers of low degree.

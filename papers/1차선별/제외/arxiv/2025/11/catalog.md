@@ -1,0 +1,112 @@
+# arXiv — 2025-11
+
+
+## FPGA-tailored algorithms for real-time decoding of quantum LDPC codes
+
+- **Status**: ❌
+- **Reason**: quantum LDPC 전용 FPGA 디코더(stabilizer syndrome, Relay/OSD/union-find) — 양자 EC 제외
+- **ID**: arxiv:2511.21660v2
+- **Type**: preprint
+- **Published**: 2025-11-26
+- **Authors**: Satvik Maurya, Thilo Maurer, Markus Bühler +2
+- **PDF**: https://arxiv.org/pdf/2511.21660v2
+- **Abstract**: Real-time decoding is crucial for fault-tolerant quantum computing but likely requires specialized hardware such as field-programmable gate arrays (FPGAs), whose parallelism can alter relative algorithmic performance. We analyze FPGA-tailored versions of three decoder classes for quantum low-density parity-check (qLDPC) codes: message passing, ordered statistics, and clustering. For message passing, we analyze the recently introduced Relay decoder and its FPGA implementation; for ordered statistics decoding (OSD), we introduce a filtered variant that concentrates computation on high-likelihood fault locations; and for clustering, we design an FPGA-adapted generalized union-find decoder. We design a systolic algorithm for Gaussian elimination on rank-deficient systems that runs in linear parallel time, enabling fast validity checks and local corrections in clustering and eliminating costly full-rank inversion in filtered-OSD. Despite these improvements, both remain far slower and less accurate than Relay, suggesting message passing is the most viable route to real-time qLDPC decoding.
+
+## Kernelized Decoded Quantum Interferometry
+
+- **Status**: ❌
+- **Reason**: Decoded Quantum Interferometry 양자 알고리즘, LDPC는 'LDPC-like' 비유 수준 — 양자 제외
+- **ID**: arxiv:2511.20016v3
+- **Type**: preprint
+- **Published**: 2025-11-25
+- **Authors**: Fumin Wang
+- **PDF**: https://arxiv.org/pdf/2511.20016v3
+- **Abstract**: Decoded Quantum Interferometry (DQI) promises superpolynomial speedups for structured optimization; however, its practical realization is often hindered by significant sensitivity to hardware noise and spectral dispersion. To bridge this gap, we introduce Kernelized Decoded Quantum Interferometry (k-DQI), a unified framework that integrates spectral engineering directly into the quantum circuit architecture. By inserting a unitary kernel prior to the interference step, k-DQI actively reshapes the problem's energy landscape, concentrating the solution mass into a ``decoder-friendly'' low-frequency head. We formalize this advantage through a novel robustness metric, the noise-weighted head mass $Σ_K$, and prove a Monotonic Improvement Theorem, which establishes that maximizing $Σ_K$ guarantees higher decoding success rates under local depolarizing noise. We substantiate these theoretical gains in Optimal Polynomial Interpolation (OPI) and LDPC-like problems, demonstrating that kernel tuning functions as a ``spectral lens'' to recover signal otherwise lost to isotropic noise. Crucially, we provide explicit, efficient circuit realizations using Chirp and Linear Canonical Transform (LCT) kernels that achieve significant boosts in effective signal-to-noise ratio with negligible depth overhead ($\tilde{O}(n)$ to $\tilde{O}(n^2)$). Collectively, these results reframe DQI from a static algorithm into a tunable, noise-aware protocol suited for near-term error-corrected environments.
+
+## Study of Iterative Dynamic Channel Tracking for Multiple RIS-Assisted MIMO Systems
+
+- **Status**: ❌
+- **Reason**: RIS-MIMO 채널추정에 LDPC를 보조 활용, 떼어낼 ECC 기법 없음 — 무선 응용 제외
+- **ID**: arxiv:2511.18669v1
+- **Type**: preprint
+- **Published**: 2025-11-24
+- **Authors**: Roberto C. G. Porto, Rodrigo C. de Lamare
+- **PDF**: https://arxiv.org/pdf/2511.18669v1
+- **Abstract**: The use of multiple Reconfigurable Intelligent Sur- faces (RIS) has gained attention in 6G networks to enhance coverage. However, the feasibility of deploying multiple RIS relies on efficient channel estimation and reduced pilot overhead. To address these challenges, this work proposes an iterative channel estimation scheme that exploits low-density parity-check (LDPC) codes, channel coherence time, and iterative processing to improve estimation accuracy while minimizing pilot length. Encoded pilots are used to strengthen the iterative processing, leveraging both pilot and parity bits, while previous estimates are incorporated to further reduce overhead. Simulations consider a sub-6 GHz scenario with non-sparse channels and multiple RIS under both LOS and NLOS conditions. The results show that the proposed method outperforms existing approaches, achieving significant gains with substantially lower pilot overhead.
+
+## Explicit construction of low-overhead gadgets for gates on quantum LDPC codes
+
+- **Status**: ❌
+- **Reason**: 양자 QLDPC 논리 게이트 gadget 구성 — 양자 EC 전용, 바이너리 NAND LDPC로 이식할 기법 없음
+- **ID**: arxiv:2511.15989v1
+- **Type**: preprint
+- **Published**: 2025-11-20
+- **Authors**: Paul Webster, Samuel C. Smith, Lawrence Z. Cohen
+- **PDF**: https://arxiv.org/pdf/2511.15989v1
+- **Abstract**: Quantum low-density parity check (QLDPC) codes can significantly reduce the overhead of quantum computing, provided the methods for performing logical operations do not require substantial space and time resources. A popular method for performing logical operations is by measuring logical Pauli operators. We present a simple, explicit construction for fixed gadgets that can measure arbitrary logical Pauli operators on QLDPC codes when dynamically connected to the code block. We apply this construction to a family of generalised bicycle codes with distances relevant to utility-scale quantum computation ($10\leq d \leq 24$) and show that it reduces the space overhead by at least an order of magnitude compared to corresponding surface code architectures, without increasing the time overhead.
+
+## Assessing Finite Scalability in Early Fault-Tolerant Quantum Computing for Homogeneous Catalysts
+
+- **Status**: ❌
+- **Reason**: EFTQC 자원 추정, QLDPC는 부수 언급 — 양자 도메인, 떼어낼 고전 LDPC 기법 없음
+- **ID**: arxiv:2511.10388v1
+- **Type**: preprint
+- **Published**: 2025-11-13
+- **Authors**: Yanbing Zhou, Athena Caesura, Corneliu Buda +3
+- **PDF**: https://arxiv.org/pdf/2511.10388v1
+- **Abstract**: As quantum hardware advances toward fault-tolerant operation, an intermediate stage known as early fault-tolerant quantum computing (EFTQC) is emerging, where partial error correction enables meaningful computation. In this regime, the ability of quantum processors to scale in size and depth has become a crucial factor shaping their achievable performance. This study investigates how finite scalability influences resource requirements for simulating open-shell catalytic systems using Quantum Phase Estimation (QPE). The analysis compares hardware archetypes distinguished by fidelity or operation speed under two representative scalability models. Finite scalability increases qubit and runtime demands yet leaves overall scaling behavior intact, with high-fidelity architectures requiring lower minimum scalability to solve equally sized problems. These effects are largely independent of the chosen scalability model. Extending this framework, we examine runtime competitiveness across hardware and code configurations, incorporating surface-code and quantum Low-Density Parity-Check (LDPC)-based fault tolerance under finite scalability. The results identify operating regimes where high-fidelity architectures remain competitive despite slower gate speeds and show that LDPC codes further expand this regime by reducing space-time overhead. Together, these findings highlight the central role of scalability in quantifying performance and guiding the design of next-generation quantum hardware. Continued progress in scalable architectures will be essential for extending quantum computing to increasingly complex scientific and industrial applications.
+
+## Cyclic Hypergraph Product Code
+
+- **Status**: ❌
+- **Reason**: Cyclic Hypergraph Product 양자 LDPC 코드 구성 — 양자 EC 전용, NAND 바이너리 LDPC 무관
+- **ID**: arxiv:2511.09683v2
+- **Type**: preprint
+- **Published**: 2025-11-12
+- **Authors**: Arda Aydin, Nicolas Delfosse, Edwin Tham
+- **PDF**: https://arxiv.org/pdf/2511.09683v2
+- **Abstract**: Hypergraph product (HGP) codes are one of the most popular family of quantum low-density parity-check (LDPC) codes. Circuit-level simulations show that they can achieve the same logical error rate as surface codes with a reduced qubit overhead. They have been extensively optimized by importing classical techniques such as the progressive edge growth, or through random search, simulated annealing or reinforcement learning techniques. In this work, instead of machine learning (ML) algorithms that improve the code performance through local transformations, we impose additional global symmetries, that are hard to discover through ML, and we perform an exhaustive search. Precisely, we focus on the hypergraph product of two cyclic codes, which we call CxC codes and we study C2 codes which are the product a cyclic code with itself and CxR codes which are the product of a cyclic codes with a repetition code. We discover C2 codes and CxR codes that significantly outperform previously optimized HGP codes, achieving better parameters and a logical error rate per logical qubit that is up to three orders of magnitude better. Moreover, some C2 codes achieve simultaneously a lower logical error rate and a smaller qubit overhead than state-of-the-art LDPC codes such as the bivariate bicycle codes, at the price of a larger block length. Finally, leveraging the cyclic symmetry imposed on the codes, we design an efficient planar layout for the QCCD architecture, allowing for a trapped ion implementation of the syndrome extraction circuit in constant depth.
+
+## Nyquist Signaling Modulation (NSM): An FTN-Inspired Paradigm Shift in Modulation Design for 6G and Beyond
+
+- **Status**: ❌
+- **Reason**: 6G 변조(NSM)에 LDGM/LDPC가 부수 결합 — JSCC/변조 결합형, 떼어낼 ECC 기법 없음
+- **ID**: arxiv:2511.08553v1
+- **Type**: preprint
+- **Published**: 2025-11-11
+- **Authors**: Mohamed Siala, Abdullah Al-Nafisah, Tareq Al-Naffouri
+- **PDF**: https://arxiv.org/pdf/2511.08553v1
+- **Abstract**: Nyquist Signaling Modulations (NSMs) are a new signaling paradigm inspired by faster-than-Nyquist principles but based on a distinct approach that enables controlled inter-symbol interference through carefully designed finite-impulse-response filters. NSMs can operate in any number of dimensions, including mixed-dimensional configurations, offering wide flexibility in filter design, optional energy balancing, and preservation of the 2-ASK minimum squared Euclidean distance (MSED). Both real and rational tapped filters are investigated, and closed-form expressions are derived for the optimal real-tap filters in the one-dimensional case (MS-PRS), providing analytical insight and strong agreement with simulated bit-error behavior across wide SNR ranges. The paradigm is conceptually expanded through an analog Low-Density Generator Matrix (LDGM) formulation, which broadens the NSM family and unifies modulation and coding within a single, structurally coherent framework. When combined with LDPC coding, it enables efficient and naturally synergistic interaction between the analog modulation and the digital LDPC code. Alternatively, when analog LDGM is employed for both source coding and modulation, a simple and harmonious joint source-channel-modulation structure emerges. In both configurations, the constituent blocks exhibit dual graph-based architectures suited to message passing, achieving high flexibility and complexity-efficient operation. Collectively, these results establish promising physical-layer directions for future 6G communication systems.
+
+## Addressable gate-based logical computation with quantum LDPC codes
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 논리 게이트 기반 연산 프로토콜 — 양자 EC 전용
+- **ID**: arxiv:2511.06124v1
+- **Type**: preprint
+- **Published**: 2025-11-08
+- **Authors**: Laura Pecorari, Francesco Paolo Guerci, Hugo Perrin +1
+- **PDF**: https://arxiv.org/pdf/2511.06124v1
+- **Abstract**: Quantum computing relies on quantum error correction for high-fidelity logical operations, but scaling to achieve near-term quantum utility is highly resource-intensive. High-rate quantum LDPC codes can reduce error correction overhead, yet realizing high-rate fault-tolerant computation with these codes remains a central challenge. Apart of the lattice surgery approach, standard schemes for realizing logical gates have so far been restricted to performing global operations on all logical qubits at the same time. Another approach relies on low-rate code switching methods. In this work, we introduce a gate-based protocol for addressable single- and multi-qubit Clifford operations on individual logical qubits encoded within one or more quantum LDPC codes. Our scheme leverages logical transversal operations via an auxiliary Bacon-Shor code to perform logical operations with constant time overhead enabled by teleportation. We demonstrate the implementation of an overcomplete logical Clifford gate set and perform numerical simulations to evaluate the error-correction performance of our protocol. Finally, we observe that our scheme can be integrated with magic state cultivation protocols to achieve universal, gate-based, and fully addressable quantum computation.
+
+## Random Construction of Quantum LDPC Codes
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC(CSS) 랜덤 구성, 직교성 유지 — 양자 EC 전용 구조, NAND 바이너리 LDPC 무관
+- **ID**: arxiv:2511.04634v1
+- **Type**: preprint
+- **Published**: 2025-11-06
+- **Authors**: Koki Okada, Kenta Kasai
+- **PDF**: https://arxiv.org/pdf/2511.04634v1
+- **Abstract**: We propose a method for modifying orthogonal sparse matrix pairs used in CSS codes while preserving their matrix row and column weight distributions, which play a crucial role in determining the performance of belief-propagation decoding. Unlike simple row or column permutations that merely reorder existing elements, the proposed local modification introduces genuine structural randomness through small $2\times2$ cross-swap operations followed by integer-linear-program-based local repairs that restore orthogonality. By applying this procedure repeatedly in a random manner, ensembles of randomized quantum LDPC codes can be constructed. The computational complexity of each repair depends only on the maximum row and column weights and is independent of the overall matrix size, ensuring scalability to large code blocks.
+
+## HyperNQ: A Hypergraph Neural Network Decoder for Quantum LDPC Codes
+
+- **Status**: ❌
+- **Reason**: 양자 QLDPC용 하이퍼그래프 신경망 디코더 — 양자 stabilizer 제약 특화, 바이너리 NAND 이식성 낮음
+- **ID**: arxiv:2511.01741v1
+- **Type**: preprint
+- **Published**: 2025-11-03
+- **Authors**: Ameya S. Bhave, Navnil Choudhury, Kanad Basu
+- **PDF**: https://arxiv.org/pdf/2511.01741v1
+- **Abstract**: Quantum computing requires effective error correction strategies to mitigate noise and decoherence. Quantum Low-Density Parity-Check (QLDPC) codes have emerged as a promising solution for scalable Quantum Error Correction (QEC) applications by supporting constant-rate encoding and a sparse parity-check structure. However, decoding QLDPC codes via traditional approaches such as Belief Propagation (BP) suffers from poor convergence in the presence of short cycles. Machine learning techniques like Graph Neural Networks (GNNs) utilize learned message passing over their node features; however, they are restricted to pairwise interactions on Tanner graphs, which limits their ability to capture higher-order correlations. In this work, we propose HyperNQ, the first Hypergraph Neural Network (HGNN)- based QLDPC decoder that captures higher-order stabilizer constraints by utilizing hyperedges-thus enabling highly expressive and compact decoding. We use a two-stage message passing scheme and evaluate the decoder over the pseudo-threshold region. Below the pseudo-threshold mark, HyperNQ improves the Logical Error Rate (LER) up to 84% over BP and 50% over GNN-based strategies, demonstrating enhanced performance over the existing state-of-the-art decoders.

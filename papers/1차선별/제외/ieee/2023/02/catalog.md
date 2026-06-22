@@ -1,0 +1,211 @@
+# IEEE Xplore — 2023-02
+
+
+## Global Design of Double Protograph LDPC Codes for Joint Source-Channel Coding
+
+- **Status**: ❌
+- **Reason**: JSCC용 double protograph LDPC, degree-2 VN 할당 설계 — JSCC 결합 부호로 떼어낼 순수 채널 ECC 기법 없음
+- **ID**: ieee:9947085
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Shaohua Hong, Jianqu Ke, Lin Wang
+- **PDF**: https://ieeexplore.ieee.org/document/9947085
+- **Abstract**: In this letter, a global design of double protograph low-density parity-check (DP-LDPC) codes is proposed for joint source-channel coding (JSCC) system. The maximum number of degree-2 variable nodes (VNs), which is very important for the performance of the system, is determined from a global perspective that considers the joint protograph as a whole. Based on the allocation of degree-2 VNs, the new guidelines with this more comprehensive perspective are summarized and the global optimized DP-LDPC codes are designed. The simulation results that are in consistent with the joint protograph extrinsic information transfer (P-EXIT) analysis indicate that the optimized DP-LDPC codes have better performance compared with the existing re-designed DP-LDPC codes.
+
+## Efficient LDPC-Coded CCSK Links for Robust High Data Rates GNSS
+
+- **Status**: ❌
+- **Reason**: GNSS CCSK용 q-ary(비이진) LDPC 중심, 바이너리 비교도 표준 BICM 수준 — 비이진 + 무선 응용 특이적 제외
+- **ID**: ieee:9831101
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Rémi Chauvat, Axel Garcia-Pena, Matteo Paonni
+- **PDF**: https://ieeexplore.ieee.org/document/9831101
+- **Abstract**: Global navigation satellite system links may require increased data rates to accommodate future features and needs (e.g., precise positioning, authentication, reduction of time-to-first-fix data). A particular form of $M$-ary orthogonal modulation designed for direct-sequence spread-spectrum (DSSS) systems, the cyclic code-shift keying (CCSK) modulation, has been proposed for this purpose. This modulation inherently allows noncoherent processing at receiver side and has the potential to improve the energy efficiency of the data link with respect to classical DSSS/BPSK signals. In this article, $q$-ary ($q\in \lbrace 2,M\rbrace$) low-density parity-check (LDPC)-based channel coding for $M$-ary CCSK is analyzed, both in terms of robustness and computational complexity. $(q=M)$-ary LDPC-coded CCSK is compared to a bit-interleaved binary LDPC-coded CCSK strategy. Though both solutions provide very reliable links for practical decoding algorithms, it is shown that adequately designed bit-interleaved binary LDPC-coded CCSK signals can offer the additional flexibility inherent to bit-interleaved coded modulation (BICM) while remaining competitive from the point of view of both error rate performance and computational complexity. The latter can be adjusted through the use of incomplete iterative demapping schedules. The optimization of this performance/complexity tradeoff is discussed.
+
+## Algorithmic Obfuscation for LDPC Decoders
+
+- **Status**: ❌
+- **Reason**: Algorithmic obfuscation/logic-locking of LDPC decoders for IP protection; degrades decoding, no ECC-improving transferable technique.
+- **ID**: ieee:9774836
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Jingbo Zhou, Xinmiao Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/9774836
+- **Abstract**: In order to protect intellectual properties against untrusted foundry, many logic-locking schemes have been developed. The idea of logic locking is to insert a key-controlled block into the circuit to make the circuit function incorrectly or go through redundant states without right keys. However, in the case that the algorithm implemented by the circuit is self-correcting, existing logic-locking schemes do not affect the system performance much even if a wrong key is used and hence do not effectively protect the circuit. One example is low-density parity-check (LDPC) error-correcting decoders, which are used in numerous digital communication and storage systems. This article proposes two algorithmic-level obfuscation methods for LDPC decoders. By modifying the decoding process and locking the stopping criterion, our new designs substantially degrade the decoder throughput and/or error-correcting performance, and make the decoder unusable when a wrong key is applied. For an example of the LDPC decoder, our proposed methods reduce the throughput to less than 1/3 and/or increase the decoder error rate by at least two orders of magnitude with at most 0.55% area overhead. Besides, our designs are also resistant to the SAT, AppSAT, and removal attacks.
+
+## Construction of Multiple-Rate Quantum LDPC Codes Sharing One Scalable Stabilizer Circuit
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC(CSS형) 스태빌라이저 회로 구성, 양자 전용 개념 의존으로 원칙 제외
+- **ID**: ieee:9998546
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Yun-Jiang Wang, Zhuo-Yan Xiao, Yi Zhang +2
+- **PDF**: https://ieeexplore.ieee.org/document/9998546
+- **Abstract**: Variable-rate coding schemes that support a variety of different rates while maintaining the same fundamental encoder/decoder architectures are of great interest in practical communication systems. Similar error-correcting code schemes are also in demand in quantum settings. However, generally, it is difficult to introduce the variable-rate coding schemes into the quantum coding domain attributed to two challenges: Obtaining new quantum codes from old ones systematically and sharing encoder-decoder components among the newly obtained quantum codes. In this correspondence, a multiple-rate coding scheme is introduced into the quantum coding domain, we achieve this goal by providing a systematic method to construct new non-homogeneous quantum LDPC codes of CSS type from an old one (named as the mother code) whose classical parity-check matrix (PCM) is row-circulant. The basic idea is to split rows of the highest-rate stabilizer elaborately to produce the stabilizer for lower rates, which ensures that the generated code family owns the same code length. More importantly, thanks to the nested stabilizer structures possessed by the resulting quantum codes, our method also enables a scalable stabilizer circuit to be shared among them.
+
+## Construction of Cyclic Redundancy Check Codes for SDDC Decoding in DRAM Systems
+
+- **Status**: ❌
+- **Reason**: DRAM SDDC용 CRC 생성 다항식 구성 — LDPC ECC가 아니고 CRC 기반, 떼어낼 LDPC 기법 없음
+- **ID**: ieee:9774861
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Jiho Kim, Soonhee Kwon, Jaesang Noh +1
+- **PDF**: https://ieeexplore.ieee.org/document/9774861
+- **Abstract**: Single device data correction (SDDC) is a main reliability, availability, and serviceability feature of DRAM systems in servers due to the significant hard-failure rate associated with DRAM devices. To correct errors in one DRAM device, error pattern is determined by even parity bits and error location is determined by the error pattern and cyclic redundancy check (CRC) bits in SDDC decoding. In this brief, a SDDC decoding scheme is proposed, which improves the error-correction performance by uniquely determining the error location. For that purpose, requirements for binary CRC generator polynomials to uniquely determine the error location are derived. Based on these requirements, a systematic method for constructing CRC generator polynomials is proposed, which guarantees 100% error-correction rate. Finally, it is confirmed that the proposed SDDC decoding scheme has lower decoding complexity compared with various ECC schemes and also shows 100% SDDC decoding success through simulation.
+
+## Concatenated Codes for Multiple Reads of a DNA Sequence
+
+- **Status**: ❌
+- **Reason**: DNA 저장용 비이진 LDPC/polar 연접부호, 삽입·삭제 채널 HMM 디코딩 — 비이진 LDPC라 제외
+- **ID**: ieee:9889680
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Issam Maarouf, Andreas Lenz, Lorenz Welter +3
+- **PDF**: https://ieeexplore.ieee.org/document/9889680
+- **Abstract**: Decoding sequences that stem from multiple transmissions of a codeword over an insertion, deletion, and substitution channel is a critical component of efficient deoxyribonucleic acid (DNA) data storage systems. In this paper, we consider a concatenated coding scheme with an outer nonbinary low-density parity-check code or a polar code and either an inner convolutional code or a time-varying block code. We propose two novel decoding algorithms for inference from multiple received sequences, both combining the inner code and channel to a joint hidden Markov model to infer symbolwise a posteriori probabilities (APPs). The first decoder computes the exact APPs by jointly decoding the received sequences, whereas the second decoder approximates the APPs by combining the results of separately decoded received sequences and has a complexity that is linear with the number of sequences. Using the proposed algorithms, we evaluate the performance of decoding multiple received sequences by means of achievable information rates and Monte-Carlo simulations. We show significant performance gains compared to a single received sequence. In addition, we succeed in improving the performance of the aforementioned coding scheme by optimizing both the inner and outer codes.
+
+## Coding Split and Adjustment to Defend OFDM-IM Against Jamming Attacks
+
+- **Status**: ❌
+- **Reason**: OFDM-IM 재밍 방어용 코드 분할 프레임워크, LDPC는 부수 사용, 떼어낼 ECC 기법 없음(무선 응용 특이)
+- **ID**: ieee:9961189
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Yinglin Chen, Weijie Yuan, Tongyang Xu
+- **PDF**: https://ieeexplore.ieee.org/document/9961189
+- **Abstract**: Jamming is a simple but efficient attack method that challenges communications while traditional physical-layer defence solutions are limited. Recently, index modulation (IM) is proposed to enable index transmission in addition to data symbol transmission, which gains resistance against jamming but with limited efficacy. This letter proposes a coding split and adjustment (CSA) framework for low-density parity-check (LDPC) coding assisted orthogonal frequency division multiplexing with IM (OFDM-IM) to enhance its anti-jamming capability. CSA splits the traditionally single system code rate into an index code rate and a data code rate, each independently adjusted based on jamming impacts to error performance. Simulation results verify that OFDM-IM with CSA exhibits superior error performance over traditional OFDM-IM and OFDM in three investigated jamming scenarios. Moreover, this letter reveals that the CSA assisted OFDM-IM can still recover signals while OFDM-IM and OFDM completely fail under high jamming power.
+
+## A New Polar Code Design Based on Reciprocal Channel Approximation
+
+- **Status**: ❌
+- **Reason**: Polar 코드 설계(RCA), LDPC 설계 기법을 polar에 차용하는 것이라 NAND LDPC로 이식할 새 기여 없음
+- **ID**: ieee:9973389
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Hideki Ochiai, Kosuke Ikeya, Patrick Mitran
+- **PDF**: https://ieeexplore.ieee.org/document/9973389
+- **Abstract**: This paper revisits polar code design for a binary-input additive white Gaussian noise (BI-AWGN) channel when successive cancellation (SC) decoding is applied at the receiver. We focus on the so-called reciprocal channel approximation (RCA), which is often adopted in the design of low-density parity-check (LDPC) codes. Implementation of RCA requires the computation of the mutual information of BPSK signaling as well as a corresponding function known as the reciprocal channel mapping, and thus we develop rigorous closed-form approximations of these that are easy to calculate numerically and also valid over a wide range of SNR. Through numerical evaluation we find that, compared to approaches based on the popular Gaussian approximation (GA) as well as the so-called improved GA (IGA), the proposed RCA approach offers better estimates of the bit error rate of polarized channels with no additional computational cost. As a result, polar codes designed by the proposed RCA can achieve further improvement in terms of block error rate (BLER) performance. The gain achieved by the new approach becomes significant as the codeword length increases.
+
+## LDPC Coded Compressive Sensing for Joint Source-Channel Coding in Wireless Sensor Networks
+
+- **Status**: ❌
+- **Reason**: WSN용 CS+LDPC JSCC, LDPC가 베이스라인 — 떼어낼 신규 ECC 기법 없음
+- **ID**: ieee:9911692
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Jue Chen, Shuai Shao, Tsang-Yi Wang +5
+- **PDF**: https://ieeexplore.ieee.org/document/9911692
+- **Abstract**: The novel concept of joint Compressive Sensing (CS) and Low Density Parity Check (LDPC) coding is conceived for Joint Source-Channel Coding (JSCC) in Wireless Sensor Networks (WSNs) supporting a massive number of signals. More explicitly, we demonstrate this concept for a specific scheme, which supports a massive number of signals simultaneously, using a small number of Internet of Things Nodes (IoTNs) based on the concept of CS. The compressed signals are LDPC coded in order to protect them from poor transmission channels. We also propose the new iterative joint source-channel decoding philosophy for exchanging soft extrinsic information, which combines CS decoding and LDPC decoding by merging their respective factor graphs. We then characterize this scheme using Extrinsic Information Transfer (EXIT) chart analysis. Our BLock Error Rate (BLER) results show that the proposed iterative joint LDPC-CS decoding scheme attains about 1.5 dB gain at a BLER of $10^{-3}$ compared to a benchmarker, which employs separate CS and LDPC decoding. Naturally, this gain is achieved at the cost of approximately doubling the complexity of the proposed iterative joint LDPC-CS decoding scheme.
+
+## Symbol-Level Detection With Matched Non-Binary LDPC Codes for Position Errors in Racetrack Memories
+
+- **Status**: ❌
+- **Reason**: 레이스트랙 메모리 PE용 비이진 LDPC + 심볼 단위 검출 — 비이진 LDPC라 제외
+- **ID**: ieee:9919870
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Ryo Shibata, Hiroyuki Yashima
+- **PDF**: https://ieeexplore.ieee.org/document/9919870
+- **Abstract**: In racetrack memory (RM), insertion and deletion (ID) errors occur owing to alignment faults; such errors are referred to as position errors (PEs). Recently, several coding schemes for PEs have been proposed based on binary low-density parity-check (BI-LDPC) codes with a joint bit-wise (BW) detection and decoding algorithm. Although these schemes yield promising asymptotic performance, they suffer from unsatisfactory finite-length performance in short block sizes. To address this problem, we propose a novel coding scheme based on non-binary LDPC (NB-LDPC) codes and symbol-wise (SW) detection. The factor graph of the proposed scheme avoids generating cycles between the detector and decoder graphs by leveraging RM’s special property that multiple ID errors are caused by PEs simultaneously, which enables the attainment of good finite-length performance while providing fast convergence. With the aim of providing further performance improvement, we also provide an SW extrinsic information transfer chart analysis to design NB-LDPC codes for the proposed scheme.
+
+## Adaptive Decoding Algorithm With Variable Sliding Window for Double SC-LDPC Coding System
+
+- **Status**: ❌
+- **Reason**: JSCC용 double SC-LDPC 가변 슬라이딩 윈도우 디코딩 — JSCC 결합 부호 특이적, 순수 ECC 이식 기법 약함
+- **ID**: ieee:9953165
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Qiu-Fang Lian, Qiwang Chen, Lin Zhou +2
+- **PDF**: https://ieeexplore.ieee.org/document/9953165
+- **Abstract**: In this letter, an adaptive decoding algorithm with a variable sliding window for joint source-channel coding (JSCC) scheme based on double spatially coupled low-density parity-check (DSC-LDPC) codes is investigated. For the traditional sliding window decoding (SWD) algorithm, one or more errors occurring in a decoding window may affect the decoding of the next window, which will trigger error propagation. To mitigate the effects, a window extension algorithm based on average log-likelihood ratios (LLRs) will be proposed, but the implement of extension implies higher decoding complexity. In order to trade-off the error rate performance and complexity, the source and channel threshold that determines the window extension are analyzed. In the simulation, the proposed SWD algorithm with acceptable complexity has better error rate performance in the water fall region and the error floor region.
+
+## Ambient LoRa Backscatter System With Chirp Interval Modulation
+
+- **Status**: ❌
+- **Reason**: LoRa 백스캐터 변조 기법, LDPC 무관 — ECC 떼어낼 기법 없음
+- **ID**: ieee:9892694
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: Yuxiang Peng, Shiyue He, Yu Zhang +3
+- **PDF**: https://ieeexplore.ieee.org/document/9892694
+- **Abstract**: Ambient LoRa backscatter enables battery-free wireless communication with long-range connectivity for the Internet of Things. However, current efforts mainly focus on symbol-level modulation, which trades considerable data rates for long backscatter ranges. To enhance the data rate, this paper presents and prototypes Pacim, which fully explores the potential of long-period LoRa chirps and conveys additional information by varying symbol lengths. Specifically, we propose the chirp interval modulation scheme that modulates multiple data bits in each time interval between two chirp-based anchor symbols. Moreover, we design a twin-chirp cancellation method at the receiver that eliminates the frequency discontinuity within anchor symbols, and propose a fine-grained detection algorithm to measure the arrival time of anchor symbols in the frequency domain. We further propose three reliable methods to improve transmission reliability and analyze the symbol error rate (SER) performance. We also build a hardware prototype and perform comprehensive evaluations. Our experiment results show that Pacim can achieve up to  $8.6 \times $  throughput gain while keeping long-range, compared with the state-of-the-art ambient LoRa backscatter design.
+
+## Exploiting Short Block and Concatenated Codes for Reliable Communications Within the Coexistence of 5G-NR-U and WiFi
+
+- **Status**: ❌
+- **Reason**: 5G-NR-U/WiFi 공존 erasure 코드, LDPC는 비교 baseline, NAND 이식 기법 없음(통신 응용 특이)
+- **ID**: ieee:9963611
+- **Type**: journal
+- **Published**: Feb. 2023
+- **Authors**: M. Moazam Azeem, Raouf Abozariba, A. Taufiq Asyhari
+- **PDF**: https://ieeexplore.ieee.org/document/9963611
+- **Abstract**: Unlicensed spectrum offers opportunities for cellular mobile network operators, where traffic can be offloaded from licensed to unlicensed bands. Modern heterogeneous technologies such as 5G and WiFi can simultaneously operate on ISM and UNII bands under strict coexistence rules. While satisfying harmonious coexistence has largely been studied in LTE/4G, an emerging issue for future deployment is to reduce latency and to guarantee reliable communications, in the direction of achieving URLLC. This work mainly focuses on the critical issues arising in the coexistence of LBT systems, sharing common infrastructure of 5G NR-U and WiFi when operating under imperfect energy detection sensing. We consider the application of short, concatenated and product erasure correcting codes to recover missing data due to collisions in LBT-based systems. The goal is to enhance spectrum utilization with reduced delay and to achieve reliable communications under various sensing impairments, with code parameters such as block length, rate and minimum distance. Using concatenation, we construct a series of sophisticated erasure block codes with less decoding complexity. Furthermore, we derive a closed-form expression using Gaussian approximation of spectrum utilization efficiency. The results are compared with the various LDPC correcting ensembles under various levels of user activities. We provide detailed comparisons of global throughput and failure probability of codes under varied number of coexisting users. Our results show that the proposed codes can achieve over 20% higher efficiency at 0.1 false alarm probability and 30% less failure probability under high contention scenarios.
+
+## Full Diversity Low-Density Parity-Check (LDPC) Codes for Block-Fading Channel
+
+- **Status**: ❌
+- **Reason**: 블록페이딩 채널용 full-diversity LDPC 설계 — 무선 채널 특이적, NAND에 떼어낼 새 디코더/HW/구성 없음
+- **ID**: ieee:10049965
+- **Type**: conference
+- **Published**: 5-8 Feb. 2
+- **Authors**: Rajan Kadel, Gottfried Lechner
+- **PDF**: https://ieeexplore.ieee.org/document/10049965
+- **Abstract**: The main goal of this paper is to design full-diversity and outage achieving LDPC codes over block-fading channels under message passing decoding. This paper presents the derivation of the necessary properties of full diversity LDPC codes under message passing decoding over block-fading channel.
+
+## Model-Driven Deep Joint Source-Channel Coding over Time-Varying Channels
+
+- **Status**: ❌
+- **Reason**: Deep-JSCC 이미지 전송, 채널코딩 ECC가 아닌 소스-채널 결합 — 제외 대상
+- **ID**: ieee:10104036
+- **Type**: conference
+- **Published**: 27-27 Feb.
+- **Authors**: Can Karamanli, Tze-Yang Tung, Deniz Guenduez
+- **PDF**: https://ieeexplore.ieee.org/document/10104036
+- **Abstract**: Machine learning techniques have recently offered powerful tools for designing joint source-channel coding (JSCC) schemes with impressive performance results. Recent works have shown that deep learning (DL) based JSCC schemes (Deep-JSCC) for wireless image transmission can outperform stateof-the-art separate source and channel coding designs. However, existing works on DL based JSCC schemes either require many models trained for specific channel conditions, increasing the storage requirements, or need to introduce additional parameters in the model to adapt to new channel conditions, increasing the complexity of the architecture. In this paper, we propose DeepJSCC-MMSE, an end-to-end optimized JSCC scheme for wireless image transmission over wireless fading channels, in which a single DeepJSCC encoder/decoder pair is trained in concatenation with a model-driven channel equalization module at the receiver, which can adapt to any channel condition without additional model parameters. We show that DeepJSC-MMSE can outperform parameterized equalization techniques, without requiring the encoder and decoder to be retrained for new channel conditions, paving the way for generalized DL based JSCC schemes.
+
+## The Performance of Channel Code in OFDM Underwater Acoustic Communication
+
+- **Status**: ❌
+- **Reason**: 수중음향 OFDM에서 LDPC가 부수 비교 대상, 떼어낼 신규 ECC 기법 없음
+- **ID**: ieee:10145226
+- **Type**: conference
+- **Published**: 25-27 Feb.
+- **Authors**: Jiting Cheng
+- **PDF**: https://ieeexplore.ieee.org/document/10145226
+- **Abstract**: With the deepening of research on the ocean, the development of UAC(underwater acoustic communication)has become a hot issue of concern. OFDM and channel coding techniques greatly impact the improvement of UAC. In this paper, channel coding is combined with OFDM to improve the OFDM UACS(underwater acoustic communication system) performance by adding some channel codes. When the coding rate is 1/2, the error correction capability is poor and the error rate is higher than when the coding rate is 1/4. The performance is better when using 1/3 bit rate in Turbo coding compared to 1/2 bit. A performance gain of about 4 dB is obtained using LDPC channel coding. The channel coding and decoding methods of convolutional, Turbo and LDPC codes can significantly improve the performance of OFDM UACS.
+
+## An Improved Min-Sum Polar Code Decoding Algorithm
+
+- **Status**: ❌
+- **Reason**: Polar code min-sum 디코딩 개선 — LDPC 아닌 Polar 전용 노드 업데이트 기법
+- **ID**: ieee:10145352
+- **Type**: conference
+- **Published**: 25-27 Feb.
+- **Authors**: Mingyuan Fang
+- **PDF**: https://ieeexplore.ieee.org/document/10145352
+- **Abstract**: In 2009, the presentation of polar code, the first theory to approach the Shannon limit of communication channel coding schemes. Thus, academics and business have focused on Polar codes. Research and worldwide standards have been offered one after another, establishing the groundwork for its real-world use.The paper proposes a min-sum decoding technique for enhanced Polar codes and revises the node update formula in the min-sum decoding algorithm by using the piecewise linear function to approximate the function ln cosh(x) in the belief propagation decoding algorithm. Compared to the min-sum decoding algorithm, the enhanced approach improves decoding performance while somewhat increasing complexity. Compared to the belief propagation decoding algorithm, this approach decreases computational complexity significantly and is simpler to implement in hardware. Based on the min-sum method and the belief propagation algorithm, this approach is offered as a balance between complexity and performance. The simulation results demonstrate that the enhanced min-sum decoding algorithm performs similarly to its predecessor. The performance of the degree propagation decoding method is almost identical to that of the min-sum decoding technique, which is superior.
+
+## Performance Analysis of Various FEC-coded OFDM Communication Systems
+
+- **Status**: ❌
+- **Reason**: OFDM FEC 성능 비교(BER), LDPC 베이스라인 언급 수준, 신규 기여 없음
+- **ID**: ieee:10145290
+- **Type**: conference
+- **Published**: 25-27 Feb.
+- **Authors**: Beiyan Wu
+- **PDF**: https://ieeexplore.ieee.org/document/10145290
+- **Abstract**: Orthogonal Frequency Division Multiplexing (OFDM) is used to encode digital data at multiple carrier frequencies and has evolved into a very common broadband digital communication scheme. All its subcarriers are orthogonal to each other, reducing the interference among subcarriers. Additionally, inter-symbol interference (ISI) can be reduced by using the Cyclic Prefix (CP). However, the intra-block OFDM symbol still degrades the performance. Bit Error Rate (BER) can be used to analyze OFDM performance. The efficiency of the OFDM system increases as the BER value decreases. The performance of the errors can be enhanced by using forward error correction. This study covers the performance of OFDM with Linear Block Code, Convolutional Code, Cyclic Block Code, Turbo Code, and LDPC across the whole SNR range. There has also been a discussion of the difference between coded and uncoded OFDM. The outcome demonstrates that Cyclic Block Code is superior to Linear Block Code in complex situations., LDPC Code performs better when increasing the data rate than Convolutional Code, and with more code generator polynomials, Turbo Code shows less BER value in comparison with Convolutional Code.
+
+## Various Channel Coding Schemes for 5G
+
+- **Status**: ❌
+- **Reason**: 5G용 LDPC/Turbo/Polar 표준 부호 BER 비교 연구, 신규 ECC 기법 없음 — 제외
+- **ID**: ieee:10062998
+- **Type**: conference
+- **Published**: 18-19 Feb.
+- **Authors**: Amrit Muskan, Tuhina Raj, Tehmina Nisar +3
+- **PDF**: https://ieeexplore.ieee.org/document/10062998
+- **Abstract**: In this study we have compared the LDPC, Turbo and Polar codes in 5th Generation communication system; which is justified by their superior Bit Error Rate performance and adjustability to accommodate a broad range of length of codes and their speeds. We are doing the error correction coding for 5th generation deployment. 5th generation wireless transmission channel coding schemes are having trouble meeting user needs for device telecommunication. For recommending the best coding method for the 5th generation telecommunication system for this study compares several channel coding schemes (Turbo Code, Polar Code, LDPC Codes, SC & NSCC codes on an AWGN with Binary-PSK scheme of speed of code half. In device telecommunication, the estimation of the various coding scheme depends on fidelity, difficulty, latency, and stability in accordance with user subscriber requirements. Better fidelity, reduced lag, and high information reliability are the primary user needs of device communication for the 5th channel coding scheme. The investigation of the data reveals that the SCC is the better coding for the 5th generation telecommunication system for brief information transmit (64k to 1024 bits) in device type communication regarding enhanced flexibility, low-level encoding computational latency, and much better dependability.

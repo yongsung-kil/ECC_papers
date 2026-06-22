@@ -1,0 +1,46 @@
+# arXiv — 2023-08
+
+
+## New Codes on High Dimensional Expanders
+
+- **Status**: ❌
+- **Reason**: 고차원 expander 위 LTC/Tanner 부호 순수 이론, NAND 고전 LDPC로 이식할 디코더·HW·실용 구성 없음
+- **ID**: arxiv:2308.15563v1
+- **Type**: preprint
+- **Published**: 2023-08-29
+- **Authors**: Irit Dinur, Siqi Liu, Rachel Yun Zhang
+- **PDF**: https://arxiv.org/pdf/2308.15563v1
+- **Abstract**: We describe a new parameterized family of symmetric error-correcting codes with low-density parity-check matrices (LDPC).   Our codes can be described in two seemingly different ways. First, in relation to Reed-Muller codes: our codes are functions on a subset of $\mathbb{F}^n$ whose restrictions to a prescribed set of affine lines has low degree. Alternatively, they are Tanner codes on high dimensional expanders, where the coordinates of the codeword correspond to triangles of a $2$-dimensional expander, such that around every edge the local view forms a Reed-Solomon codeword.   For some range of parameters our codes are provably locally testable, and their dimension is some fixed power of the block length. For another range of parameters our codes have distance and dimension that are both linear in the block length, but we do not know if they are locally testable. The codes also have the multiplication property: the coordinate-wise product of two codewords is a codeword in a related code.   The definition of the codes relies on the construction of a specific family of simplicial complexes which is a slight variant on the coset complexes of Kaufman and Oppenheim. We show a novel way to embed the triangles of these complexes into $\mathbb{F}^n$, with the property that links of edges embed as affine lines in $\mathbb{F}^n$.   We rely on this embedding to lower bound the rate of these codes in a way that avoids constraint-counting and thereby achieves non-trivial rate even when the local codes themselves have arbitrarily small rate, and in particular below $1/2$.
+
+## QDistRnd: A GAP package for computing the distance of quantum error-correcting codes
+
+- **Status**: ❌
+- **Reason**: GF(q) 비이진 양자 부호 거리 계산 GAP 패키지 — 비이진+양자, 이중 제외
+- **ID**: arxiv:2308.15140v1
+- **Type**: preprint
+- **Published**: 2023-08-29
+- **Authors**: Leonid P. Pryadko, Vadim A. Shabashov, Valerii K. Kozin
+- **PDF**: https://arxiv.org/pdf/2308.15140v1
+- **Abstract**: The GAP package QDistRnd implements a probabilistic algorithm for finding the minimum distance of a quantum low-density parity-check code linear over a finite field GF(q). At each step several codewords are randomly drawn from a distribution biased toward smaller weights. The corresponding weights are used to update the upper bound on the distance, which eventually converges to the minimum distance of the code. While there is no performance guarantee, an empirical convergence criterion is given to estimate the probability that a minimum weight codeword has been found. In addition, a format for storing matrices associated with q-ary quantum codes is introduced and implemented via the provided import/export functions. The format, MTXE, is based on the well established MaTrix market eXchange (MTX) Coordinate format developed at NIST, and is designed for full backward compatibility with this format. Thus, MTXE files are readable by any software package which supports MTX.
+
+## Simulating LDPC code Hamiltonians on 2D lattices
+
+- **Status**: ❌
+- **Reason**: LDPC 부호 해밀토니안의 2D 격자 양자 시뮬레이션, 양자 HW 전용 — 제외
+- **ID**: arxiv:2308.13277v1
+- **Type**: preprint
+- **Published**: 2023-08-25
+- **Authors**: Harriet Apel, Nouédyn Baspin
+- **PDF**: https://arxiv.org/pdf/2308.13277v1
+- **Abstract**: While LDPC codes have been demonstrated with desirable error correcting properties, this has come at a cost of diverging from the geometrical constraints of many hardware platforms. Viewing codes as the groundspace of a Hamiltonian, we consider engineering a simulation Hamiltonian reproducing some relevant features of the code. Techniques from Hamiltonian simulation theory are used to build a simulation of LDPC codes using only 2D nearest-neighbour interactions at the cost of an energy penalty polynomial in the system size. We derive guarantees for the simulation that allows us to approximately reproduce the ground state of the code Hamiltonian, approximating a $[[N, Ω(\sqrt{N}), Ω(\sqrt{N})]]$ code in 2D. The key ingredient is a new constructive tool to simulate an $l$-long interaction between two qubits by a 1D chain of $l$ nearest-neighbour interacting qubits using $\mathrm{poly}( l)$ interaction strengths. This is an exponential advantage over the existing gadgets for this routine which facilitates the first $ε$-simulation of \emph{arbitrary sparse} Hamiltonian on $n$ qubits with a Hamiltonian on a 2D lattice of $O(n^2)$ qubits with interaction strengths scaling as $O\left(\mathrm{poly}(n,1/ε)\right)$.
+
+## High-threshold and low-overhead fault-tolerant quantum memory
+
+- **Status**: ❌
+- **Reason**: 양자 메모리용 LDPC, 신드롬 측정 회로·논리 큐빗 등 양자 전용 — 원칙 제외
+- **ID**: arxiv:2308.07915v2
+- **Type**: preprint
+- **Published**: 2023-08-15
+- **Authors**: Sergey Bravyi, Andrew W. Cross, Jay M. Gambetta +3
+- **PDF**: https://arxiv.org/pdf/2308.07915v2
+- **Abstract**: Quantum error correction becomes a practical possibility only if the physical error rate is below a threshold value that depends on a particular quantum code, syndrome measurement circuit, and decoding algorithm. Here we present an end-to-end quantum error correction protocol that implements fault-tolerant memory based on a family of LDPC codes with a high encoding rate that achieves an error threshold of $0.8\%$ for the standard circuit-based noise model. This is on par with the surface code which has remained an uncontested leader in terms of its high error threshold for nearly 20 years. The full syndrome measurement cycle for a length-$n$ code in our family requires $n$ ancillary qubits and a depth-7 circuit composed of nearest-neighbor CNOT gates. The required qubit connectivity is a degree-6 graph that consists of two edge-disjoint planar subgraphs. As a concrete example, we show that 12 logical qubits can be preserved for nearly one million syndrome cycles using 288 physical qubits in total, assuming the physical error rate of $0.1\%$. We argue that achieving the same level of error suppression on 12 logical qubits with the surface code would require nearly 3000 physical qubits. Our findings bring demonstrations of a low-overhead fault-tolerant quantum memory within the reach of near-term quantum processors.

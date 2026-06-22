@@ -1,0 +1,35 @@
+# arXiv — 2021-09
+
+
+## Constant-overhead quantum error correction with thin planar connectivity
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 2D 레이아웃·스태빌라이저 측정 회로 — 양자 전용 HW, 고전 이식 불가
+- **ID**: arxiv:2109.14609v1
+- **Type**: preprint
+- **Published**: 2021-09-29
+- **Authors**: Maxime A. Tremblay, Nicolas Delfosse, Michael E. Beverland
+- **PDF**: https://arxiv.org/pdf/2109.14609v1
+- **Abstract**: Quantum LDPC codes may provide a path to build low-overhead fault-tolerant quantum computers. However, as general LDPC codes lack geometric constraints, naïve layouts couple many distant qubits with crossing connections which could be hard to build in hardware and could result in performance-degrading crosstalk. We propose a 2D layout for quantum LDPC codes by decomposing their Tanner graphs into a small number of planar layers. Each layer contains long-range connections which do not cross. For any CSS code with a degree-$δ$ Tanner graph, we design stabilizer measurement circuits with depth at most $(2δ+2)$ using at most $\lceil δ/2 \rceil$ layers. We observe a circuit-noise threshold of 0.28\% for a positive-rate code family using 49 physical qubits per logical qubit. For a physical error rate of $10^{-4}$, this family reaches a logical error rate of $10^{-15}$ using fourteen times fewer physical qubits than the surface code.
+
+## Bounds on stabilizer measurement circuits and obstructions to local implementations of quantum LDPC codes
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 스태빌라이저 측정 회로 하한 이론 — 양자 전용, 디코더/코드설계로 안 이어짐
+- **ID**: arxiv:2109.14599v1
+- **Type**: preprint
+- **Published**: 2021-09-29
+- **Authors**: Nicolas Delfosse, Michael E. Beverland, Maxime A. Tremblay
+- **PDF**: https://arxiv.org/pdf/2109.14599v1
+- **Abstract**: In this work we establish lower bounds on the size of Clifford circuits that measure a family of commuting Pauli operators. Our bounds depend on the interplay between a pair of graphs: the Tanner graph of the set of measured Pauli operators, and the connectivity graph which represents the qubit connections required to implement the circuit. For local-expander quantum codes, which are promising for low-overhead quantum error correction, we prove that any syndrome extraction circuit implemented with local Clifford gates in a 2D square patch of $N$ qubits has depth at least $Ω(n/\sqrt{N})$ where $n$ is the code length. Then, we propose two families of quantum circuits saturating this bound. First, we construct 2D local syndrome extraction circuits for quantum LDPC codes with bounded depth using only $O(n^2)$ ancilla qubits. Second, we design a family of 2D local syndrome extraction circuits for hypergraph product codes using $O(n)$ ancilla qubits with depth $O(\sqrt{n})$. Finally, we use circuit noise simulations to compare the performance of a family of hypergraph product codes using this last family of 2D syndrome extraction circuits with a syndrome extraction circuit implemented with fully connected qubits. While there is a threshold of about $10^{-3}$ for a fully connected implementation, we observe no threshold for the 2D local implementation despite simulating error rates of as low as $10^{-6}$. This suggests that quantum LDPC codes are impractical with 2D local quantum hardware. We believe that our proof technique is of independent interest and could find other applications. Our bounds on circuit sizes are derived from a lower bound on the amount of correlations between two subsets of qubits of the circuit and an upper bound on the amount of correlations introduced by each circuit gate, which together provide a lower bound on the circuit size.
+
+## Quantifying nonlocality: how outperforming local quantum codes is expensive
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 비국소성 정량화·k,d 하한 이론 — 양자 전용, 고전 이식 기법 없음
+- **ID**: arxiv:2109.10982v1
+- **Type**: preprint
+- **Published**: 2021-09-22
+- **Authors**: Nouédyn Baspin, Anirudh Krishna
+- **PDF**: https://arxiv.org/pdf/2109.10982v1
+- **Abstract**: Quantum low-density parity-check (LDPC) codes are a promising avenue to reduce the cost of constructing scalable quantum circuits. However, it is unclear how to implement these codes in practice. Seminal results of Bravyi & Terhal, and Bravyi, Poulin & Terhal have shown that quantum LDPC codes implemented through local interactions obey restrictions on their dimension $k$ and distance $d$. Here we address the complementary question of how many long-range interactions are required to implement a quantum LDPC code with parameters $k$ and $d$. In particular, in 2D we show that a quantum LDPC with distance $n^{1/2 + ε}$ code requires $Ω(n^{1/2 + ε})$ interactions of length $\widetildeΩ(n^ε)$. Further a code satisfying $k \propto n$ with distance $d \propto n^α$ requires $\widetildeΩ(n)$ interactions of length $\widetildeΩ(n^{α/2})$. Our results are derived using bounds on quantum codes from graph metrics. As an application of these results, we consider a model called a stacked architecture, which has previously been considered as a potential way to implement quantum LDPC codes. In this model, although most interactions are local, a few of them are allowed to be very long. We prove that limited long-range connectivity implies quantitative bounds on the distance and code dimension.

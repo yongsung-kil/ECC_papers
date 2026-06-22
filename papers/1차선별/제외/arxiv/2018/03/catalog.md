@@ -1,0 +1,35 @@
+# arXiv — 2018-03
+
+
+## On LDPC Code Based Massive Random-Access Scheme for the Gaussian Multiple Access Channel
+
+- **Status**: ❌
+- **Reason**: Gaussian MAC 대량 랜덤액세스용 LDPC(PEXIT protograph), MAC 응용 특이적이라 떼어낼 NAND 기법 없음
+- **ID**: arxiv:1803.08377v1
+- **Type**: preprint
+- **Published**: 2018-03-22
+- **Authors**: Luiza Medova, Anton Glebov, Pavel Rybin +1
+- **PDF**: https://arxiv.org/pdf/1803.08377v1
+- **Abstract**: This paper deals with the problem of massive random access for Gaussian multiple access channel (MAC). We continue to investigate the coding scheme for Gaussian MAC proposed by A. Vem et al in 2017. The proposed scheme consists of four parts: (i) the data transmission is partitioned into time slots; (ii) the data, transmitted in each slot, is split into two parts, the first one set an interleaver of the low-density parity-check (LDPC) type code and is encoded by spreading sequence or codewords that are designed to be decoded by compressed sensing type decoding; (iii) the another part of transmitted data is encoded by LDPC type code and decoded using a joint message passing decoding algorithm designed for the T-user binary input Gaussian MAC; (iv) users repeat their codeword in multiple slots. In this paper we are concentrated on the third part of considered scheme. We generalized the PEXIT charts to optimize the protograph of LDPC code for Gaussian MAC. The simulation results, obtained at the end of the paper, were analyzed and compared with obtained theoretical bounds and thresholds. Obtained simulation results shows that proposed LDPC code constructions have better performance under joint decoding algorithm over Gaussian MAC than LDPC codes considered by A. Vem et al in 2017, that leads to the better performance of overall transmission system.
+
+## Iterative Turbo Receiver for LDPC-Coded MIMO Systems Based on Semi-definite Relaxation
+
+- **Status**: ❌
+- **Reason**: LDPC-coded MIMO SDR 터보 수신기(검출단), MIMO 검출 특이적이라 이식할 LDPC 디코더/구성 없음
+- **ID**: arxiv:1803.05844v3
+- **Type**: preprint
+- **Published**: 2018-03-15
+- **Authors**: Kun Wang, Zhi Ding
+- **PDF**: https://arxiv.org/pdf/1803.05844v3
+- **Abstract**: In this work, we develop a new iterative turbo receiver for LDPC-coded multi-antenna systems based on semidefinite relaxation (SDR). For a classical turbo receiver, forward error correction (FEC) code is only used at decoder. Nonetheless, by taking advantage of FEC code in the detection stage, our proposed SDR detector can output extrinsic information with much improved reliability to the decoder. We also propose a simplified SDR turbo receiver that solves only one SDR problem per codeword instead of solving multiple SDR problems in the iterative turbo processing. This scheme significantly reduces the time complexity of SDR turbo receiver, while the error performance remains similar as before. In fact, our simplified scheme is generic in the sense that it is applicable to any list-based iterative receivers.
+
+## Finite Length Analysis of Irregular Repetition Slotted ALOHA in the Waterfall Region
+
+- **Status**: ❌
+- **Reason**: IRSA(slotted ALOHA) 유한길이 분석, erasure/랜덤액세스 — LDPC는 베이스라인 비유, 떼어낼 ECC 기법 없음
+- **ID**: arxiv:1803.01368v1
+- **Type**: preprint
+- **Published**: 2018-03-04
+- **Authors**: Alexandre Graell i Amat, Gianluigi Liva
+- **PDF**: https://arxiv.org/pdf/1803.01368v1
+- **Abstract**: A finite length analysis is introduced for irregular repetition slotted ALOHA (IRSA) that enables to accurately estimate its performance in the moderate-to-high packet loss probability regime, i.e., in the so-called waterfall region. The analysis is tailored to the collision channel model, which enables mapping the description of the successive interference cancellation process onto the iterative erasure decoding of low-density parity-check codes. The analysis provides accurate estimates of the packet loss probability of IRSA in the waterfall region as demonstrated by Monte Carlo simulations.

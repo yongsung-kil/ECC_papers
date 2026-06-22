@@ -1,0 +1,618 @@
+# IEEE Xplore — 2021-09
+
+
+## Blind Identification of LDPC Codes Based on a Candidate Set
+
+- **Status**: ❌
+- **Reason**: Blind identification of LDPC codes (encoder detection) for comms; not a decoder/HW/code-design technique for NAND ECC.
+- **ID**: ieee:9440914
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Li Longqing, Huang Zhiping, Zhou Jing
+- **PDF**: https://ieeexplore.ieee.org/document/9440914
+- **Abstract**: Modern communication systems tend to use different channel codes to find a balance between communication speed and quality. Accordingly, the blind identification techniques of encoders have drawn much research interest. In this letter, we propose a blind identification scheme for the Low-Density Parity Check (LDPC) coded communication systems based on a known candidate set. The proposed scheme can adaptively adjust the length of the received sequence to approach an arbitrary probability of missed detection and false alarm for codes in the candidate set, where the latter probability has received little attention by the existing methods. On this basis, the proposed scheme can determine whether there are unknown codes in the received vector, which is useful in practical applications. The performance of the proposed scheme is investigated using system simulations.
+
+## High-Performance Concatenation Decoding of Reed–Solomon Codes With SPC Codes
+
+- **Status**: ❌
+- **Reason**: RS+SPC concatenated 디코더(VM_SPC-MA, Chase/LCC). LDPC 아님, 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:9492319
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Jiajing Gao, Wei Zhang, Yanyan Liu +2
+- **PDF**: https://ieeexplore.ieee.org/document/9492319
+- **Abstract**: A novel single parity check-multiplicity assignment decoding algorithm based on voltage magnitude (VM_SPC-MA) is proposed, which is applied to the concatenated scheme of single parity check (SPC) inner code and Reed-Solomon (RS) outer code, following the Consultative Committee for Space Data Systems (CCSDS) standard. The algorithm determines whether the SPC code is in error by SPC, then obtains the reliability information of the inner code bits for error correction based on the characteristics of the received bit-level voltage, and decodes the outer code based on the reliability information of the inner codewords and the channel information. The decoding performance is greatly improved by connecting the inner and outer codes through the multiplicity assignment (MA) module, which makes full use of the channel information. Compared with the low-complexity Chase decoding based on the hard-decision decoding (HDD-LCC) and SPC_Kaneko-RS_Chase decoding, simulation results show that the SPC-RS concatenated decoding scheme based on VM_SPC-MA algorithm can provide up to 1.78 and 1.05 dB of coding gain when the bit error rate is (BER) = 10-5. Besides, the hardware design of the SPC-MA module is provided and applied to the serial LCC decoder based on syndrome calculation-polynomial selection (PS)-Chien search and Forney algorithm (SPCF). The implementation results in ASIC show that the area efficiency of the complete concatenated decoder increases by 27.38% compared to the unified syndrome computation (USC)-based LCC decoder in a 0.13- μm process.
+
+## Performance Analysis of Reconfigurable Intelligent Surface Assisted Wireless System With Low-Density Parity-Check Code
+
+- **Status**: ❌
+- **Reason**: RIS-assisted wireless with LDPC-coded signal; only derives BER bounds, LDPC is baseline, no transplantable ECC technique.
+- **ID**: ieee:9452133
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Yunkai Hu, Peng Wang, Zihuai Lin +1
+- **PDF**: https://ieeexplore.ieee.org/document/9452133
+- **Abstract**: Low-density parity-check (LDPC) codes that allow for encoding-decoding have been adopted in the fifth-generation (5G) network to support high-throughput and low-latency communications. To meet new user requirements of the beyond 5G and future sixth-generation (6G) wireless networks, reconfigurable intelligent surface (RIS) has been proposed as a promising solution to enhance the communication quality. In this letter, we investigate the performance of a RIS-assisted wireless communication system where the signal transmitted from the transmitter is protected by LDPC codes. We derive the analytical upper and lower bounds on the bit error probability of the RIS-assisted wireless system with LDPC-coded source signals. Through Monte Carlo simulations, we validate the accuracy of our derived bounds for various numbers of RIS reflecting elements.
+
+## On the Global and Local Decoding of q-Ary SC-LDPC Codes With Moderate Coupling Length
+
+- **Status**: ❌
+- **Reason**: q-ary (non-binary GF(q)) SC-LDPC codes; non-binary LDPC is excluded per criteria.
+- **ID**: ieee:9481135
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Mingyang Zhu, Ming Jiang, Chunming Zhao
+- **PDF**: https://ieeexplore.ieee.org/document/9481135
+- **Abstract**: This letter discusses a special type of q-ary spatially coupled low-density parity-check (SC-LDPC) codes with the potential for local decoding (LD). We demonstrate that q-ary SC-LDPCL (suffix “L” stands for locality) code ensembles have better decoding thresholds than the corresponding binary ensembles. We also develop local window decoding (LWD) to improve local decoding performance. The q-ary codes are constructed from low-order finite fields that guarantees relatively low complexity. The provided examples show that q-ary SC-LDPCL codes outperform the corresponding binary codes in both global and local decoding.
+
+## Binary Linear Codes With Optimal Scaling: Polar Codes With Large Kernels
+
+- **Status**: ❌
+- **Reason**: 폴라 코드(대형 커널) 스케일링 — LDPC 아님, NAND ECC 이식 기법 아님
+- **ID**: ieee:9261460
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Arman Fazeli, Hamed Hassani, Marco Mondelli +1
+- **PDF**: https://ieeexplore.ieee.org/document/9261460
+- **Abstract**: We prove that, for the binary erasure channel (BEC), the polar-coding paradigm gives rise to codes that not only approach the Shannon limit but do so under the best possible scaling of their block length as a function of the gap to capacity. This result exhibits the first known family of binary codes that attain both optimal scaling and quasi-linear complexity of encoding and decoding. Our proof is based on the construction and analysis of binary polar codes with large kernels. When communicating reliably at rates within ε > 0 of capacity, the code length n often scales as O(1/εμ), where the constant μ is called the scaling exponent. It is known that the optimal scaling exponent is μ = 2, and it is achieved by random linear codes. The scaling exponent of conventional polar codes (based on the 2×2 kernel) on the BEC is μ = 3.63. This falls far short of the optimal scaling guaranteed by random codes. Our main contribution is a rigorous proof of the following result: for the BEC, there exist l×l binary kernels, such that polar codes constructed from these kernels achieve scaling exponent μ(l) that tends to the optimal value of 2 as l grows. We furthermore characterize precisely how large l needs to be as a function of the gap between μ(l) and 2. The resulting binary codes maintain the recursive structure of conventional polar codes, and thereby achieve construction complexity O(n) and encoding/decoding complexity O(nlogn).
+
+## Performance Analysis of Coded OTFS Systems Over High-Mobility Channels
+
+- **Status**: ❌
+- **Reason**: Coded OTFS over high-mobility wireless channels; coding gain/diversity tradeoff analysis, no transplantable LDPC decoder/HW/code-design technique.
+- **ID**: ieee:9404861
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Shuangyang Li, Jinhong Yuan, Weijie Yuan +3
+- **PDF**: https://ieeexplore.ieee.org/document/9404861
+- **Abstract**: Orthogonal time frequency space (OTFS) modulation is a recently developed multi-carrier multi-slot transmission scheme for wireless communications in high-mobility environments. In this paper, the error performance of coded OTFS modulation over high-mobility channels is investigated. We start from the study of conditional pairwise-error probability (PEP) of the OTFS scheme, based on which its performance upper bound of the coded OTFS system is derived. Then, we show that the coding improvement for OTFS systems depends on the squared Euclidean distance among codeword pairs and the number of independent resolvable paths of the channel. More importantly, we show that there exists a fundamental trade-off between the coding gain and the diversity gain for OTFS systems, i.e., the diversity gain of OTFS systems improves with the number of resolvable paths, while the coding gain declines. Furthermore, based on our analysis, the impact of channel coding parameters on the performance of the coded OTFS systems is unveiled. The error performance of various coded OTFS systems over high-mobility channels is then evaluated. Simulation results demonstrate a significant performance improvement for OTFS modulation over the conventional orthogonal frequency division multiplexing (OFDM) modulation over high-mobility channels. Analytical results and the effectiveness of the proposed code design are also verified by simulations with the application of both classical and modern codes for OTFS systems.
+
+## Fundamental Limits of Many-User MAC With Finite Payloads and Fading
+
+- **Status**: ❌
+- **Reason**: Information-theoretic many-user MAC limits with SPARCs; pure bound/theory, no LDPC decoder/HW/code-design to transplant.
+- **ID**: ieee:9462926
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Suhas S. Kowshik, Yury Polyanskiy
+- **PDF**: https://ieeexplore.ieee.org/document/9462926
+- **Abstract**: Consider a (multiple-access) wireless communication system where users are connected to a unique base station over a shared-spectrum radio links. Each user has a fixed number k of bits to send to the base station, and his signal gets attenuated by a random channel gain (quasi-static fading). In this paper we consider the many-user asymptotics of Chen-Chen-Guo'2017, where the number of users grows linearly with the blocklength. Differently, though, we adopt a per-user probability of error (PUPE) criterion (as opposed to classical joint-error probability criterion). Under PUPE the finite energy-per-bit communication is possible, and we are able to derive bounds on the tradeoff between energy and spectral efficiencies. We reconfirm the curious behaviour (previously observed for non-fading MAC) of the possibility of almost perfect multi-user interference (MUI) cancellation for user densities below a critical threshold. Further, we demonstrate the suboptimality of standard solutions such as orthogonalization (i.e. TDMA/FDMA) and treating interference as noise (i.e. pseudo-random CDMA without multi-user detection). Notably, the problem treated here can be seen as a variant of support recovery in compressed sensing for the unusual definition of sparsity with one non-zero entry per each contiguous section of 2k coordinates. This identifies our problem with that of the sparse regression codes (SPARCs) and hence our results can be equivalently understood in the context of SPARCs with sections of length 2100. Finally, we discuss the relation of the almost perfect MUI cancellation property and the replica-method predictions.
+
+## Disaster Protection in Inter-DataCenter Networks Leveraging Cooperative Storage
+
+- **Status**: ❌
+- **Reason**: Disaster protection / spectrum routing in optical inter-datacenter networks; no LDPC ECC technique at all.
+- **ID**: ieee:9459187
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Yuanhao Liu, Fen Zhou, Cao Chen +3
+- **PDF**: https://ieeexplore.ieee.org/document/9459187
+- **Abstract**: Natural disasters have challenged the survivability of Elastic Optical Inter-DataCenter Networks (EO-DCNs), and it is urgent to establish efficient disaster protection schemes. In this paper, we investigate the disaster-resilient service provisioning problem leveraging cooperative storage system (CSS). Instead of mirrored content backup on a single DC, our proposed CSS partitions a required content into no less than three fragments if possible, each of which is then stored on a DC located in different disaster zones. Accordingly, multi-path routing with the adaptive number of working paths to distinct DCs is employed to serve each request, while a protection path is computed to protect against a disaster failure. Our main objective is to jointly minimize the spectrum usage and maximal occupied frequency slot index (MOFI) subject to disaster resilience. Besides, we also expect to cut the content storage space. To this end, we propose for the first time a CSS-based dedicated end-to-content path protection (CDP), which allows service provisioning through multiple paths with the adaptive number of paths rather than a single path. This consequently reduces at least half of the reserved spectrum on the protection path. To find the optimal CDP strategy, we formulate the studied problem as an integer linear program (ILP) and then propose a fast heuristic algorithm. Observing the trade-off between the spectrum usage and content storage space, we further design a maximum-CDP (M-CDP), which generates the maximum number of working paths to reduce the content storage space. Simulations are conducted to compare the proposed schemes with the traditional protection strategy using mirrored storage and single-path routing. Numerical results demonstrate that the proposed CSS-based protection schemes enable to cut up to 21.6% of the spectrum usage and 15% of the content storage space.
+
+## Space–Time Line Code for Enhancing Physical Layer Security of Multiuser MIMO Uplink Transmission
+
+- **Status**: ❌
+- **Reason**: STLC 기반 물리계층 보안 — LDPC 무관, 이식 기법 없음
+- **ID**: ieee:9126815
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Jihoon Choi, Jingon Joung, Bang Chul Jung
+- **PDF**: https://ieeexplore.ieee.org/document/9126815
+- **Abstract**: In this article, we investigate a secure uplink multiple-input multiple-output communication system, in which the multiple users transmit information to a legitimate access point (AP) when a passive eavesdropper exists. A secure multiple access method is proposed for single-antenna users by employing space-time line codes (STLCs), which enables noncoherent detection at the legitimate AP without channel state information (CSI) and achieves full spatial diversity. While extending the secure STLC scheme from the single-antenna to two-antenna users by combining the STLC with artificial noise (AN) injection, we design a low-complexity AN signals with the optimal power control scheme. The proposed AN is ensured to be eliminated after STLC decoding at the legitimate AP, while sustained in eavesdropper's received signals as interference. Theoretical sum secrecy rates are derived by considering time-varying fading channels with the uncertainty of CSI at the users, and the numerical results verify that the proposed STLC schemes outperform the existing secure transmission schemes in terms of the sum secrecy rate.
+
+## Factored LT and Factored Raptor Codes for Large-Scale Distributed Matrix Multiplication
+
+- **Status**: ❌
+- **Reason**: 분산 행렬곱용 LT/Raptor fountain 코드. erasure/straggler 대응, 채널 ECC LDPC 디코더 아님
+- **ID**: ieee:9513242
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Asit Kumar Pradhan, Anoosheh Heidarzadeh, Krishna R. Narayanan
+- **PDF**: https://ieeexplore.ieee.org/document/9513242
+- **Abstract**: We propose two coding schemes for distributed matrix multiplication in the presence of stragglers. These coding schemes are adaptations of Luby Transform (LT) codes and Raptor codes to distributed matrix multiplication and are termed Factored LT (FLT) codes and Factored Raptor (FRT) codes. We show that all nodes in the Tanner graph of a randomly sampled code have a tree-like neighborhood with high probability. This ensures that the density evolution analysis gives a reasonable estimate of the average recovery threshold of FLT codes. The recovery threshold of the proposed FLT codes is asymptotically optimal when the output degree distribution is Soliton. Empirically, we show that FRT codes have an excellent recovery threshold while the number of worker nodes is moderately large. In addition, using Azuma–Hoeffding inequality, we derive concentration results to show that the recovery threshold of a randomly chosen FLT code is close to the ensemble average. FLT and FRT codes have better recovery thresholds when compared to Product codes and they are expected to have better numerical stability when compared to Polynomial codes, while they can also be decoded with a low-complexity decoding algorithm. Finally, the proposed codes are better matched to the practically important case of sparse matrix-matrix multiplication as compared to many previous schemes.
+
+## Deep Neural Network Aided Low-Complexity MPA Receivers for Uplink SCMA Systems
+
+- **Status**: ❌
+- **Reason**: SCMA 다중접속 검출용 MPA/DNN-MPA. 채널 ECC LDPC 디코더 아니라 무선 다중사용자 검출 특이적
+- **ID**: ieee:9496150
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Hao Cheng, Yili Xia, Yongming Huang +2
+- **PDF**: https://ieeexplore.ieee.org/document/9496150
+- **Abstract**: Sparse code multiple access (SCMA) has exhibited superiority in spectrum efficiency, which is particularly essential in the Internet of Things (IoT) system where a steadily increasing number of device connections are accommodated. However, the computational complexity of the conventional message passing algorithm (MPA) for the multiuser SCMA detection increases exponentially with the degree of resource nodes (RNs). To address this issue, two low complexity MPA schemes are proposed by utilizing the sparse feature of codewords. First, a sorted MPA (SMPA) detector is introduced to reduce the message exchanging from RNs to variable nodes (VNs) by dropping the redundant superposed constellation points outside a belief interval. Next, in order to further speed up the sorting process of the Euclidean distances between the received signal and codeword combinations, a deep neural network aided MPA (DNNMPA) is proposed, in which, the DNN behaves as a function approximator to generate the belief interval and operates in parallel with the initialization procedure before iterative message passing. Simulation results illustrate that the proposed SMPA and DNNMPA detectors significantly reduce the computational complexity of the conventional MPA one, but with comparable decoding capabilities, for the uplink SCMA system.
+
+## Soft-Input Soft-Output Block Decision Feedback Equalization for ISI Channels
+
+- **Status**: ❌
+- **Reason**: Soft-input soft-output block DFE for turbo equalization over ISI channels; equalizer technique, no LDPC ECC contribution.
+- **ID**: ieee:9448053
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Congji Yin, Wenjiang Feng, Junbing Li +2
+- **PDF**: https://ieeexplore.ieee.org/document/9448053
+- **Abstract**: In this paper, a new class of soft-input soft-output block decision feedback equalizer (BDFE) for turbo equalization over inter-symbol interference (ISI) channels under minimum mean-square error (MMSE) criterion is proposed. First, the BDFE which employs both the a posteriori moments of estimated symbols and the a priori moments of unestimated symbols is investigated, and two recursive schemes are derived to reduce the complexity. Then, to mitigate error propagation, the bidirectional BDFE (Bi-BDFE) consisting of a forward BDFE and a backward BDFE is proposed. Furthermore, a threshold is employed to reduce the number of inverse matrix update process for the BDFE (T-BDFE), which can attain a flexible trade-off between complexity and performance. Finally, the bidirectional equalization is introduced into a low-complexity approximate solution of the BDFE (Bi-LC-BDFE) to further reduce the complexity and obtain time diversity gain, which utilizes a time-invariant covariance matrix. Simulation results show that the proposed equalizers significantly outperform the block linear equalizer (BLE), the exact MMSE-based linear equalizer (Exact-MMSE-LE) and the soft-decision feedback equalizers (SDFE), while keeping a similar complexity as the BLE. In addition, the Bi-BDFE can achieve better performance than the Max-Log-MAP equalizer while its complexity is on the same order as the BDFE.
+
+## Decoding of Variable Length PLH Codes
+
+- **Status**: ❌
+- **Reason**: 가변길이 PLH 헤더 코드 디코딩(DVB-S2X) — LDPC ECC 아님, 응용 특이적
+- **ID**: ieee:9372389
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Marco Morini, Alessandro Ugolini, Giulio Colavolpe
+- **PDF**: https://ieeexplore.ieee.org/document/9372389
+- **Abstract**: In this paper, we address the problem of the decoding of variable length physical layer header (PLH) codes. We take as a case study the DVB-S2X standard, and, after selecting a suitable PLH code with variable codeword length, we propose two alternative noncoherent decoding strategies. The proposed decoding strategies allow to estimate the length of the transmitted PLH field, which is unknown at the receiver, jointly with the decoding of the PLH code. We demonstrate that it is possible to achieve an excellent decoding performance while significantly reducing the overhead due to the transmission of the PLH field with respect to a standard fixed-length PLH.
+
+## Observability Analysis for Large-Scale Power Systems Using Factor Graphs
+
+- **Status**: ❌
+- **Reason**: 전력계통 관측성 분석(팩터그래프/가우시안 BP) — LDPC ECC 디코더 아님, 응용 특이적
+- **ID**: ieee:9347723
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Mirsad Cosovic, Muhamed Delalic, Darijo Raca +1
+- **PDF**: https://ieeexplore.ieee.org/document/9347723
+- **Abstract**: The state estimation algorithm estimates the values of the state variables based on the measurement model described as the system of equations. Prior to applying the state estimation algorithm, the existence and uniqueness of the solution of the underlying system of equations is determined through the observability analysis. If a unique solution does not exist, the observability analysis defines observable islands and further defines an additional set of equations (measurements) needed to determine a unique solution. For the first time, we utilise factor graphs and Gaussian belief propagation algorithm to define a novel observability analysis approach. The observable islands and placement of measurements to restore observability are identified by following the evolution of variances across the iterations of the Gaussian belief propagation algorithm over the factor graph. Due to sparsity of the underlying power network, the resulting method has the linear computational complexity (assuming a constant number of iterations) making it particularly suitable for solving large-scale systems. The method can be flexibly matched to distributed computational resources, allowing for determination of observable islands and observability restoration in a distributed fashion. Finally, we discuss performances of the proposed observability analysis using power systems whose size ranges between 1354 and 70 000 buses.
+
+## A Novel Coordinated Multipoint Scheme With Zero Guard Interval for ATSC 3.0 Single Frequency Networks
+
+- **Status**: ❌
+- **Reason**: ATSC 3.0 SFN/CoMP-NOMA 채널행렬·결합검출 — LDPC ECC와 무관, 떼어낼 디코더/코드설계 기법 없음
+- **ID**: ieee:9394566
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Nazli Ahmad Khan Beigi, Mohammad Reza Soleymani
+- **PDF**: https://ieeexplore.ieee.org/document/9394566
+- **Abstract**: Advanced Television Systems Committee (ATSC) has issued ATSC 3.0 as the standard for the next-generation of Digital Terrestrial Television (DTT) broadcasting. ATSC 3.0 introduces several new features including Layered Division Multiplexing (LDM) that is a form of Non-Orthogonal Multiple Access (NOMA). ATSC 3.0 supports the legacy Single Frequency Networks (SFN), where the Guard Interval (GI) is considered to overcome the multipath as well as the asynchronous reception from different transmitters. Considering the huge distances between the DTT broadcasters, the GI overhead could be comparable to the data size, making the control/data ratio unfavorable. This paper proposes the association of Coordinated MultiPoint (CoMP) in SFN with NOMA-LDM. A novel formation of the channel matrix is provided that jointly includes the asynchronous channel's cross correlations for further joint detection of the signals at the receiver. The purpose is to enhance the coverage and spectral efficiency while avoiding hectic guard intervals or directional antennas. The capacity region is derived in an information theoretic framework based on exploiting the asynchronous channels' memory and correlation. We show that the spectral efficiency can exceed that of the non-coordinating schemes, provided that the proper receiver is equipped with the proposed channel matrix formation. Our extensive simulations validate that our proposed association of CoMP-SFN with NOMA-LDM provides a considerable boost in the coverage and channel reliability, while increasing the spectral and power efficiency.
+
+## Bit Error Probability Performance of Binary Dimmable Visible Light Communication Systems
+
+- **Status**: ❌
+- **Reason**: VLC dimmable OOK 오류확률 성능 분석. 순수 이론 bound, LDPC/디코더/HW 기법 없음
+- **ID**: ieee:9501500
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Sang Hyun Lee, Minsu Zhang, Jae Kyun Kwon
+- **PDF**: https://ieeexplore.ieee.org/document/9501500
+- **Abstract**: This paper evaluates the practically achievable best error performance obtained from a dimmable visible light communication (VLC) system that conveys information using binary modulations, such as on-off keying (OOK). As compared to previous studies that address the ideal performance of dimmable VLC systems only over reliable channels with arbitrarily small error probability, this paper presents the best achievable error probability of various configurations with the dimming targets, signal quality, and data rate. The numerical results establish the ultimate decoding error performance targeted for dimmable VLC systems and are expected to provide a practical guideline for the enhanced VLC system design.
+
+## Rate-Splitting for Multicarrier Multigroup Multicast: Precoder Design and Error Performance
+
+- **Status**: ❌
+- **Reason**: Rate-Splitting 프리코더 설계, LDPC는 LLS 베이스라인 — 떼어낼 새 ECC 기법 없음
+- **ID**: ieee:9403732
+- **Type**: journal
+- **Published**: Sept. 2021
+- **Authors**: Hongzhi Chen, De Mi, Tong Wang +4
+- **PDF**: https://ieeexplore.ieee.org/document/9403732
+- **Abstract**: Employing multi-antenna rate-splitting (RS) at the transmitter and successive interference cancellation (SIC) at the receivers, has emerged as a powerful transceiver strategy for multi-antenna networks. In this paper, we design RS precoders for an overloaded multicarrier multigroup multicast downlink system, and analyse the error performance. RS splits each group message into degraded and designated parts. The degraded parts are combined and encoded into a degraded stream, while the designated parts are encoded in designated streams. All streams are precoded and superimposed in a non-orthogonal fashion before being transmitted over the same time-frequency resource. We first derive the optimized RS-based precoder, where the design philosophy is to achieve a fair user group rate for the considered scenario by solving a joint max-min fairness and sum subcarrier rate optimization problem. Comparing with other precoding schemes including the state-of-the-art multicast transmission scheme, we show that the RS precoder outperforms its counterparts in terms of the fairness rate, with Gaussian signalling, i.e., idealistic assumptions. Then we integrate the optimized RS precoder into a practical transceiver design for link-level simulations (LLS), with realistic assumptions such as finite alphabet inputs and finite code block length. The performance metric becomes the coded bit error rate (BER). In the system under study, low-density parity-check (LDPC) encoding is applied at the transmitter, and iterative soft-input soft-output detection and decoding are employed at the successive interference cancellation based receiver, which completes the LLS processing chain and helps to generate the coded error performance results which validate the effectiveness of the proposed RS precoding scheme compared with benchmark schemes, in terms of the error performance. More importantly, we unveil the corresponding relations between the achievable rate in the idealistic case and coded BER in the realistic case, e.g., with finite alphabet input, for the RS precoded multicarrier multigroup multicast scenario.
+
+## Low Rate Protograph-Based LDPC Codes for Continuous Variable Quantum Key Distribution
+
+- **Status**: ❌
+- **Reason**: [정정 out] CV-QKD reconciliation용 protograph LDPC 코드설계(E). QKD 정보조정은 원칙 제외이며 예외는 디코더 양자화·HW(C/D)에 한정 — 코드설계(E)는 예외 대상 아님, ultra-low-rate라 NAND 부호율과도 거리. (구판정: 양자의존성 없는 바이너리 설계로 in)
+- **ID**: ieee:9562244
+- **Type**: conference
+- **Published**: 6-9 Sept. 
+- **Authors**: Kadir Gümüş, Laurent Schmalen
+- **PDF**: https://ieeexplore.ieee.org/document/9562244
+- **Abstract**: Error correction plays a major role in the reconciliation of continuous variable quantum key distribution (CV-QKD) and greatly affects the performance of the system. CV- QKD requires error correction codes of extremely low rates and high reconciliation efficiencies. There are only very few code designs available in this ultra low rate regime. In this paper, we introduce a method for designing protograph-based ultra low rate LDPC codes using differential evolution. By proposing type-based protographs, a new way of representing low rate protograph-based LDPC codes, we drastically reduce the complexity of the protograph optimization, which enables us to quickly design codes over a wide range of rates. We show that the codes resulting from our optimization outperform the codes from the literature both in regards to the threshold and in finite-length performance, validated by Monte-Carlo simulations, showing gains in the regime relevant for CV-QKD.
+
+## Neural Network-based Forecasting of Decodability for Early ARQ
+
+- **Status**: ❌
+- **Reason**: 수신 패킷 디코딩 가능성을 NN으로 예측(ARQ 조기 피드백) — 디코더 자체 기법 아님, NAND LDPC에 이식할 ECC 기여 없음.
+- **ID**: ieee:9562182
+- **Type**: conference
+- **Published**: 6-9 Sept. 
+- **Authors**: Matthias Hummert, Dirk Wübben, Armin Dekorsy
+- **PDF**: https://ieeexplore.ieee.org/document/9562182
+- **Abstract**: Forecasting the decodability of a received packet of a given decoder is a hard task as many State-of-the-Art (SoTA) decoders are of high complexity and not easy to analyse in an analytical fashion. Gathering this forecast on the other hand would enable to save computational complexity and latency as a decoder execution can be saved if it is unlikely that the received packet is decoded correctly. On top, we can provide early feedback for Automatic Repeat Request (ARQ) schemes before actually running the decoding chain. Guided by this motivation, several approaches of classifying the received packet before the actual decoding process have been discussed. We propose to use neural networks (NN) in the context of forecasting received packets for a given receiver chain. We evaluate the performance of the NN by evaluating different performance metrics and perform an efficiency analysis of ARQ.
+
+## Construction of Polar Codes Based on Piecewise Gaussian Approximation
+
+- **Status**: ❌
+- **Reason**: Polar code construction (Gaussian approximation), not LDPC; no portable LDPC decoder/HW/code-design technique.
+- **ID**: ieee:9562206
+- **Type**: conference
+- **Published**: 6-9 Sept. 
+- **Authors**: Robert M. Oliveira, Rodrigo C. De Lamare
+- **PDF**: https://ieeexplore.ieee.org/document/9562206
+- **Abstract**: In this paper, we investigate the construction of polar codes by Gaussian approximation (GA) and develop an approach based on piecewise Gaussian approximation (PGA). In particular, with the piecewise approach we obtain a function that replaces the original GA function with a more accurate approximation, which results in significant gain in performance. The proposed PGA construction of polar codes is presented in its integral form as well as an alternative approximation that does not rely on the integral form. Simulations results show that the proposed PGA construction outperforms the standard GA for several examples of polar codes and rates.
+
+## Joint Source-Channel Codes Based on a Single Protograph
+
+- **Status**: ❌
+- **Reason**: 단일 protograph 기반 JSCC(소스-채널 결합), LDPC 베이스라인일 뿐 떼어낼 ECC 기법 없음
+- **ID**: ieee:9594129
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Francis C. M. Lau, Jia Zhan
+- **PDF**: https://ieeexplore.ieee.org/document/9594129
+- **Abstract**: In this paper, we propose using a single protograph to design joint source-channel codes (JSCCs). We present a generalized algorithm, called protograph extrinsic information transfer for JSCC algorithm (PEXIT-JSCC algorithm), for analyzing the channel threshold of the proposed JSCC. Using the classic AR3A and AR4JA protographs, we construct AR3A-JSCC and AR4JA-JSCC codes. We analyze their decoding thresholds and compare their performance with JSCC systems using optimized double protograph low-density-party-check codes.
+
+## Symbol Message Passing Decoding of LDPC Codes for Orthogonal Modulations
+
+- **Status**: ❌
+- **Reason**: q-ary(non-binary) LDPC symbol message passing 디코더. 비이진 LDPC 제외 대상
+- **ID**: ieee:9594277
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Emna Ben Yacoub, Balazs Matuz
+- **PDF**: https://ieeexplore.ieee.org/document/9594277
+- **Abstract**: A simple decoder for q-ary low-density parity-check codes is studied, termed symbol message passing. The decoder passes hard decisions from a q-ary alphabet. For orthogonal modulations over the additive white Gaussian channel for which the modulation order and the field order q are equal, it is shown that the extrinsic messages can be modelled as observations of a q-ary symmetric channel, allowing to work out density evolution equations. A stability analysis is provided which emphasizes the influence of degree-3 variable nodes. Simulation results show performance gains for increasing q w.r.t. binary low-density parity-check codes with bit-interleaved coded modulation, and potential savings in decoding complexity.
+
+## Design of Spatially Coupled Turbo Product Codes for Optical Communications
+
+- **Status**: ❌
+- **Reason**: 광통신용 spatially coupled turbo product code 설계, LDPC 디코더/구성 기법 아님
+- **ID**: ieee:9594120
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Guido Montorsi, Sergio Benedetto
+- **PDF**: https://ieeexplore.ieee.org/document/9594120
+- **Abstract**: A new design is proposed for spatial coupled turbo product codes matching the challenging constraints of forward error correcting codes for optical communication applications. The design includes a simple encoding algorithm that matches the reduced rate of the code w.r.t. the block turbo product codes and keeps the frame structure of the original block product code by replacing part of the information bits with properly designed check on checks. Moreover, conditions are shown on the spatial coupling matrix on the code that allows to increase the minimum distance of the code, thus coping with the very low bit error probability required in optical communications.
+
+## Design of Iterative Demapping Schedules for Reduced-Complexity BICM-ID with Binary LDPC Codes and Orthogonal Modulations
+
+- **Status**: ❌
+- **Reason**: BICM-ID iterative demapping 스케줄 최적화, LDPC는 베이스라인이고 떼어낼 ECC 기법은 demapping 활성화 횟수 제어로 무선 변조 특이적
+- **ID**: ieee:9594275
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Rémi Chauvat, Axel Garcia-Pena, Matteo Paonni
+- **PDF**: https://ieeexplore.ieee.org/document/9594275
+- **Abstract**: LDPC-coded modulations are attractive solutions for many communications links. BICM provides a very simple, flexible yet effective way of combining binary channel codes with non-binary modulations. However, iterative demapping is sometimes necessary to increase the coding gains. This is especially the case for orthogonal modulations where the "BICM capacity" falls far away from the coded modulation capacity. Unfortunately, iterative demapping results in a significant computational cost. A pragmatic solution to reduce this computational cost aims at restricting the number of demapping activations. In this article, a strategy to compute the minimum number of demapping activations necessary for a target estimated BER performance is presented and results are introduced for BICM-ID with binary LDPC-coded orthogonal modulations. Iterative demap-ping schedules optimized for a limited number of demapper activations are designed and evaluated in the finite code length regime.
+
+## The Best, The Requested, and The Default Non-Binary LDPC Decoding Algorithm
+
+- **Status**: ❌
+- **Reason**: Non-Binary LDPC 디코딩 알고리즘 — 비이진 LDPC 즉시 제외
+- **ID**: ieee:9594148
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Joseph Jabour, Cédric Marchand, Emmanuel Boutillon
+- **PDF**: https://ieeexplore.ieee.org/document/9594148
+- **Abstract**: This paper presents a different vision of the Non-Binary LDPC decoding algorithm. So far, state-of-the-art decoders are mainly focused on the reduction of the check node processing complexity, with a potential side effect on the size of the messages that are exchanged in the iterative decoder. However, it is possible to take a different approach and consider the reduction of the message size as the main objective. The paper presents "the Best, the Requested and the Default" algorithm that shrinks dramatically the communication load between the variable nodes and check nodes.
+
+## PAM-6 Coded Modulation for IM/DD Channels with a Peak-Power Constraint
+
+- **Status**: ❌
+- **Reason**: PAM-6 확률 진폭 셰이핑 변조 — LDPC 무관, 떼어낼 ECC 기법 없음
+- **ID**: ieee:9594181
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Tobias Prinz, Thomas Wiegart, Daniel Plabst +4
+- **PDF**: https://ieeexplore.ieee.org/document/9594181
+- **Abstract**: Coded modulation with probabilistic amplitude shaping (PAS) is considered for intensity modulation/direct detection channels with a transmitter peak-power constraint. PAS is used to map bits to a uniform PAM-6 distribution and outperforms PAM-8 for rates up to around 2.3 bits per channel use. PAM-6 with PAS also outperforms a cross-shaped QAM-32 constellation by up to 1dB and 0.65dB after bit-metric soft- and hard decoding, respectively. An alternative PAM-6 scheme based on a framed-cross-shaped QAM-32 constellation is proposed that shows similar gains.
+
+## On the Equivalence between Pre-transformed and Parity-check Monomial Codes
+
+- **Status**: ❌
+- **Reason**: Polar/Reed-Muller monomial code 이론, LDPC ECC 디코더/HW/구성 기법 아님
+- **ID**: ieee:9594246
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Yuanxin Guo, Zihan Tang, Bin Li
+- **PDF**: https://ieeexplore.ieee.org/document/9594246
+- **Abstract**: Polar codes and Reed-Muller codes belong to a family of codes called monomial codes. In this work, we study pre-transformed monomial codes, which cover several constructions including parity-check (PC) codes and PAC codes. We show that any pre-transformed monomial code can be transformed into a parity-check monomial code with the same codewords, and give an explicit algorithm for this transformation. We further prove that for certain monomial codes, the minimum weight is invariant under pre-transformation, but specific pre-transformation matrices can be constructed to reduce the number of minimum-weight codewords. These results offer theoretical support for the success of various heuristics, e.g., PAC codes attain dispersion bound, and provide guidance for designing short codes.
+
+## Connecting Spatially Coupled LDPC Code Chains for Bit-Interleaved Coded Modulation
+
+- **Status**: ❌
+- **Reason**: SC-LDPC 체인 연결 BICM/비트매핑 UEP — 무선 변조 응용 특이적, 떼어낼 NAND ECC 기법 약함
+- **ID**: ieee:9594212
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Yihuan Liao, Min Qiu, Jinhong Yuan
+- **PDF**: https://ieeexplore.ieee.org/document/9594212
+- **Abstract**: This paper investigates the design of spatially coupled low-density parity-check (SC-LDPC) codes constructed from connected-chain ensembles for bit-interleaved coded modulation (BICM) schemes. For short coupling lengths, connecting multiple SC-LDPC chains can improve decoding performance over single-chains and impose structured unequal error protection (UEP). A joint design of connected-chain ensembles and bit mapping to further exploit the UEP from codes and high-order modulations is proposed. Numerical results demonstrate the superiority of the proposed design over existing connected-chain ensembles and over single-chain ensembles with existing bit mapping design.
+
+## Channel Model with Memory for DNA Data Storage with Nanopore Sequencing
+
+- **Status**: ❌
+- **Reason**: DNA 저장 + non-binary LDPC 명시. 비이진 LDPC는 제외 대상
+- **ID**: ieee:9594243
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Belaid Hamoum, Elsa Dupraz, Laura Conde-Canencia +1
+- **PDF**: https://ieeexplore.ieee.org/document/9594243
+- **Abstract**: This paper is dedicated to channel modeling and error-correction coding for DNA data storage with nanopore sequencing. We first propose a novel statistical model for DNA storage, which takes into account the memory within DNA storage error events, and follows the way nanopore sequencing works. Compared to existing channel models, the proposed model represents more accurate experimental datasets. We also propose a full error-correction scheme for DNA storage, based on a consensus algorithm and non-binary LDPC codes. Especially, we introduce a novel synchronization method which allows to eliminate remaining deletion errors after the consensus, before applying a belief-propagation LDPC decoding algorithm to correct substitution errors. This method exploits the LDPC code structure to correct deletions, and does not require adding any extra redundancy.
+
+## A Class of Hybrid Coupled Serially Concatenated Codes
+
+- **Status**: ❌
+- **Reason**: SC concatenated convolutional codes(SC-SCC/HC-SCC) error-floor 개선, LDPC 디코더/구성 기법 아님
+- **ID**: ieee:9594274
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Chaojie Yang, Shancheng Zhao, Xiao Ma
+- **PDF**: https://ieeexplore.ieee.org/document/9594274
+- **Abstract**: Spatially coupled serially concatenated codes (SC-SCCs) outperform the spatially coupled parallel concatenated codes (SC-PCCs) both in the waterfall region and the error-floor region. Although the SC-SCCs with a weak outer convolutional code (CC) and a strong inner CC reveal good waterfall performance, their error-floors are still too high. This paper introduces the recursive encoding structure into SC-SCCs to reduce the error-floor. We introduce the hybrid coupled serially concatenated codes (HC-SCCs), in which spatial coupling is achieved by taking a portion of the encoding outputs of both the outer and the inner encoders as the input of the current inner encoder. As a result, the proposed HC-SCCs are recursive in nature. The exact density evolution equations of the HC-SCCs are derived. Numerical results are provided to show the performance advantages of the proposed HC-SCCs. Particularly, simulation results show that, compared to the original SC-SCCs, about two orders of magnitude error-floor performance improvement are obtained with the proposed HC-SCCs.
+
+## Joint Source-Channel Polar Coding for Biased Bernoulli Sources at Short Blocklengths
+
+- **Status**: ❌
+- **Reason**: Polar 소스-채널 결합 부호화(JSCC), LDPC 아님
+- **ID**: ieee:9594160
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Mengfan Zheng, Jiaqi Gu, Mengyao Ma +1
+- **PDF**: https://ieeexplore.ieee.org/document/9594160
+- **Abstract**: We study the design of joint source-channel polar coding for biased Bernoulli sources in this paper, focusing on short blocklengths. We first apply the CRC-aided successive cancellation decoding scheme to source polar coding and demonstrate its superior performance at short blocklengths. Then we design a joint decoding scheme for concatenated source-channel polar codes, using soft information from the source decoder and source CRC bits to aid channel decoding. Simulations show that the proposed scheme outperforms separate source-channel polar coding and can even break through the finite blocklength bound of separate source-channel coding in some cases.
+
+## Input-distribution-aware parallel decoding of block codes
+
+- **Status**: ❌
+- **Reason**: Polar/BCH list 디코딩 병렬도 제어(IDA) 기법으로 LDPC 떼어낼 ECC 기법 없음; 대상은 polar/BCH
+- **ID**: ieee:9594071
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Carlo Condo, Alex Nicolescu
+- **PDF**: https://ieeexplore.ieee.org/document/9594071
+- **Abstract**: Many channel decoders rely on parallel decoding attempts to achieve good performance with acceptable latency. However, most of the time fewer attempts than the foreseen maximum are sufficient for successful decoding. Input-distribution-aware (IDA) decoding allows to determine the parallelism of polar code list decoders by observing the distribution of channel information. In this work, IDA decoding is proven to be effective with different codes and decoding algorithms as well. Two techniques, M-IDA and MD-IDA, are proposed: they exploit the sampling of the input distribution inherent to particular decoding algorithms to perform low-cost IDA decoding. Simulation results on the decoding of BCH codes via the Chase and ORBGRAND algorithms show that they perform at least as well as the original IDA decoding, allowing to reduce run-time complexity down to 17% and 67% with minimal error correction degradation.
+
+## Self-Decodability of HARQ Retransmissions for 5G NR LDPC Codes
+
+- **Status**: ❌
+- **Reason**: 5G NR HARQ self-decodability via rate-matching, '채널 코드 구성 변경 없음' 명시 - 떼어낼 LDPC ECC 기법 없음, 무선 응용 특이적
+- **ID**: ieee:9594241
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Gabi Sarkis, Joseph B. Soriaga, Tom Richardson
+- **PDF**: https://ieeexplore.ieee.org/document/9594241
+- **Abstract**: Hybrid automatic retransmission request (HARQ) in modern wireless communication systems such as 4G and 5G is designed to allowing efficient combining of multiple (re)transmissions so as to to achieve coding gain. The coding performance for each retransmission in isolation may, however, not be consistent, potentially lacking self-decodability of individual retransmissions. This can require the UE to receive multiple additional retransmissions when the initial transmission is missed, undermining the intended efficiency of the HARQ system. In this paper, we discuss the self-decodability of HARQ retransmissions and show it can be improved, providing a balance between coding gain and self-decodability, by modifying the rate-matching operation without changing the channel code construction. We present results illustrating the gains in self-decodability using the proposed scheme.
+
+## Iteration Based Analysis of Straggling Channel Decoders for Network Function Virtualization
+
+- **Status**: ❌
+- **Reason**: NFV straggling 디코더 가용성 분석(스케줄/지연), LDPC 부수적·새 디코더/구성/HW 없음
+- **ID**: ieee:9594134
+- **Type**: conference
+- **Published**: 30 Aug.-3 
+- **Authors**: Yashar Naderzadeh, Jörg Kliewer
+- **PDF**: https://ieeexplore.ieee.org/document/9594134
+- **Abstract**: We consider the uplink of a cloud radio access network, in which baseband functionality is offloaded to the off-the-shelf servers in the cloud via network function virtualization (NFV). Specifically, we consider channel decoding of iteratively decodable channel codes as an important time-critical baseband operation. It has been shown that by reencoding the received channel codewords at the cloud with a linear NFV code, the impact of straggling decoders can be reduced. In our previous work the channel decoding operation at each server, after some probabilistic processing delay, was assumed to have converged to a codeword with only negligible probability of error. In contrast, in this work we leverage the fact that for iterative decoding we can trade-off latency versus decoding error by considering intermediate decoding results, i.e., after each decoder iteration. We derive an expression for the frame unavailability probability as a function of the decoding latency and thus of the number of completed iterations at all decoders. We show that for LDPC codes the latency is significantly reduced if we combine intermediate codeword estimates of the decoders at each iteration.
+
+## IEEE 802.11be: Performance of Chase Combining HARQ Protocol with LDPC over Channels with Doppler Spread and Feedback Delay
+
+- **Status**: ❌
+- **Reason**: 802.11be CC-HARQ 성능 분석, LDPC는 부수적 베이스라인. 떼어낼 디코더/HW/코드설계 기여 없음 (무선 응용 특이적)
+- **ID**: ieee:9625472
+- **Type**: conference
+- **Published**: 27-30 Sept
+- **Authors**: Roger Pierre Fabris Hoefel
+- **PDF**: https://ieeexplore.ieee.org/document/9625472
+- **Abstract**: This paper analyses the performance of Chase Combining Hybrid Automatic Repeat Request (CC-HARQ) protocol in the novel 2024 IEEE 802.11 be physical layer (PHY) when it is implemented Low-Density Parity-Check (LDPC) codes over Doppler channels for the following transceiver architectures: downlink transmit beamforming (DL TxBF), DL multi-user multiple-input multiple-output (DL MU-MIMO), and uplink MU-MIMO. Simulation results indicate that the performance gains due to the implementation of CC-HARQ with LDPC codes vary between 2 to 4 dB with only one retransmission, where the achievable gains depend on PHY layer set-up and channel modelling. We also have observed that the performance of DL MU-MUMO transceivers presents a great sensibility with the decrease of precoding accuracy due to the joint effects of Doppler spread and channel state information feedback delay. Finally, we have concluded that the implementation of 802.11be PHY with 4096-QAM is possible with practical signal-to-noise ratio (SNR) when it is implemented TxBF transceivers even without implementing HARQ protocols. In this set-up, the implementation of CC-HARQ scheme with only one retransmission allows power gains between 3 to 4 dB, increasing the usage of 4096-QAM.
+
+## Performance Analysis of NR based Vehicular IoT System with OTFS Modulation
+
+- **Status**: ❌
+- **Reason**: OTFS 변조로 LDPC를 오히려 제거하는 방향, LDPC 기여 없음
+- **ID**: ieee:9625242
+- **Type**: conference
+- **Published**: 27-30 Sept
+- **Authors**: Ch Santosh Reddy, Debarati Sen, Chetna Singhal
+- **PDF**: https://ieeexplore.ieee.org/document/9625242
+- **Abstract**: Orthogonal Time Frequency Space (OTFS) modulation is a 2-D modulation technique where the time-varying multipath channel is equivalent to a time-invariant delay-Doppler channel. The information symbols that are coherently combined along the multiple delay-Doppler diversity branches experience the same channel gain. New Radio (NR) based Internet of Things (IoT) in 5G standard can support high-speed automated vehicular network that can be termed as vehicular IoT (V-IoT). At high speeds, the orthogonal frequency division multiplexing-based transmission suffers from high intercarrier (or symbol) interference, making it unsuitable. In this paper, we have proposed a less complex NR-based IoT (NR-IoT) system with OTFS that performs better than NR-IoT with low-density parity-check (LDPC). We thereby eliminate the computational complexity of LDPC decoding in our scheme. We have evaluated our proposed technique of uncoded NR-IoT with OTFS over the extended vehicular channel model-A and ultra-reliable low latency communication channel. We have achieved a 6 dB SNR gain with our proposed NR-IoT system with OTFS.
+
+## Spectrally Efficient FDM System with Probabilistic Shaping
+
+- **Status**: ❌
+- **Reason**: SEFDM+확률적 셰이핑, LDPC는 표준 SD-FEC 베이스라인으로 사용, 새 ECC 기여 없음
+- **ID**: ieee:9625460
+- **Type**: conference
+- **Published**: 27-30 Sept
+- **Authors**: Xinyue Liu, Izzat Darwazeh, Nader Zein +1
+- **PDF**: https://ieeexplore.ieee.org/document/9625460
+- **Abstract**: This work proposes and explores the use of probabilistic shaping for the non-orthogonal multicarrier spectrally efficient frequency division multiplexing (SEFDM) system. The system design considers the reverse concatenation architecture which cascades the constant composition distribution matching (CCDM) algorithm together with soft-decision forward error correction (SD-FEC)-LDPC code for the probabilistic shaping scheme. The non-orthogonal signalling is implemented by discrete Fourier transform (DFT)-based SEFDM modulation with matched filtering demodulation and advanced interference cancellation detection. The high achievable spectral efficiency, low computation complexity and reliability make SEFDM a good candidate for multicarrier signalling for beyond 5G communications. By adding extra shaping gain and flexibility of rate adaptation, the combination of two capacity-achieving techniques provides significant insight of further performance improvement. In this paper, we investigate the performance of the proposed probabilistically shaped-SEFDM (PS-SEFDM) system with regular QAM constellations. The presented results of the proposed system show less required power and bandwidth saving compared to OFDM when achieving the same error performance and same spectral efficiency.
+
+## On the RIS Manipulating Attack and Its Countermeasures in Physical-layer Key Generation
+
+- **Status**: ❌
+- **Reason**: RIS physical-layer 키 생성 공격/방어, ECC 무관
+- **ID**: ieee:9625442
+- **Type**: conference
+- **Published**: 27-30 Sept
+- **Authors**: Lei Hu, Guyue Li, Hongyi Luo +1
+- **PDF**: https://ieeexplore.ieee.org/document/9625442
+- **Abstract**: Reconfigurable Intelligent Surface (RIS) is a new paradigm that enables the reconfiguration of the wireless environment. Based on this feature, RIS can be employed to facilitate Physical-layer Key Generation (PKG). However, this technique could also be exploited by the attacker to destroy the key generation process via manipulating the channel features at the legitimate user side. Specifically, this paper proposes a new RIS-assisted Manipulating attack (RISM) that reduces the wireless channel reciprocity by rapidly changing the RIS reflection coefficient in the uplink and downlink channel probing step in orthogonal frequency division multiplexing (OFDM) systems. The vulnerability of traditional key generation technology based on channel frequency response (CFR) under this attack is analyzed. Then, we propose a slewing rate detection method based on path separation. The attacked path is removed from the time domain and a flexible quantization method is employed to maximize the Key Generation Rate (KGR). The simulation results show that under RISM attack, when the ratio of the attack path variance to the total path variance is 0.17, the Bit Disagreement Rate (BDR) of the CFR-based method is greater than 0.25, and the KGR is close to zero. In addition, the proposed detection method can successfully detect the attacked path for SNR above 0 dB in the case of 16 rounds of probing and the KGR is 35 bits/channel use at 23.04MHz bandwidth.
+
+## Reconfigurable Intelligent Surface for 5G NR Uplink Coverage Enhancement
+
+- **Status**: ❌
+- **Reason**: RIS 기반 5G 커버리지 향상, LDPC는 부수 언급뿐 떼어낼 기법 없음
+- **ID**: ieee:9625081
+- **Type**: conference
+- **Published**: 27-30 Sept
+- **Authors**: Visa Tapio, Arman Shojaeifard, Ibrahim Hemadeh +2
+- **PDF**: https://ieeexplore.ieee.org/document/9625081
+- **Abstract**: Reconfigurable intelligent surfaces (RIS) have the ability to steer the electromagnetic (EM) waves to a desired direction. This enables the improvement of the wireless link performance by allowing the illumination of receivers otherwise shadowed by buildings or hills. In this paper, a standards-compliant link-level simulator is developed to study the performance improvement offered by a RIS in 5G New Radio (NR) uplink operating at sub-6 GHz bands. At these frequencies the direct channel between the user and base station is rarely completely blocked, but given the stringent power restrictions of devices, the RIS is utilized for enhancing the coverage performance in the uplink direction. In the studied cases, the transmitter (TX) is close to the RIS and a line-of-sight (LoS) path between the TX and RIS is assumed. The channel between the TX and receiver (RX) is modeled as a non-line-of-sight (NLoS) channel with 5G NR clustered delay line A (CDL-A) profile. Both LoS and NLoS channels between the RIS and RX are considered. Under state-of-the-art system settings, the RIS is shown to increase the symbol error rate link performance by 6 dB. When the performance is measured with coded bit error rate, the performance gain in simulated cases is 1 dB. The coverage enhancement is measured with the throughput as a function of the distance between the TX and RX. The distance at which the maximum possible throughput can be achieved is increased about 5%. The coverage can be further extended if a lower than the maximum throughput is accepted.
+
+## Achievable Sum-Rate Capacity Optimization for Joint MIMO Multiuser Communications and Radar
+
+- **Status**: ❌
+- **Reason**: MIMO 통신-레이더 합동 송신 설계, LDPC ECC 무관
+- **ID**: ieee:9593259
+- **Type**: conference
+- **Published**: 27-30 Sept
+- **Authors**: Xiang Liu, Tianyao Huang, Yimin Liu +1
+- **PDF**: https://ieeexplore.ieee.org/document/9593259
+- **Abstract**: This work considers the joint transmit design of multiuser MIMO communications and MIMO radar. In particular, we propose to maximize the sum-rate capacity of multiuser MIMO communications under certain transmit correlation mismatch level for MIMO radar, and solve the maximization via convex optimization. Then, a practical transmit design scheme based on Tomlinson-Harashima precoding is proposed to approach the sum-rate capacity. The numerical results on the sum-rate capacity indicate that the average capacity under Rayleigh fading channel is the highest when radar intends to form a omnidirectional transmit beam. The bit error rate simulation shows that the proposed transmit design scheme is about 7dB from the theoretic capacity.
+
+## A Prototype Broadband Acoustic Underwater Data Communication System for High Data Rates
+
+- **Status**: ❌
+- **Reason**: 수중 음향 통신 프로토타입 — LDPC 기법 없음
+- **ID**: ieee:9705850
+- **Type**: conference
+- **Published**: 20-23 Sept
+- **Authors**: Elna Niemann, Kiri Nicolaides, Kahesh Dhuness
+- **PDF**: https://ieeexplore.ieee.org/document/9705850
+- **Abstract**: The need for wireless underwater communication systems exists due to the constraints that tethered wired communication systems place on underwater equipment, and the extensive time and effort required to retrieve information from remote underwater installations. With current available commercial underwater acoustic modem systems only offering low data rates for use mainly in control signals and sensor telemetry data transfer from deep depths and over large distances, there exists a need for a wireless system capable of handling large, high-speed data transfers over shorter distances. Being able to transmit data at a high transmission rate in turn requires higher frequencies and a broader system bandwidth. With the development of advanced wideband ultrasonic transducer technology within the Council for Scientific and Industrial Research (CSIR), the application of such transducers for broadband underwater acoustic data communication for high data rates and reliable transmission has been researched and investigated over the past few years. A prototype broadband acoustic underwater data communication (BAUDC) system has been developed, with the intended end goal of being able to perform large data transfers, such as sonar images, from an unmanned underwater vehicle (UUV) to a surface ship, surface buoy or submarine at a sufficiently high data rate to allow the data to be received in near real-time. The prototype BAUDC system is currently still under development, but it has so far produced excellent results. During testing of the system in the CSIR’s sonar testing tank, a set of transducers having a bandwidth of around 280 kHz achieved data rates over 200 kbps with a bit-error-ratio (BER) of 0, meaning no bit-errors occurred. The prototype system has also been tested in a real shallow water environment inside a harbor, with a communication distance of 200m successfully achieved.
+
+## Reduced-Complexity Quasi-Reversible BCH Decoders for Data Storage Systems
+
+- **Status**: ❌
+- **Reason**: 비-LDPC 부호(BCH) 디코더 복잡도 감소 — 부호 특화(error-locator polynomial) 기법으로 바이너리 LDPC BP에 이식 불가, 원칙 제외
+- **ID**: ieee:9603036
+- **Type**: conference
+- **Published**: 15-17 Sept
+- **Authors**: Chong-Dao Lee
+- **PDF**: https://ieeexplore.ieee.org/document/9603036
+- **Abstract**: Error-correcting codes, including Bose-Chaudhuri-Hocquenghem (BCH) codes, low-density parity-check codes, and Reed-Solomon codes have been widely applied to magnetic and data storage systems. Recently, a new subclass of BCH codes was proposed and called quasi-reversible BCH codes. This paper proposes the new error-locator polynomial, which is a sparse polynomial, requires the less finite field additions as well as multiplications, and is able to reduce time delay. Finally, the algebraic decoding algorithm for quasi-reversible BCH codes to correct up to six errors is developed.
+
+## Synchronization and Asymmetric Error Correction for Nanopore Sequencing
+
+- **Status**: ❌
+- **Reason**: 나노포어 시퀀싱 DNA 스토리지의 동기화/비대칭 오류용 concatenated LDPC+marker BP — NAND ECC와 무관한 채널특화 기법, 떼어낼 일반 디코더 기여 없음
+- **ID**: ieee:9603039
+- **Type**: conference
+- **Published**: 15-17 Sept
+- **Authors**: Ryosuke Nakata, Haruhiko Kaneko
+- **PDF**: https://ieeexplore.ieee.org/document/9603039
+- **Abstract**: Nanopore sequencing is prone to synchronization and asymmetric substitution errors. Error correction coding suitable for correcting these errors is required to improve the reliability of DNA storage. This paper defines a channel model which can express both synchronization and asymmetric errors. We also show an concatenated coding using outer LDPC code and inner marker, and present a decoding algorithm based on a belief propagation on factor graph. Numerical results show that, for evaluated channel parameters, the error rate is minimized when the marker interval is 5 and the oversampling factor is 10.
+
+## Coded Faster-than-Nyquist Signaling for Short Packet Communications
+
+- **Status**: ❌
+- **Reason**: NB-LDPC(비이진 LDPC) 기반 FTN 신호 검출 — 비이진 LDPC 즉시 제외
+- **ID**: ieee:9569719
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Emre Cerci, Adem Cicek, Enver Cavus +2
+- **PDF**: https://ieeexplore.ieee.org/document/9569719
+- **Abstract**: Ultra-reliable low-latency communication (URLLC) requires short packets of data transmission. It is known that when the packet length becomes short, the achievable rate is subject to a penalty when compared to the channel capacity. In this paper, we propose to use faster-than-Nyquist (FTN) signaling to compensate for the achievable rate loss of short packet communications. We investigate the performance of a combination of a low complexity detector of FTN signaling used with nonbinary low-density parity-check (NB-LDPC) codes that is suitable for low-latency and short block length requirements of URLLC systems. Our investigation shows that such combination of low-complexity FTN signaling detection and NB-LDPC codes outperforms the use of close-to-optimal FTN signaling detectors with LDPC codes in terms of error rate performance and also has a considerably lower computational complexity.
+
+## 400G MIMO-FSO Transmission with Enhanced Reliability Enabled by Joint LDPC Coding
+
+- **Status**: ❌
+- **Reason**: MIMO-FSO 광전송에 표준 joint LDPC 적용, 새 디코더/구성 없음 — 응용 특이적 단순 사용
+- **ID**: ieee:9605896
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Marco A. Fernandes, Paulo P. Monteiro, Fernando P. Guiomar
+- **PDF**: https://ieeexplore.ieee.org/document/9605896
+- **Abstract**: We experimentally demonstrate error-free MIMO-FSO transmission of 2&#x00D7;200 Gbps, with joint LDPC coding between the signals, leading to an increase in tolerated channel power loss of 2 dB. Moreover, we show enhanced communication reliability in Gamma-Gamma MIMO-FSO systems.
+
+## Modulation and Coding Schemes for Variable-Rate Parallel Sequence Spread Spectrum
+
+- **Status**: ❌
+- **Reason**: PSSS 확산변조+LDPC 결합 무선 시스템, LDPC는 부수 언급(코드율 축소) — 떼어낼 ECC 기법 없음
+- **ID**: ieee:9569376
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: L. Lopacinski, A. Hasani, N. Maletic +3
+- **PDF**: https://ieeexplore.ieee.org/document/9569376
+- **Abstract**: This paper investigates coding and modulation schemes for wireless communication based on variable-rate parallel sequence spread spectrum (PSSS). PSSS can adapt the spreading gain according to channel conditions. When this modulation technique is combined with external forward error correction (FEC), a challenge arises in adjusting the gains from FEC and PSSS to achieve the highest spectral and energy efficiency. We profile the bit error rate (BER) and energy efficiency as a function of the signal-to-noise ratio (SNR) for PSSS combined with low-density parity-check (LDPC) codes implemented in 28 nm CMOS technology. This analysis reveals that the gain provided by PSSS should be used only in exceptional cases, whereas LDPC codes provide the gain at a lower spectral- penalty. Moreover, we simplify our system by reducing the number of LDPC code rates. As compared to IEEE 802.11n, we exclude the 2/3 and 3/4 FEC code rates from the hardware and compensate these modes by using the variable-rate PSSS.
+
+## Cloud Native Hardware Accelerated 5G virtualized Radio Access Network
+
+- **Status**: ❌
+- **Reason**: 5G vRAN 클라우드 오케스트레이션/HW 오프로딩, LDPC FEC는 응용 언급뿐 — 떼어낼 디코더/HW 신규 기여 없음
+- **ID**: ieee:9569523
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Jean Dion, Julien Lallet, Laurent Beaulieu +2
+- **PDF**: https://ieeexplore.ieee.org/document/9569523
+- **Abstract**: Cloud Radio Access Network consists in deporting and pooling radio processing on shared servers for a better use of computing resources, more agile operations, and thus optimizing costs and energy performance. Some of these processes at the radio physical layer are highly demanding in terms of computing power, which implies high energy consumption. Our approach enables the automatic activation of hardware programmable acceleration resources that are better suited to these processes in terms of performance and energy efficiency. Low-Density Parity-Check Forward Error Correction functions standardized in 5th Generation of Mobile Networks are offloaded on these hardware acceleration resources. Kubernetes-based orchestration is made compatible with the use of a edge computing accelerated heterogeneous infrastructure (CPU, GPU, FPGA) that can be distributed at the edge of the operator’s network to deploy the RAN Distributed Unit. We assess the proof-of-concept implementation of our approach and evaluate cost in data offloading and energy consumption. This prefigures a full cloud orchestration for 5G access, such as recommended in the O-RAN consortium.
+
+## Dual Coding Concatenation for Burst-Error Correction in Probabilistic Amplitude Shaping
+
+- **Status**: ❌
+- **Reason**: 확률적 진폭 성형의 BCH 연접 부호 — 비-LDPC, 광통신 특이적
+- **ID**: ieee:9605842
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Pavel Skvortcov, Toshiaki Koike-Akino, David S. Millar +2
+- **PDF**: https://ieeexplore.ieee.org/document/9605842
+- **Abstract**: We investigate a dual coding concatenation in probabilistic amplitude shaping to mitigate post-shaping burst errors. The joint use of pre-/post-shaping BCH codes can significantly relax bit error rate (BER) threshold after soft-decision code resulting in signal-to-noise ratio (SNR) gain of 0.1 dB.
+
+## Reduced Capability Devices for 5G IoT
+
+- **Status**: ❌
+- **Reason**: 5G IoT reduced capability 디바이스 개요, LDPC 무관
+- **ID**: ieee:9569595
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Rapeepat Ratasuk, Nitin Mangalvedhe, Gilsoo Lee +1
+- **PDF**: https://ieeexplore.ieee.org/document/9569595
+- **Abstract**: The first release of 5G NR (Rel-15) supports Internet of Things (IoT) use cases including ultra-reliable low-latency as well as massive machine type communications. In Rel-17, reduced capability devices are being introduced to support mid-range IoT use cases such as industrial wireless sensors, wearables, and video surveillance. These use cases require low-cost devices to support high reliability, low latency, medium data rate, and long battery life despite being low complexity in design. In this paper, we provide an overview of these devices and describe important features being standardized in 3GPP for complexity reduction, coverage compensation, and power saving.
+
+## Low-complexity Channel Polarized Multilevel Coding for Modulation-format-independent Forward Error Correction
+
+- **Status**: ❌
+- **Reason**: 채널 극화 다중레벨 코딩(polar 계열 SD-FEC) 광통신 변조 기법 — 비-LDPC, 떼어낼 LDPC 기법 없음
+- **ID**: ieee:9605828
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Takeshi Kakizaki, Masanori Nakamura, Fukutaro Hamaoka +1
+- **PDF**: https://ieeexplore.ieee.org/document/9605828
+- **Abstract**: We propose a modulation-format-independent binary coding scheme that applies multilevel coding to channel polarized signals with different capacities. The simulation results show that the proposed method can reduce complexity with slight net coding gain degradation by applying SD-FEC only to non-reliable bits compared to BICM.
+
+## On Kurtosis-limited Enumerative Sphere Shaping for Reach Increase in Single-span Systems
+
+- **Status**: ❌
+- **Reason**: kurtosis 제한 enumerative sphere shaping(성형 기법), ECC/LDPC 기여 없음 — 소스 성형
+- **ID**: ieee:9605938
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Yunus Can Gültekin, Alex Alvarado, Olga Vassilieva +4
+- **PDF**: https://ieeexplore.ieee.org/document/9605938
+- **Abstract**: The effect of decreasing the kurtosis of channel inputs is investigated for the first time with an algorithmic shaping implementation. No significant gains in decoding performance are observed for multi-span systems, while an increase in reach is obtained for single-span transmission.
+
+## Irregular Superimposed Multi-pilot for Grant-free Massive MIMO
+
+- **Status**: ❌
+- **Reason**: Massive MIMO grant-free pilot 설계, LDPC ECC와 무관
+- **ID**: ieee:9569676
+- **Type**: conference
+- **Published**: 13-16 Sept
+- **Authors**: Yihua Ma, Zhifeng Yuan, Weimin Li +1
+- **PDF**: https://ieeexplore.ieee.org/document/9569676
+- **Abstract**: Massive MIMO provides a high spatial degree of freedom (DoF) to support multiple users. To gain the spatial DoF, accurate channel information is crucial, and the pilot is important to obtain it. However, in grant-free transmissions, different users may select the same pilot, which leads to pilot collisions. To solve this problem, this paper proposes an irregular superimposed multi-pilot. The proposed superimposed structure provides a large multi-pilot pool than the conventional cascaded one. Using this structure, the number of single-pilots in multi-pilot can be different, and the pilot number distribution is optimized via a novel Monte-Carlo-based differential evolution. The simulation results verify the analysis and show that the proposed method outperforms existing works.
+
+## A quantum algorithm for single parity check code
+
+- **Status**: ❌
+- **Reason**: 양자 알고리즘 기반 single parity check code; 비-LDPC·양자 전용으로 NAND 바이너리 LDPC에 이식 기법 없음
+- **ID**: ieee:9570857
+- **Type**: conference
+- **Published**: 13-15 Sept
+- **Authors**: Makhamisa Senekane, Mhlambululi Mafu, Motobatsi Maseli +1
+- **PDF**: https://ieeexplore.ieee.org/document/9570857
+- **Abstract**: In coding theory, error-detecting and error-correcting codes are used to enable digital communication over a noisy communication channel. One of the most uncomplicated error-detecting codes is the single parity check code. The single parity check code detects the number of ones (1s) in a string of bits. If the number of ones is even, then the bit string is said to have even parity. On the other hand, if the number of ones is odd, then the string is said to have odd parity. The challenge with this approach is that it cannot be detected if there are an even number of errors. Also, it can not tell which bit is in error (the error may even be the parity bit itself); thus, it cannot fix the error. This means the single parity check has a one-bit error detection capability but no error correction capability. Therefore, in this work, we propose a novel quantum algorithm that can be used to implement a single parity check code. Quantum algorithms run on a quantum computer and achieve a speedup, or other efficiency improvements, over any possible classical algorithm. The critical advantage of this algorithm is that it maintains a constant circuit depth regardless of the length of the bit string. Thus, the circuit depth of our proposed algorithm does not increase with bit string length. This demonstrates the power and efficiency of quantum computing in performing a single parity check.
+
+## Performance Improvement of Digital Radio Mondiale System Using Non Uniform Constellations
+
+- **Status**: ❌
+- **Reason**: DRM 방송 시스템 비균일 성상도(NUC)+LDPC; LDPC는 베이스라인, 무선 변조 특이적으로 떼어낼 ECC 기법 없음
+- **ID**: ieee:9570994
+- **Type**: conference
+- **Published**: 13-15 Sept
+- **Authors**: Péniel Dassi, Michel Dossou, Anne-Carole Honfoga +1
+- **PDF**: https://ieeexplore.ieee.org/document/9570994
+- **Abstract**: The challenge in the designing of wireless communication system is to get close to the Shannon limit. In this paper, Non Uniform Constellations (NUCs) have been proposed as an alternative to uniform Quadrature Amplitude Modulation (QAM) in Digital Radio Mondiale (DRM) system based on Low Density Parity Check (LDPC). Indeed LDPC has been previously proposed in substitution of convolutionnal code and highlighted a better performance. Also 2D-NUCs performance have been previously highlighted in many broadcasting systems. These constellations shaping is jointly proposed with LDPC as an alternative to QAM + convolutional code in order to increase DRM system capacity. The simulation results show that DRM system based on LDPC/ NUCs outperforms the legacy system 1 dB, 1.18 dB and 1.25 dB SNR gain at a Bit Error Rate (BER) of 10−3respectively for code rates 1/2, 3/5 and 2/3.
+
+## Hamming Distance Based Data Correction Combined With Low Power XOR Circuit
+
+- **Status**: ❌
+- **Reason**: Hamming code 단일비트 정정 + 저전력 XOR 회로; LDPC 아님, 떼어낼 디코더/코드 기법 없음
+- **ID**: ieee:9581042
+- **Type**: conference
+- **Published**: 10-13 Sept
+- **Authors**: Ruben Musayelyan
+- **PDF**: https://ieeexplore.ieee.org/document/9581042
+- **Abstract**: Error detection and correction techniques are base for faultless data transmission. Hamming code is widely used technique for single bit error detection and correction. Aside from this, low power circuits are in a wide use too, as they can lead to many advantages like cost minimization, performance improvement, etc. Hamming distance-based error data detection and correction algorithm is presented, which has integrated low power XOR circuit. Experiments show, that by using proposed method, power consumption is being decreased by about $\sim 19$% compared with design with standard gates. However, as less low power gates are slower, delays in circuit has been increased by about $\sim 14 \%$.
+
+## New Metric for Evaluating the Effectiveness of Redundancy in Fault-Tolerant Logic Circuits
+
+- **Status**: ❌
+- **Reason**: 결함허용 조합회로 중복성 평가 지표, LDPC/ECC 무관
+- **ID**: ieee:9581027
+- **Type**: conference
+- **Published**: 10-13 Sept
+- **Authors**: Dmitry Vl. Telpukhov, Tatiana D. ZHukova
+- **PDF**: https://ieeexplore.ieee.org/document/9581027
+- **Abstract**: Today, most of the methods for combinational circuits fault-tolerant design are based on the introduction of some structural redundancy, which provides more resistance to various destabilizing factors. Each of these methods provides means to synthesize circuits with different characteristics of reliability and redundancy, making their architecture more efficient for practical application in certain environmental conditions. In this regard, it becomes necessary to bring in some numerical estimate to determine the relevance of introducing additional structural redundancy into the device. In this paper, an efficiency metric is proposed, which helps to analyze protection method applied to a particular combinational circuit in terms of redundancy and fault tolerance. The main parameter for the presented function is the priority coefficient, which allows us to customize analysis with respect to main circuit characteristics that are in priority.

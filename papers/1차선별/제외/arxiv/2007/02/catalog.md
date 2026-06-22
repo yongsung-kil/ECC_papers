@@ -1,0 +1,46 @@
+# arXiv — 2007-02
+
+
+## A Local Tree Structure is NOT Sufficient for the Local Optimality of Message-Passing Decoding in Low Density Parity Check Codes
+
+- **Status**: ❌
+- **Reason**: 메시지패싱 국소최적성 이론 반례 및 정리 증명 수정, 디코더/HW/구성으로 안 이어지는 순수 이론
+- **ID**: arxiv:cs/0702146v1
+- **Type**: preprint
+- **Published**: 2007-02-25
+- **Authors**: Weiyu Xu
+- **PDF**: https://arxiv.org/pdf/cs/0702146v1
+- **Abstract**: We address the problem,`Is a local tree structure sufficient for the local optimality of message passing algorithm in low density parity check codes?'.It is shown that the answer is negative. Using this observation, we pinpoint a flaw in the proof of Theorem 1 in the paper `The Capacity of Low-Density Parity-Check Codes Under Message-Passing Decoding' by Thomas J. Richardson and Rüdiger L.Urbanke\cite{RUCapacity}. We further provide a new proof of that theorem based on a different argument.
+
+## Constructing CSS Codes with LDPC Codes for the BB84 Quantum Key Distribution Protocol
+
+- **Status**: ❌
+- **Reason**: BB84 QKD용 CSS코드/프라이버시 증폭 구성, 임의 LDPC 채택만 함—양자/보안+정보조정 영역, 떼어낼 신규 디코더·HW 없음
+- **ID**: arxiv:quant-ph/0702184v3
+- **Type**: preprint
+- **Published**: 2007-02-19
+- **Authors**: Maki Ohata, Kanta Matsuura
+- **PDF**: https://arxiv.org/pdf/quant-ph/0702184v3
+- **Abstract**: In this paper, we propose how to simply construct a pair of linear codes for the BB84 quantum key distribution protocol. This protocol allows unconditional security in the presence of an eavesdropper, and the pair of linear codes is used for error correction and privacy amplification. Since their high decoding performance implies low eavesdropper's mutual information, good design of the two codes is required. The proposed method admits using arbitrary low-density parity-check (LDPC) codes. Therefore, it has low complexity and high performance for hardware implementation. Simulation results show that the pair of codes performs well against practical and various noise levels.
+
+## Tradeoff between decoding complexity and rate for codes on graphs
+
+- **Status**: ❌
+- **Reason**: 디코딩 복잡도-rate 트레이드오프 점근 bound, 순수 이론으로 떼어낼 디코더/HW/구성 없음
+- **ID**: arxiv:cs/0702073v1
+- **Type**: preprint
+- **Published**: 2007-02-13
+- **Authors**: Pulkit Grover
+- **PDF**: https://arxiv.org/pdf/cs/0702073v1
+- **Abstract**: We consider transmission over a general memoryless channel, with bounded decoding complexity per bit under message passing decoding. We show that the achievable rate is bounded below capacity if there is a finite success in the decoding in a specified number of operations per bit at the decoder for some codes on graphs. These codes include LDPC and LDGM codes. Good performance with low decoding complexity suggests strong local structures in the graphs of these codes, which are detrimental to the code rate asymptotically. The proof method leads to an interesting necessary condition on the code structures which could achieve capacity with bounded decoding complexity. We also show that if a code sequence achieves a rate epsilon close to the channel capacity, the decoding complexity scales at least as O(log(1/epsilon).
+
+## Finite size scaling for the core of large random hypergraphs
+
+- **Status**: ❌
+- **Reason**: BEC LDPC 디코딩의 core/leaf-removal 유한크기 스케일링 순수이론 — 디코더/HW/구성으로 안 이어짐
+- **ID**: arxiv:math/0702007v2
+- **Type**: preprint
+- **Published**: 2007-02-01
+- **Authors**: Amir Dembo, Andrea Montanari
+- **PDF**: https://arxiv.org/pdf/math/0702007v2
+- **Abstract**: The (two) core of a hypergraph is the maximal collection of hyperedges within which no vertex appears only once. It is of importance in tasks such as efficiently solving a large linear system over GF[2], or iterative decoding of low-density parity-check codes used over the binary erasure channel. Similar structures emerge in a variety of NP-hard combinatorial optimization and decision problems, from vertex cover to satisfiability. For a uniformly chosen random hypergraph of $m=nρ$ vertices and $n$ hyperedges, each consisting of the same fixed number $l\geq3$ of vertices, the size of the core exhibits for large $n$ a first-order phase transition, changing from $o(n)$ for $ρ>ρ_{\mathrm{c}}$ to a positive fraction of $n$ for $ρ<ρ_{\mathrm{c}}$, with a transition window size $Θ(n^{-1/2})$ around $ρ_{\mathrm{c}}>0$. Analyzing the corresponding ``leaf removal'' algorithm, we determine the associated finite-size scaling behavior. In particular, if $ρ$ is inside the scaling window (more precisely, $ρ=ρ_{\mathrm{c}}+rn^{-1/2}$), the probability of having a core of size $Θ(n)$ has a limit strictly between 0 and 1, and a leading correction of order $Θ(n^{-1/6})$. The correction admits a sharp characterization in terms of the distribution of a Brownian motion with quadratic shift, from which it inherits the scaling with $n$. This behavior is expected to be universal for a wide collection of combinatorial problems.

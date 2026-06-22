@@ -1,0 +1,255 @@
+# IEEE Xplore — 2015-02
+
+
+## Nonbinary LDPC Codes on Cages: Structural Property and Code Optimization
+
+- **Status**: ❌
+- **Reason**: 비이진(nonbinary) LDPC on cages — 비이진 LDPC는 제외
+- **ID**: ieee:7001068
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Chao Chen, Baoming Bai, Guangming Shi +2
+- **PDF**: https://ieeexplore.ieee.org/document/7001068
+- **Abstract**: A (v,g)-cage is a (not necessarily unique) smallest v-regular graph of girth g. On such a graph, a nonbinary (2,v)-regular low-density parity-check (LDPC) code can be defined such that the Tanner graph has girth 2g and the code length achieves the minimum possible. In this paper, we focus on two aspects of this class of codes, structural property and code optimization. We find that, in addition to those found previously, many cages can be used to construct structured LDPC codes. We show that all cages with even girth can be structured as protograph-based codes, many of which have block-circulant Tanner graphs. We also find that four cages with odd girth can be structured as protograph-based codes with block-circulant Tanner graphs. For code optimization, we develop an ontology-based approach. All possible inter-connected cycle patterns that lead to low symbol-weight codewords are identified to put together the ontology. By doing so, it becomes handleable to estimate and optimize distance spectrum of equivalent binary image codes. We further analyze some known codes from the Consultative Committee for Space Data Systems recommendation and design several new codes. Numerical results show that these codes have reasonably good minimum bit distance and perform well under iterative decoding.
+
+## Implementing the Han–Kobayashi Scheme Using Low Density Parity Check Codes Over Gaussian Interference Channels
+
+- **Status**: ❌
+- **Reason**: Gaussian 간섭채널 Han-Kobayashi용 LDPC 차수분포 최적화 — 무선 응용 특이적, LDPC는 베이스라인이고 간섭채널 의존
+- **ID**: ieee:6998073
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Shahrouz Sharifi, A. Korhan Tanc, Tolga M. Duman
+- **PDF**: https://ieeexplore.ieee.org/document/6998073
+- **Abstract**: We focus on Gaussian interference channels (GICs) and study the Han-Kobayashi coding strategy for the two-user case with the objective of designing implementable (explicit) channel codes. Specifically, low-density parity-check codes are adopted for use over the channel, their benefits are studied, and suitable codes are designed. Iterative joint decoding is used at the receivers, where independent and identically distributed channel adapters are used to prove that log-likelihood-ratios exchanged among the nodes of the Tanner graph enjoy symmetry when BPSK or QPSK with Gray coding is employed. This property is exploited in the proposed code optimization algorithm adopting a random perturbation technique. Code optimization and convergence threshold computations are carried out for different GICs employing finite constellations by tracking the average mutual information. Furthermore, stability conditions for the admissible degree distributions under strong and weak interference levels are determined. Via examples, it is observed that the optimized codes using BPSK or QPSK with Gray coding operate close to the capacity boundary for strong interference. For the case of weak interference, it is shown that nontrivial rate pairs are achievable via the newly designed codes, which are not possible by single user codes with time sharing. Performance of the designed codes is also studied for finite block lengths through simulations of specific codes picked with the optimized degree distributions with random constructions, where, for one instance, the results are compared with those of some structured designs.
+
+## Multinary-Signaling-Based Coded Modulation for Ultrahigh-Speed Optical Transport
+
+- **Status**: ❌
+- **Reason**: 광통신용 multinary-signaling 코드변조/성상 설계 — 바이너리 LDPC 디코더/구성 기법 아님
+- **ID**: ieee:7024098
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Ivan B. Djordjevic, Tao Liu, Ting Wang
+- **PDF**: https://ieeexplore.ieee.org/document/7024098
+- **Abstract**: A multinary-signaling-based coded-modulation (CM) scheme is proposed, which is suitable for various applications ranging from multi-Tb/s to multi-Pb/s data rates, outperforming conventional CM schemes in terms of both spectral and energy efficiencies. The corresponding multinary signal constellation design algorithm is also proposed. Both 2-D and 3-D multinary-signaling-based CM schemes have been studied.
+
+## A Fully Parallel Nonbinary LDPC Decoder With Fine-Grained Dynamic Clock Gating
+
+- **Status**: ❌
+- **Reason**: GF(64) 비이진(non-binary) LDPC 디코더 — 비이진 LDPC는 제외 대상
+- **ID**: ieee:6955861
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Youn Sung Park, Yaoyu Tao, Zhengya Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/6955861
+- **Abstract**: Nonbinary LDPC (NB-LDPC) codes, defined over Galois field, offer better coding gain and a lower error floor than binary LDPC codes. However, the complex decoding and large memory requirement have prevented any practical chip implementations. We present a 1.22 Gb/s fully parallel decoder of a GF(64) (160, 80) regular-(2, 4) NB-LDPC code in 65 nm CMOS. The reduced number of edges in NB-LDPC code's factor graph permits a low wiring overhead in the fully parallel architecture. The throughput is further improved by a one-step look-ahead check node design that increases the clock frequency to 700 MHz, and the interleaving of variable node and check node operations that shortens one decoding iteration to 47 clock cycles. We allow each processing node to detect its own convergence and apply dynamic clock gating to save power. When all processing nodes have been clock gated, the decoder terminates and continues with the next input to increase the throughput to 1.22 Gb/s. The dynamic clock gating and decoder termination improve the energy efficiency to 3.03 nJ/b, or 259 pJ/b/iteration, at 1.0 V and 700 MHz. Voltage scaling to 675 mV improves the energy efficiency to 89 pJ/b/iteration for a throughput of 698 Mb/s at 400 MHz.
+
+## Asynchronous Physical-Layer Network Coding With Quasi-Cyclic Codes
+
+- **Status**: ❌
+- **Reason**: 비동기 물리계층 네트워크코딩용 QC코드 인터리브 변환(IDT) — QC구조를 통신 동기화에 활용, 떼어낼 LDPC ECC 디코더/구성 기법 없음
+- **ID**: ieee:6991517
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Ping-Chung Wang, Yu-Chih Huang, Krishna R. Narayanan
+- **PDF**: https://ieeexplore.ieee.org/document/6991517
+- **Abstract**: Communication in the presence of bounded timing asynchronism, which is known to the receiver but cannot be easily compensated, is studied. Examples of such situations include point-to-point communication over intersymbol interference (ISI) channels and asynchronous wireless networks. In these scenarios, although the receiver may know all the delays, it is often not an easy task for the receiver to compensate the delays as the signals are mixed together. A novel framework, which is called interleave/deinterleave transform (IDT), is proposed to deal with this problem. It is shown that the IDT allows one to design the delays so that quasi-cyclic (QC) codes with a proper shifting constraint can be used accordingly. When used in conjunction with QC codes, IDT provides significantly better performance than existing schemes relying solely on cyclic codes. Two instances of asynchronous physical-layer network coding, namely, the integer-forcing equalization for ISI channels and asynchronous compute-and-forward, are then studied. For integer-forcing equalization, the proposed scheme provides improved performance over using cyclic codes. For asynchronous compute-and-forward, the proposed scheme shows that there is no loss in the achievable information rates due to delays that are integer multiples of the symbol duration. Furthermore, the proposed approach shows that delays introduced by the channel can sometimes be exploited to obtain higher information rates than those obtainable in the synchronous case. The proposed IDT can be thought of as a generalization of the interleaving/deinterleaving idea proposed by Wang et al., which allows the use of QC codes, thereby substantially increasing the design space.
+
+## Resource-Allocation Frameworks for Network-Coded Layered Multimedia Multicast Services
+
+- **Status**: ❌
+- **Reason**: 랜덤 선형 네트워크코딩 기반 멀티미디어 멀티캐스트 자원할당 — LDPC ECC 무관
+- **ID**: ieee:6994250
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Andrea Tassi, Ioannis Chatzigeorgiou, Dejan Vukobratović
+- **PDF**: https://ieeexplore.ieee.org/document/6994250
+- **Abstract**: The explosive growth of content-on-the-move, such as video streaming to mobile devices, has propelled research on multimedia broadcast and multicast schemes. Multirate transmission strategies have been proposed as a means of delivering layered services to users experiencing different downlink channel conditions. In this paper, we consider point-to-multipoint layered service delivery across a generic cellular system and improve it by applying different random linear network coding approaches. We derive packet error probability expressions and use them as performance metrics in the formulation of resource-allocation frameworks. The aim of these frameworks is both the optimization of the transmission scheme and the minimization of the number of broadcast packets on each downlink channel, while offering service guarantees to a predetermined fraction of users. As a case of study, our proposed frameworks are then adapted to the LTE-A standard and the eMBMS technology. We focus on the delivery of a video service based on the H.264/SVC standard and demonstrate the advantages of layered network coding over multirate transmission. Furthermore, we establish that the choice of both the network coding technique and the resource-allocation method play a critical role on the network footprint, as well as the quality of each received video layer.
+
+## Heuristic Ternary Error-Correcting Output Codes Via Weight Optimization and Layered Clustering-Based Approach
+
+- **Status**: ❌
+- **Reason**: 다중분류용 error-correcting output codes(머신러닝 앙상블), 채널 ECC LDPC와 무관
+- **ID**: ieee:6824185
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Xiao-Lei Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/6824185
+- **Abstract**: One important classifier ensemble for multiclass classification problems is error-correcting output codes (ECOCs). It bridges multiclass problems and binary-class classifiers by decomposing multiclass problems to a serial binary-class problems. In this paper, we present a heuristic ternary code, named weight optimization and layered clustering-based ECOC (WOLC-ECOC). It starts with an arbitrary valid ECOC and iterates the following two steps until the training risk converges. The first step, named layered clustering-based ECOC (LC-ECOC), constructs multiple strong classifiers on the most confusing binary-class problem. The second step adds the new classifiers to ECOC by a novel optimized weighted (OW) decoding algorithm, where the optimization problem of the decoding is solved by the cutting plane algorithm. Technically, LC-ECOC makes the heuristic training process not blocked by some difficult binary-class problem. OW decoding guarantees the nonincrease of the training risk for ensuring a small code length. Results on 14 UCI datasets and a music genre classification problem demonstrate the effectiveness of WOLC-ECOC.
+
+## Coded-Seeking: A Simple HDD Speed-Up Concept
+
+- **Status**: ❌
+- **Reason**: HDD 블록 seek 시간 단축용 coded-seeking/TSP 스케줄링 — 떼어낼 ECC 디코더/HW/코드설계 기법 없음
+- **ID**: ieee:6994828
+- **Type**: journal
+- **Published**: Feb. 2015
+- **Authors**: Ulric J. Ferner, Muriel Médard
+- **PDF**: https://ieeexplore.ieee.org/document/6994828
+- **Abstract**: Consider a single hard disk drive (HDD) composed of rotating platters and a single magnetic head. We propose a simple internal coding framework for HDDs that uses coding across drive blocks to reduce average block seek times. In particular, instead of the HDD controller seeking individual blocks, the drive performs coded-seeking: It seeks the closest subset of coded blocks, where a coded block contains partial information from multiple uncoded blocks. Coded-seeking is a tool that relaxes the scheduling of a full traveling salesman problem (TSP) on an HDD into a k-TSP. This may provide opportunities for new scheduling algorithms and to reduce average read times.
+
+## Post and pre-layout analysis of Low Density Parity Check (LDPC) decoder using 120nm technology Cadence Encounter Tool
+
+- **Status**: ❌
+- **Reason**: 표준 Min-Sum LDPC 디코더의 120nm Cadence 레이아웃 분석, 신규 아키텍처·기법 없는 표준 구현 보고
+- **ID**: ieee:7124921
+- **Type**: conference
+- **Published**: 26-27 Feb.
+- **Authors**: A. Jemima, G. Manoj
+- **PDF**: https://ieeexplore.ieee.org/document/7124921
+- **Abstract**: Low Density Parity Check (LDPC) codes are the one most powerful error correction codes (ECCs) and approach the Shannon limit[1]. The main advantage of the parity check matrix is the decoder can correct all single-bit errors. A decoding algorithm called Min-Sum (MS) algorithm is used in LDPC decoder. In a MIN-SUM decoding algorithm, check node units (CNU) and variable node units (VNU) are iteratively exchange messages with one another following the rule described by the Tanner graph. Min-Sum decoding is widely used for decoding LDPC codes in many modern digital video broadcasting decoding due to its relative low complexity and robustness against quantization error. In this proposed method, the front-end design flow is done in Verilog and the hardware core is simulated in ModelSim and the performance analysis for various parameters are area (2.153mm2), power(59.035mW)and memory (260.864Megabytes). The Design Rule Check (DRC) is done for back-end design flow by using Cadence Encounter Tool and the comparison results are analysed between the pre-layout and post-layout design flow of LDPC Decoder.
+
+## Performance of MC-CDMA system thorough Turbo block codes
+
+- **Status**: ❌
+- **Reason**: MC-CDMA에 Turbo block code 적용, LDPC 부수 언급·무선 MAI 완화 응용, 떼어낼 LDPC 기법 없음
+- **ID**: ieee:7124964
+- **Type**: conference
+- **Published**: 26-27 Feb.
+- **Authors**: K. Rasadurai, N. Kumaratharan
+- **PDF**: https://ieeexplore.ieee.org/document/7124964
+- **Abstract**: Multi carrier code division multiple access (MC-CDMA) is an efficient multi carrier modulation (MCM) technique that mitigates problems like spectral limitation and distortion due to multipath channels. Nevertheless, in a high speed mobile communication channels the orthogonality among subcarriers are destroyed due to multipath fading. The loss of orthogonality can cause inter carrier interference (ICI) and multiple access interference (MAI). The effect of MAI reduces the system performance in term of bit error rate (BER). The Turbo block code (TBC) technique based low density parity check (LDPC) code is proposed to overcome the MAI. It provides better concatenated decoding scheme with lower complexity and higher efficiency for improving the performance of MC-CDMA system in terms of BER and the same is proved through simulation.
+
+## A comparison between RS+TCM and LDPC for G.fast channel coding
+
+- **Status**: ❌
+- **Reason**: G.fast DSL용 RS+TCM vs LDPC 성능 비교만, 신규 디코더/구성/HW 기여 없음
+- **ID**: ieee:7250472
+- **Type**: conference
+- **Published**: 24-27 Feb.
+- **Authors**: Marcos Takeda, Fernanda Smith, Aldebaro Klautau
+- **PDF**: https://ieeexplore.ieee.org/document/7250472
+- **Abstract**: We compare schemes from two different standards for copper twisted pairs in light of the upcoming G.fast standard for Digital Subscriber Lines. Various configurations are compared based on error performance. This contribution confirms quantitatively that Low-Density Parity-Check codes perform better than the traditional interleaved Reed Solomon with Trellis Coded Modulation from an error performance perspective.
+
+## Multi-Carrier Two-Way Relaying with Non-Binary Coding
+
+- **Status**: ❌
+- **Reason**: two-way relay 비이진(non-binary) 채널코딩 — non-binary 제외 및 무선 응용 특이적
+- **ID**: ieee:7052143
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Stephan Pfletschinger, Dirk Wuebben, David Gregoratti
+- **PDF**: https://ieeexplore.ieee.org/document/7052143
+- **Abstract**: We apply non-binary channel coding to the symmetric multi-carrier two-way relay channel and evaluate two decoding approaches at the relay. Complete-decode-and-forward (CDF) decodes the packets of both users before forwarding the binary sum in the second phase, while functional-decode-andforward (FDF) directly decodes the binary sum of both packets. For both approaches, we study suitable subchannel or rate allocation strategies and apply single-user and joint decoding of both packets.
+
+## Optimization of Variable Edge Degree Distributions to Compensate the Differential Penalty by LDPC Turbo Decoding
+
+- **Status**: ❌
+- **Reason**: 광통신 differential modulation 보상용 LDPC degree distribution 최적화 — 채널 특이적, NAND에 이식할 디코더/HW/구성 기법 없음
+- **ID**: ieee:7052081
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Doris Pflueger, Gerhard Bauch
+- **PDF**: https://ieeexplore.ieee.org/document/7052081
+- **Abstract**: Differential modulation is often applied in fiber optical communications in order to compensate for cycle slips. However, differential modulation causes a performance degradation compared to coherent detection, called the differential penalty. We consider a low density parity check (LDPC) coded system and include the differential modulation in the optimization of the LDPC code with the intention of overcoming the differential penalty. In this paper special attention is paid on the optimization of the variable edge degree distribution of the LDPC code. In this case the optimization problem is non linear. Therefore we derive substitute linear optimization problems that allow to determine upper and lower bounds of the maximal achievable rate. The corresponding degree distributions are determined explicitly. We explain why this method works well in the differential case but fails in the coherent case. In the differential case these new bounds allow to conclude for which parameters the differential penalty can be overcome. We show in particular that this is possible for high rates.
+
+## On Error Correction for Physical Unclonable Functions
+
+- **Status**: ❌
+- **Reason**: PUF 키 재생성용 코딩(보안), 비-LDPC 코드 클래스 — 보안 도메인이며 LDPC BP 이식 기법 없음
+- **ID**: ieee:7052113
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Sven Puchinger, Sven Mueelich, Martin Bossert +2
+- **PDF**: https://ieeexplore.ieee.org/document/7052113
+- **Abstract**: Physical Unclonable Functions evaluate manufacturing variations to generate secure cryptographic keys for embedded systems without secure key storage. It is explained how methods from coding theory are applied in order to ensure reliable key reproduction. We show how better results can be obtained using code classes and decoding principles not used for this scenario before. These methods are exemplified by specific code constructions which improve existing codes with respect to error probability, decoding complexity and codeword length.
+
+## Mixed Generalized Gaussian Noise Channels: Capacity, Decoding, and Performance
+
+- **Status**: ❌
+- **Reason**: generalized Gaussian noise 채널 capacity/LLR 서베이 — NAND에 떼어낼 신규 디코더/구성 기여 없음
+- **ID**: ieee:7052093
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Susanne Sparrer, Robert F. H. Fischer
+- **PDF**: https://ieeexplore.ieee.org/document/7052093
+- **Abstract**: In many different fields of communications such as sonar applications and Compressed Sensing, a growing interest in non-Gaussian channel models has been observed. One model of high interest is the so-called generalized Gaussian noise, which is often used to model impulsive events. In this paper, a survey of the properties of (mixed) additive white generalized Gaussian noise channels is given. The log-likelihood ratios are derived and connections to conventional LLR calculation are pointed out. We also discuss the capacity and give an upper and a lower bound for it. It is shown that the gain achievable by channel coding strongly depends on the parameters of the generalized Gaussian noise.
+
+## RS-LDPC product code for high SNR applications
+
+- **Status**: ❌
+- **Reason**: RS-LDPC product code. 비-LDPC(RS) 결합이며 디코딩은 표준 bit-flipping 단순 사용, 신규 LDPC 기법 없음.
+- **ID**: ieee:7095330
+- **Type**: conference
+- **Published**: 19-20 Feb.
+- **Authors**: Dhaval Shah, Yesha Padia, Himanshi Jadawala
+- **PDF**: https://ieeexplore.ieee.org/document/7095330
+- **Abstract**: Product code is a promising technique for low as well as high SNR applications due to its superior error correction performance. Indoor video broadcasting is an application where distance between transmitter and receiver is less, hence the received SNR is high. For such an application and similar applications tolerant to high BER, in this paper, we propose a Low Density Parity Check-Reed Solomon (LDPC-RS) product code structure using Bit Flipping algorithm for decoding of LDPC code. For LDPC decoding, bit flipping is preferred over log SPA (Sum Product Algorithm) as it offers lesser hardware and computational complexity. Simulation results for our product code show great error performance in high SNR regions.
+
+## A PHY-layer framework of multirate transmission for ultra-dense networks in 5G
+
+- **Status**: ❌
+- **Reason**: 5G UDN PHY-layer 다중전송 설계, LDPC는 부수 FEC 언급 — 떼어낼 ECC 기법 없음
+- **ID**: ieee:7081296
+- **Type**: conference
+- **Published**: 17-19 Feb.
+- **Authors**: Mithun Mukherjee, Prashant Kumar, Rakesh Matam
+- **PDF**: https://ieeexplore.ieee.org/document/7081296
+- **Abstract**: Future wireless communication systems beyond 2020 will demand diverse requirements on system design that supports a wide range of data rates in overcrowded networks. This paper presents a physical (PHY)-layer system design for ultra-dense network (UDN) with multirate transmission. This proposed scheme transmits user data over highly fragmented spectrum which implies efficient spectrum utilization. This approach may be considered as a potential PHY-layer design for 5-th generation (5G) networks, as it supports both integer and fractional multiple of basic data rates which yield diverse quality-of-service (QoS) requirement with non-contiguous spectrum allocation for future wireless applications and services. Simulation results show the improved bit-error-rate (BER) performance for higher data rate users in the proposed system design. However lower data rate users suffers from high level of interference due to the low spreading gain diversity. Further to improve the performance of high and low data rate users, we use forward error correcting codes like low-density parity-check (LDPC) codes at the cost of throughput. It is observed that the performance improvement due to error correcting codes is more in lower data rate users due to less data used in LDPC encoder compared to higher data rate users. Thus, we can ascertain reasonable BER performance for both low and high data rate users even in overloaded scenario. This paper suggests a novel approach towards the development of a new PHY-layer design for 5G.
+
+## Modified trellis-based Min-max decoder for non-binary LDPC codes
+
+- **Status**: ❌
+- **Reason**: 비이진(GF(q)) NB-LDPC trellis Min-max 디코더 — 비이진 LDPC라 제외
+- **ID**: ieee:7069415
+- **Type**: conference
+- **Published**: 16-19 Feb.
+- **Authors**: Xinmiao Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/7069415
+- **Abstract**: Non-binary low-density parity-check (NB-LDPC) codes over GF(q) (q > 2) have better error-correcting performance than their binary counterparts when the codeword length is moderate. In this paper, a modified trellis-based Min-max decoder is proposed for NB-LDPC codes. By relaxing the constraints on which messages can be included, the trellis syndrome computation is simplified without sacrificing the error-correcting performance. In addition, the iterative comparisons needed in computing the check-to-variable messages are replaced by one-step message selection. The decoding complexity of NB-LDPC codes grows substantially with q, and small q is preferred to achieve low complexity and high speed for data storage systems. Making use of the properties of G F (4), the hardware units are further simplified and efficient decoder architectures are developed for codes over G F (4). Compared to prior efforts, the proposed design requires smaller area, consumes much less power, achieves higher throughput, and also has slightly better error-correcting performance.
+
+## A study of polar codes for MLC NAND flash memories
+
+- **Status**: ❌
+- **Reason**: polar 부호의 NAND 적용 — 비-LDPC 부호, polar shortening 기법은 LDPC BP에 이식 안 됨
+- **ID**: ieee:7069414
+- **Type**: conference
+- **Published**: 16-19 Feb.
+- **Authors**: Yue Li, Hakim Alhussien, Erich F. Haratsch +1
+- **PDF**: https://ieeexplore.ieee.org/document/7069414
+- **Abstract**: The increasing density of NAND flash memories makes data more prone to errors due to severe process variations and disturbance. The urgency to improve NAND flash reliability encourages searching for optimal channel coding methods. This paper reports our efforts towards a read channel for flash memories using polar coding. Our contributions include the solutions to several challenges raised when applying polar codes to NAND flash memories in practice. We propose efficient schemes for shortening both non-systematic and systematic polar codes, making polar codewords be easily adapted to flash page of any size. We demonstrate that the decoding performance of the shortened polar codes and LDPC codes are comparable using the data obtained by our NAND flash characterization platform. We show the feasibility of a practical adaptive decoding framework where it is not necessary to construct new polar codes for different channel parameters. Experimental results show that the decoding performance approaches the optimized performance where different codes are constructed for different channel conditions. To the best of our knowledge, this work is the first study of polar codes for error correction in flash memories.
+
+## Protograph-based Raptor-like LDPC codes for the binary erasure channel
+
+- **Status**: ❌
+- **Reason**: BEC용 rate-compatible PBRL 코드 설계 — 바이너리 LDPC지만 erasure 채널 전용 rate-compatible 구성으로 NAND 고전 LDPC에 새 기여 약함, 다만 경계선
+- **ID**: ieee:7308995
+- **Type**: conference
+- **Published**: 1-6 Feb. 2
+- **Authors**: Kasra Vakilinia, Dariush Divsalar, Richard D. Wesel
+- **PDF**: https://ieeexplore.ieee.org/document/7308995
+- **Abstract**: This paper designs protograph-based Raptor-like (PBRL) codes as a class of rate-compatible (RC) LDPC codes for binary-erasure channels (BEC). Similar to the Raptor Codes, the RC property is achieved by X-OR operations of the precoded bits. The additional parity bits, which lower the rate, are selected such that their connections in the protograph optimize the density evolution threshold. In order to avoid problematic graphical objects in the CPEG lifted bipartite graph and guarantee the linear growth distance property some constraints are imposed in the threshold optimization algorithm. Simulation results are presented for information block sizes of k = 1032, and k = 16384. These results are compared with finite blocklength bounds of Polyanskiy, Poor, Verdu (PPV) as well as several asymptotic bounds. The k = 1032 code family operates at various rates in the range of 8/9 to 8/48 and has an average normalized threshold gap of 5.56% from capacity. The k = 16384 code family operates at rates 8/10 to 8/32 and has an average normalized threshold gap of 3.27% from capacity.
+
+## Symmetric product codes
+
+- **Status**: ❌
+- **Reason**: 대칭 product code(비-LDPC), 광통신용 iterative product 디코딩으로 바이너리 LDPC BP에 이식할 기법 없음
+- **ID**: ieee:7309002
+- **Type**: conference
+- **Published**: 1-6 Feb. 2
+- **Authors**: Henry D. Pfister, Santosh K. Emmadi, Krishna Narayanan
+- **PDF**: https://ieeexplore.ieee.org/document/7309002
+- **Abstract**: Product codes were introduced by Elias in 1954 and generalized by Tanner in 1981. Recently, a number of generalized product codes have been proposed for forward error-correction in high-speed optical communication. In practice, these codes are decoded by iteratively decoding each of the component codes. Symmetric product codes are a subclass of generalized product codes that use symmetry to reduce the block length of a product code while using the same component code. One example of this subclass, dubbed half-product codes, was introduced by Tanner in 1981 and then generalized by Justesen in 2011. In this paper, we discuss some initial results on symmetric product codes. Our results show that: (i) these codes have a larger normalized minimum distance than the product code from which they are derived, (ii) some small constructions achieve the largest minimum distance possible for a linear code, and (iii) they can have better performance in both the waterfall region and the error floor when compared to a product code of similar length and rate.
+
+## Active stateful PCE with hitless LDPC code adaptation [Invited]
+
+- **Status**: ❌
+- **Reason**: PCE/SDN 기반 LDPC rate hitless 적응 오케스트레이션 — 신규 디코더/구성/HW 없음, 응용 특이적
+- **ID**: ieee:7035536
+- **Type**: journal
+- **Published**: 1 February
+- **Authors**: F. Cugini, F. Fresi, F. Paolucci +6
+- **PDF**: https://ieeexplore.ieee.org/document/7035536
+- **Abstract**: The path computation element (PCE) architecture was originally proposed with a stateless condition, i.e., considering only network reserved resources during constraint-based path computations. More recently, a stateful architecture was introduced to additionally maintain the state of computed and established label switch paths (LSPs). Furthermore, the PCE architecture evolved to active functionality, enabling the PCE to directly issue recommendations to the network. In this study, we present and discuss several use cases where the active stateful architecture can provide some benefits. They include impairmentaware path computations in the context of multirate optical networks, recovery solutions, global defragmentation, and dynamic LSP adaptations. The latter use case is then specifically demonstrated in a network testbed including a flexigrid optical network operated with a multicarrier 1 Tb/s transmission with coherent detection. Novel advanced digital signal processing (DSP) monitoring functionalities are introduced and experimentally demonstrated. These monitoring functionalities are utilized to trigger a new hitless dynamic adaptation technique operating on the applied low-density parity check (LDPC) transmitted coding. The technique has been successfully demonstrated to increase transmission robustness upon impairment degradation, such that no traffic disruption is experienced. Moreover, to accommodate the LSP coding adaptation, network reconfiguration has been performed, successfully driven by the PCE thanks to the active functionality.
+
+## Superfilter technique in SDN-controlled elastic optical networks [Invited]
+
+- **Status**: ❌
+- **Reason**: SDN superfilter 스펙트럼 기법 — LDPC 무관
+- **ID**: ieee:7035538
+- **Type**: journal
+- **Published**: 1 February
+- **Authors**: F. Paolucci, F. Cugini, F. Fresi +7
+- **PDF**: https://ieeexplore.ieee.org/document/7035538
+- **Abstract**: In flexigrid elastic optical networks, filtering cascade effects strongly affect the overall transmission performance. To avoid these detrimental impairments, each lightpath is typically configured, in an independent way, to encompass additional spectrum resources. Thus, the flat central region of the traversed filters are exploited and their transition region around the cutoff frequencies is avoided. However, handling lightpaths independently leads to less efficient spectrum utilization. In this study, we propose a novel technique, called superfilters, which enables different lightpaths, with different source-destination pairs, to coexist within the same flat region of a single filter configuration. That is, the technique consists of a pathcomputation strategy that applies differentiated configurations of lightpath traversed filters, which are decoupled from head-end lightpath configurations. Simulative transmission results are provided to assess the benefits of the proposed technique. Then, an experimental implementation is presented, including a software-defined networking implementation successfully applied to a flexigrid network testbed.

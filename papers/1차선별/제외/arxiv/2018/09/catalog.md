@@ -1,0 +1,13 @@
+# arXiv — 2018-09
+
+
+## A Neural Network Aided Approach for LDPC Coded DCO-OFDM with Clipping Distortion
+
+- **Status**: ❌
+- **Reason**: 광 OFDM 클리핑 왜곡 완화용 NN-BICM 수신기 — LDPC는 베이스라인, 떼어낼 디코더 기법은 채널 특이적 LLR 보정뿐
+- **ID**: arxiv:1809.01022v1
+- **Type**: preprint
+- **Published**: 2018-09-04
+- **Authors**: Yuan He, Ming Jiang, Chunming Zhao
+- **PDF**: https://arxiv.org/pdf/1809.01022v1
+- **Abstract**: In this paper, a neural network-aided bit-interleaved coded modulation (NN-BICM) receiver is designed to mitigate the nonlinear clipping distortion in the LDPC coded direct currentbiased optical orthogonal frequency division multiplexing (DCOOFDM) systems. Taking the cross-entropy as loss function, a feed forward network is trained by backpropagation algorithm to output the condition probability through the softmax activation function, thereby assisting in a modified log-likelihood ratio (LLR) improvement. To reduce the complexity, this feed-forward network simplifies the input layer with a single symbol and the corresponding Gaussian variance instead of focusing on the inter-carrier interference between multiple subcarriers. On the basis of the neural network-aided BICM with Gray labelling, we propose a novel stacked network architecture of the bitinterleaved coded modulation with iterative decoding (NN-BICMID). Its performance has been improved further by calculating the condition probability with the aid of a priori probability that derived from the extrinsic LLRs in the LDPC decoder at the last iteration, at the expense of customizing neural network detectors at each iteration time separately. Utilizing the optimal DC bias as the midpoint of the dynamic region, the simulation results demonstrate that both the NN-BICM and NN-BICM-ID schemes achieve noticeable performance gains than other counterparts, in which the NN-BICM-ID clearly outperforms NN-BICM with various modulation and coding schemes.

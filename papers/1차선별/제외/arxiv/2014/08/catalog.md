@@ -1,0 +1,13 @@
+# arXiv — 2014-08
+
+
+## Performance Comparison of LDPC Block and Spatially Coupled Codes over GF(q)
+
+- **Status**: ❌
+- **Reason**: GF(q) 비이진 SC-LDPC vs LDPC-BC 성능 비교 — 비이진 LDPC는 제외
+- **ID**: arxiv:1408.2621v1
+- **Type**: preprint
+- **Published**: 2014-08-12
+- **Authors**: Kechao Huang, David G. M. Mitchell, Lai Wei +2
+- **PDF**: https://arxiv.org/pdf/1408.2621v1
+- **Abstract**: In this paper, we compare the finite-length performance of protograph-based spatially coupled low-density parity-check (SC-LDPC) codes and LDPC block codes (LDPC-BCs) over GF(q). In order to reduce computational complexity and latency, a sliding window decoder with a stopping rule based on a soft bit-error-rate (BER) estimate is used for the q-ary SC-LDPC codes. Two regimes are considered: one when the constraint length of q-ary SC-LDPC codes is equal to the block length of q-ary LDPC-BCs and the other when the two decoding latencies are equal. Simulation results confirm that, in both regimes, (3,6)-, (3,9)-, and (3,12)-regular non-binary SC-LDPC codes can significantly outperform both binary and non-binary LDPC-BCs and binary SC-LDPC codes. Finally, we present a computational complexity comparison of q-ary SC-LDPC codes and q-ary LDPC-BCs under equal decoding latency and equal decoding performance assumptions.

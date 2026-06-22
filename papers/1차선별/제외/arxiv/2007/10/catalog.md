@@ -1,0 +1,24 @@
+# arXiv — 2007-10
+
+
+## LDPC-Based Iterative Algorithm for Compression of Correlated Sources at Rates Approaching the Slepian-Wolf Bound
+
+- **Status**: ❌
+- **Reason**: 상관소스 압축(Slepian-Wolf) 소스코딩; 채널 ECC 아님
+- **ID**: arxiv:0710.5640v1
+- **Type**: preprint
+- **Published**: 2007-10-30
+- **Authors**: F. Daneshgaran, Massimiliano Laddomada, M. Mondin
+- **PDF**: https://arxiv.org/pdf/0710.5640v1
+- **Abstract**: This article proposes a novel iterative algorithm based on Low Density Parity Check (LDPC) codes for compression of correlated sources at rates approaching the Slepian-Wolf bound. The setup considered in the article looks at the problem of compressing one source at a rate determined based on the knowledge of the mean source correlation at the encoder, and employing the other correlated source as side information at the decoder which decompresses the first source based on the estimates of the actual correlation. We demonstrate that depending on the extent of the actual source correlation estimated through an iterative paradigm, significant compression can be obtained relative to the case the decoder does not use the implicit knowledge of the existence of correlation.
+
+## Message passing for the coloring problem: Gallager meets Alon and Kahale
+
+- **Status**: ❌
+- **Reason**: Gallager 메시지패싱과 그래프 컬러링의 이론적 연결; 이식 가능한 LDPC 디코더/구성 기법 없음
+- **ID**: arxiv:0710.3928v1
+- **Type**: preprint
+- **Published**: 2007-10-21
+- **Authors**: Sonny Ben-Shimon, Dan Vilenchik
+- **PDF**: https://arxiv.org/pdf/0710.3928v1
+- **Abstract**: Message passing algorithms are popular in many combinatorial optimization problems. For example, experimental results show that {\em survey propagation} (a certain message passing algorithm) is effective in finding proper $k$-colorings of random graphs in the near-threshold regime. In 1962 Gallager introduced the concept of Low Density Parity Check (LDPC) codes, and suggested a simple decoding algorithm based on message passing. In 1994 Alon and Kahale exhibited a coloring algorithm and proved its usefulness for finding a $k$-coloring of graphs drawn from a certain planted-solution distribution over $k$-colorable graphs. In this work we show an interpretation of Alon and Kahale's coloring algorithm in light of Gallager's decoding algorithm, thus showing a connection between the two problems - coloring and decoding. This also provides a rigorous evidence for the usefulness of the message passing paradigm for the graph coloring problem. Our techniques can be applied to several other combinatorial optimization problems and networking-related issues.

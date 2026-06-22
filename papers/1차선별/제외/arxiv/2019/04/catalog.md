@@ -1,0 +1,24 @@
+# arXiv — 2019-04
+
+
+## Analysis of reaction and timing attacks against cryptosystems based on sparse parity-check codes
+
+- **Status**: ❌
+- **Reason**: sparse parity-check 암호계의 reaction/timing 공격(보안) — ECC 디코더·HW 기여 없음, 제외
+- **ID**: arxiv:1904.12215v1
+- **Type**: preprint
+- **Published**: 2019-04-27
+- **Authors**: Paolo Santini, Massimo Battaglioni, Franco Chiaraluce +1
+- **PDF**: https://arxiv.org/pdf/1904.12215v1
+- **Abstract**: In this paper we study reaction and timing attacks against cryptosystems based on sparse parity-check codes, which encompass low-density parity-check (LDPC) codes and moderate-density parity-check (MDPC) codes. We show that the feasibility of these attacks is not strictly associated to the quasi-cyclic (QC) structure of the code but is related to the intrinsically probabilistic decoding of any sparse parity-check code. So, these attacks not only work against QC codes, but can be generalized to broader classes of codes. We provide a novel algorithm that, in the case of a QC code, allows recovering a larger amount of information than that retrievable through existing attacks and we use this algorithm to characterize new side-channel information leakages. We devise a theoretical model for the decoder that describes and justifies our results. Numerical simulations are provided that confirm the effectiveness of our approach.
+
+## Compute-and-forward relaying with LDPC codes over QPSK scheme
+
+- **Status**: ❌
+- **Reason**: compute-and-forward 무선 릴레이 응용, LDPC는 베이스라인 BP — 떼어낼 신규 ECC 기법 없음
+- **ID**: arxiv:1904.08306v1
+- **Type**: preprint
+- **Published**: 2019-04-17
+- **Authors**: Satoshi Takabe, Tadashi Wadayama, Ángeles Vazquez-Castro +1
+- **PDF**: https://arxiv.org/pdf/1904.08306v1
+- **Abstract**: In this paper, we study a compute-and-forward (CAF) relaying scheme with low-density parity-check (LDPC) codes, a special case of physical layer network coding, under the quadrature phase shift keying (QPSK) modulation. The novelty of this paper is the theoretical analysis of decoding performance of the CAF scheme and traditional separation decoding (SD) scheme with joint decoding or with successive interference cancellation (SIC) decoding when the reception powers from both senders are not equal but close to each other. First, we study the decoding performance of linear random coding (LRC) in the CAF scheme whose decoder is based on the degraded channel. When rotation angles of constellations of two senders are controlled, we show that they can achieve rates well beyond the multiple access channel (MAC) with LRC with optimal rotation angles. Second, we analyze the practical feasibility of CAF using LDPC codes in terms of computational costs and decoding performance of belief propagation (BP) decoders. The calculation complexity of the BP decoder for the CAF scheme is almost equal to that of the SIC BP decoder, and smaller than the joint BP decoder in the SD scheme. Decoding performance is evaluated by the asymptotic decodable region using density evolution. The results show that, with code rate fixed, the CAF scheme has better performance than the SD scheme with joint BP decoding and SIC BP decoding in the high rate region.
