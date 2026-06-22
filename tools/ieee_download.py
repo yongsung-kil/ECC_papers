@@ -22,6 +22,13 @@ import os
 import re
 import sys
 
+# Windows 콘솔(cp949)에서 한글·기호 출력이 깨지지 않도록 UTF-8 강제
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 # ── 설정 ───────────────────────────────────────────────────────────────
 PAPER_URL = "https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7117421"
 
