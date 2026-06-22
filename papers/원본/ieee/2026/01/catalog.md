@@ -223,8 +223,8 @@
 
 ## Reduced Complexity Blind Recognition Method of LDPC Codes Over a Candidate Set
 
-- **Status**: ✅
-- **Reason**: LDPC 블라인드 인식이 주제지만 OMSA(offset min-sum) 디코더 기법 언급 — C 이식 가능성 애매하여 살림
+- **Status**: ❌
+- **Reason**: LDPC 블라인드 인식(candidate set)이 본질 — 부호 추정/식별 문제로 NAND ECC 무관, OMSA 언급은 부수적 → 제외(블라인드 인식)
 - **ID**: ieee:11406886
 - **Type**: journal
 - **Published**: 2026

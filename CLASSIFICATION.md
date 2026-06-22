@@ -1,6 +1,6 @@
 # 논문 분류 작업 정리 (Phase 2 · Phase 2.5)
 
-> 기준 시점: 2026-06-20 · 데이터: `data/papers.db` (SQLite)
+> 기준 시점: 2026-06-22 · 데이터: `data/papers.db` (SQLite)
 
 전체 수집 논문 **22,225편**(arXiv 1,124 + IEEE 21,101)을 두 단계로 분류했다.
 초록만 보고 판정했으며, 판정은 병렬 에이전트(LLM)가 수행하고 결과를 DB에 기록했다.
@@ -8,10 +8,10 @@
 ```
 [전체 22,225]
    └─ Phase 2 (1차 선별: NAND LDPC ECC 적용성)
-        ├─ filtered_out 15,997  (제외)
-        └─ filtered_in   6,228  (통과)
+        ├─ filtered_out 15,999  (제외)
+        └─ filtered_in   6,226  (통과)
               └─ Phase 2.5 (알고리즘 수정 여부)
-                   ├─ algo_mod=1  5,313  (유지: 알고리즘/코드 기여 있음)
+                   ├─ algo_mod=1  5,311  (유지: 알고리즘/코드 기여 있음)
                    └─ algo_mod=0    915  (제외: 하드웨어 수정만)
 ```
 
@@ -47,7 +47,10 @@ JSCC·fountain/erasure 등. (각 항목의 예외 조건은 기준서 참조)
 - 도구: `src/review.py`(분할/기록/검증), `select_workflow.js`(병렬 판정 워크플로),
   절차서 `REVIEW.md`.
 
-**결과**: filtered_in **6,228** / filtered_out **15,997** (전체 22,225편 = 100% 완료).
+**결과**: filtered_in **6,226** / filtered_out **15,999** (전체 22,225편 = 100% 완료).
+
+> 보정 이력(2026-06-22): 블라인드 부호 인식·블라인드 LLR 추정 2편(`ieee:11406886`,
+> `ieee:8580788`)을 제외로 재분류(기준서 제외 항목 신설). filtered_in 6,228→6,226.
 
 **DB 기록 위치**:
 - `papers.status` = `filtered_in` | `filtered_out`
@@ -71,7 +74,7 @@ JSCC·fountain/erasure 등. (각 항목의 예외 조건은 기준서 참조)
 
 - 도구: `src/algo_classify.py`(파싱·분류·배치·기록), `algo_workflow.js`(애매분 재판정 워크플로).
 
-**결과** (filtered_in 6,228편 대상): 유지 **5,313** / 제외(HW만) **915**.
+**결과** (filtered_in 6,226편 대상): 유지 **5,311** / 제외(HW만) **915**.
 제외된 915편은 "min-sum 디코더 FPGA 구현", "QC-LDPC VLSI 아키텍처" 등 표준 알고리즘의
 하드웨어 구현·가속에 그치는 논문들이다.
 
@@ -80,7 +83,7 @@ JSCC·fountain/erasure 등. (각 항목의 예외 조건은 기준서 참조)
 - `0` = 하드웨어 수정만 (제외)
 
 status는 `filtered_in` 그대로 두고 컬럼만 플래그로 둔다.
-이후 단계는 `algo_mod = 1`(5,313편)만 대상으로 삼으면 HW-only 915편이 제외된다.
+이후 단계는 `algo_mod = 1`(5,311편)만 대상으로 삼으면 HW-only 915편이 제외된다.
 
 ---
 

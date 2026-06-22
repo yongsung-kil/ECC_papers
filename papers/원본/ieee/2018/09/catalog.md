@@ -135,8 +135,8 @@
 
 ## Blind Estimation of an Approximated Likelihood Ratio in Impulsive Environment
 
-- **Status**: ✅
-- **Reason**: 임펄스 잡음 환경에서 근사 LLR 블라인드 추정을 BP 디코더 입력으로 사용(C); LLR 양자화/추정 기법 NAND read에 이식 여지, 애매하면 in
+- **Status**: ❌
+- **Reason**: 임펄스 잡음 환경 근사 LLR 블라인드 추정이 본질 — 블라인드 추정 문제로 제외(블라인드 LLR 추정)
 - **ID**: ieee:8580788
 - **Type**: conference
 - **Published**: 9-12 Sept.

@@ -109,18 +109,6 @@
 - **PDF**: https://ieeexplore.ieee.org/document/11367752
 - **Abstract**: Protograph-based Raptor-like (PBRL) LDPC codes, adopted in the 5G NR eMBB data channel, support a wide range of code rates by generating incremental redundancy through XOR operations. As the protograph structure directly influences performance, its efficient design is crucial. This letter introduces a novel framework for optimizing the IRC submatrix by minimizing the Euclidean norm of capacity gaps, a new evaluation metric that captures overall threshold behavior across all supported rates, in contrast to the conventional rate-by-rate greedy optimization. The approach formulates this as a global optimization problem solved via a genetic algorithm (GA) with simulated annealing (SA) applied for improved convergence. Numerical results show notable threshold reductions, including a 58.4% improvement in the capacity gap norm for the 5G Base Graph 1. The method is also compatible with other rate-compatible structures, such as rate-compatible spatially coupled LDPC codes, which are promising candidates for coding schemes in next-generation mobile systems.
 
-## Reduced Complexity Blind Recognition Method of LDPC Codes Over a Candidate Set
-
-- **Status**: ✅
-- **Reason**: LDPC 블라인드 인식이 주제지만 OMSA(offset min-sum) 디코더 기법 언급 — C 이식 가능성 애매하여 살림
-- **알고리즘 기여**: ✅ 알고리즘/코드 기여
-- **ID**: ieee:11406886
-- **Type**: journal
-- **Published**: 2026
-- **Authors**: Zhuolun Wu, Yushan Zhang, Wei Zhang +1
-- **PDF**: https://ieeexplore.ieee.org/document/11406886
-- **Abstract**: Adaptive modulation and coding (AMC) systems require the transmission of control signals, thereby reducing overall system transmission efficiency. The channel coding blind recognition technique is key to solving this problem. This paper proposes a reduced-complexity method for blind recognition of low-density parity-check (LDPC) coding parameters within a given candidate set, thereby enhancing the work efficiency of AMC systems. This paper applies a method based on code rate for classification evaluation, circumventing superfluous calculations for several candidate parity-check matrices. Furthermore, computational complexity is reduced by applying the offset min-sum algorithm (OMSA) to the parity-check stage. Subsequently, the Z-score is used to measure the difference between the actual data and the theoretical distribution. Compared with the best existing recognition methods, the proposed algorithm offers clear advantages in computational complexity and is virtually identical in recognition performance.
-
 ## 6G-Oriented LDPC-Coded Faster-Than-Nyquist Signaling: Code Design and Performance Analysis
 
 - **Status**: ✅

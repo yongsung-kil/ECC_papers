@@ -37,18 +37,6 @@
 - **PDF**: https://ieeexplore.ieee.org/document/8580758
 - **Abstract**: Low decoding latency and complexity are two important requirements of channel codes used in many applications, like machine-to-machine communications. In this paper, we show how these requirements can be fulfilled by using some special quasi-cyclic low-density parity-check block codes and spatially coupled low-density parity-check convolutional codes that we denote as compact. They are defined by parity-check matrices designed according to a recent approach based on sequentially multiplied columns. This method allows obtaining codes with girth up to 12. Many numerical examples of practical codes are provided.
 
-## Blind Estimation of an Approximated Likelihood Ratio in Impulsive Environment
-
-- **Status**: ✅
-- **Reason**: 임펄스 잡음 환경에서 근사 LLR 블라인드 추정을 BP 디코더 입력으로 사용(C); LLR 양자화/추정 기법 NAND read에 이식 여지, 애매하면 in
-- **알고리즘 기여**: ✅ 알고리즘/코드 기여
-- **ID**: ieee:8580788
-- **Type**: conference
-- **Published**: 9-12 Sept.
-- **Authors**: Yasser Mestrah, Anne Savard, Alban Goupil +2
-- **PDF**: https://ieeexplore.ieee.org/document/8580788
-- **Abstract**: Robust communication is necessary for many wireless applications. Making a decision at the receiver requires an evaluation of the likelihood. However, in impulsive noise, the traditional Gaussian-based receiver exhibits a very significant performance loss. This paper proposes to approximate the likelihood ratio in a binary transmission with a function adapted to impulsive noise conditions but also efficient when noise is purely Gaussian. We introduce a blind estimation of the two parameters defining the approximation and evaluate its performance when used as the inputs of the belief propagation decoder. Our proposal allows us not only to achieve performance close to the optimal decoding but also to have a simple implementation and to adapt to different environment, impulsive or not, independently of the underlying statistical noise model, without the need of a training sequence.
-
 ## Convergence Behavior of LDPC Decoding and Application to Early Termination
 
 - **Status**: ✅

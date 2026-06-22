@@ -100,6 +100,17 @@
 - **PDF**: https://ieeexplore.ieee.org/document/8532194
 - **Abstract**: Space shift keying (SSK) modulation is a special case of conventional spatial modulation (SM), where the amplitude and/or phase modulation symbols are eliminated from the transmission process so as to reduce complexity. However, high spectral efficiencies are difficult to achieve with SSK. At the same time, the spectral efficiency of SM can be further improved. On this note, to further enhance the spectral efficiencies of both SM and SSK, quadrature SM (QSM) and Bi-SSK modulations, respectively, were proposed. In coded channels, typically soft-output detection coupled with soft-input channel decoding yields significant signal-to-noise ratio (SNR) gain. Hence, in this paper, we propose soft-output maximum-likelihood detectors (SOMLD) for SSK, Bi-SSK and QSM modulated systems. Monte Carlo simulation results demonstrate that the error performances of the proposed SOMLD schemes closely match with that of their hard-decision maximum-likelihood detector counterparts in uncoded channels; while, significant SNR gains are yielded in coded channels.
 
+## Blind Estimation of an Approximated Likelihood Ratio in Impulsive Environment
+
+- **Status**: ❌
+- **Reason**: 임펄스 잡음 환경 근사 LLR 블라인드 추정이 본질 — 블라인드 추정 문제로 제외(블라인드 LLR 추정)
+- **ID**: ieee:8580788
+- **Type**: conference
+- **Published**: 9-12 Sept.
+- **Authors**: Yasser Mestrah, Anne Savard, Alban Goupil +2
+- **PDF**: https://ieeexplore.ieee.org/document/8580788
+- **Abstract**: Robust communication is necessary for many wireless applications. Making a decision at the receiver requires an evaluation of the likelihood. However, in impulsive noise, the traditional Gaussian-based receiver exhibits a very significant performance loss. This paper proposes to approximate the likelihood ratio in a binary transmission with a function adapted to impulsive noise conditions but also efficient when noise is purely Gaussian. We introduce a blind estimation of the two parameters defining the approximation and evaluate its performance when used as the inputs of the belief propagation decoder. Our proposal allows us not only to achieve performance close to the optimal decoding but also to have a simple implementation and to adapt to different environment, impulsive or not, independently of the underlying statistical noise model, without the need of a training sequence.
+
 ## MDPC Decoding Algorithms and Their Impact on the McEliece Cryptosystem
 
 - **Status**: ❌

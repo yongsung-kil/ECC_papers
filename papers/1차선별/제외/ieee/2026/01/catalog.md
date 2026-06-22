@@ -122,6 +122,17 @@
 - **PDF**: https://ieeexplore.ieee.org/document/11466175
 - **Abstract**: Semantic communication has demonstrated the potential to surpass the Shannon limit through joint source-channel coding. However, existing systems suffer from two critical limitations: the lack of adaptability to dynamic channels and insufficient compatibility with digital communication systems due to reliance on analog modulation. This paper proposes a signal-to-noise ratio (SNR) adaptive digital semantic communication framework that achieves high-quality transmission under dynamic channels and compatibility with digital systems by integrating a channel-aware semantic codec with a learnable semantic feature quantization module. The system employs lightweight residual convolutional modules to extract semantic features, enables a single model to adapt to a wide SNR range through an SNR-adaptive attention mechanism, and utilizes a learnable codebook to map continuous features to discrete binary sequences. A three-stage progressive training strategy is adopted to optimize system performance. Experimental results on the test set demonstrate that the proposed system outperforms the traditional JPEG+LDPC scheme, validating the effectiveness and practical value of this framework.
 
+## Reduced Complexity Blind Recognition Method of LDPC Codes Over a Candidate Set
+
+- **Status**: ❌
+- **Reason**: LDPC 블라인드 인식(candidate set)이 본질 — 부호 추정/식별 문제로 NAND ECC 무관, OMSA 언급은 부수적 → 제외(블라인드 인식)
+- **ID**: ieee:11406886
+- **Type**: journal
+- **Published**: 2026
+- **Authors**: Zhuolun Wu, Yushan Zhang, Wei Zhang +1
+- **PDF**: https://ieeexplore.ieee.org/document/11406886
+- **Abstract**: Adaptive modulation and coding (AMC) systems require the transmission of control signals, thereby reducing overall system transmission efficiency. The channel coding blind recognition technique is key to solving this problem. This paper proposes a reduced-complexity method for blind recognition of low-density parity-check (LDPC) coding parameters within a given candidate set, thereby enhancing the work efficiency of AMC systems. This paper applies a method based on code rate for classification evaluation, circumventing superfluous calculations for several candidate parity-check matrices. Furthermore, computational complexity is reduced by applying the offset min-sum algorithm (OMSA) to the parity-check stage. Subsequently, the Z-score is used to measure the difference between the actual data and the theoretical distribution. Compared with the best existing recognition methods, the proposed algorithm offers clear advantages in computational complexity and is virtually identical in recognition performance.
+
 ## Neural Rate-Adaptive LDPC Decoding for the Slepian-Wolf Problem
 
 - **Status**: ❌
