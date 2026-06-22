@@ -49,6 +49,9 @@ LIMIT = None            # 테스트용: 정수 넣으면 그만큼만 받음. No
 RETRY_FAILED = True     # 이전에 실패한 것도 다시 시도할지
 MAX_ATTEMPTS = 3        # 같은 논문 최대 시도 횟수
 DL_TIMEOUT = 90         # 논문 1편 다운로드 대기 최대 초
+PAGE_TIMEOUT = 15       # stamp 페이지에서 iframe(실제 PDF)이 뜰 때까지 최대 초
+POLITE_DELAY = 1.5      # 논문 사이 간격(초) — 너무 빠르면 IEEE 가 막을 수 있어 둠
+FAIL_DELAY = 5          # 실패 시 추가 휴식(초)
 # ───────────────────────────────────────────────────────────────────────
 
 
@@ -104,36 +107,55 @@ def clear_staging():
                 pass
 
 
+def staging_pdf():
+    """staging 에 완성된(.crdownload 없는) .pdf 가 있으면 경로, 없으면 None."""
+    if not os.path.isdir(STAGING):
+        return None
+    files = os.listdir(STAGING)
+    if any(f.endswith(".crdownload") for f in files):
+        return None
+    pdfs = [f for f in files if f.lower().endswith(".pdf")]
+    return os.path.join(STAGING, pdfs[0]) if pdfs else None
+
+
 def wait_download(timeout):
     """staging 에 .pdf 가 완성될 때까지 대기. 완성 파일경로 반환 or None."""
     deadline = time.time() + timeout
     while time.time() < deadline:
-        files = os.listdir(STAGING)
-        crdownload = [f for f in files if f.endswith(".crdownload")]
-        pdfs = [f for f in files if f.lower().endswith(".pdf")]
-        if pdfs and not crdownload:
-            return os.path.join(STAGING, pdfs[0])
+        got = staging_pdf()
+        if got:
+            return got
         time.sleep(1)
     return None
 
 
 def download_one(driver, arnumber):
-    """stamp 페이지 → iframe PDF 다운로드. 완성 파일경로 반환 or None."""
+    """stamp 페이지 → iframe(실제 PDF) 로 곧장 이동해 다운로드.
+    완성 파일경로 반환 or None."""
     stamp = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={arnumber}"
     clear_staging()
     driver.get(stamp)
-    time.sleep(2)
-    saved = wait_download(8)          # stamp 가 바로 다운로드 트리거하는 경우
-    if saved:
-        return saved
-    # iframe 의 실제 PDF 로 직접 이동
-    try:
-        iframe = driver.find_element("css selector", "iframe")
-        src = iframe.get_attribute("src")
-        if src and ".pdf" in src:
-            driver.get(src)
-    except Exception:
-        pass
+
+    # iframe 의 PDF src 가 나타나는 즉시 이동 (무의미한 고정 대기 제거).
+    # 드물게 stamp 가 바로 다운로드를 트리거하면 그 사이 staging 에 파일이 생긴다.
+    src = None
+    deadline = time.time() + PAGE_TIMEOUT
+    while time.time() < deadline:
+        got = staging_pdf()
+        if got:
+            return got
+        try:
+            iframe = driver.find_element("css selector", "iframe")
+            s = iframe.get_attribute("src")
+            if s and ".pdf" in s:
+                src = s
+                break
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+    if src:
+        driver.get(src)
     return wait_download(DL_TIMEOUT)
 
 
@@ -213,6 +235,7 @@ def main():
                 conn.commit()
                 ok += 1
                 print(f"OK ({os.path.getsize(tgt):,} B)")
+                time.sleep(POLITE_DELAY)            # 편당 간격(과속 방지)
             else:
                 conn.execute(
                     "UPDATE download_targets SET status='failed', "
@@ -221,6 +244,7 @@ def main():
                 conn.commit()
                 fail += 1
                 print("실패")
+                time.sleep(FAIL_DELAY)              # 실패 시 추가 휴식
     finally:
         driver.quit()
         clear_staging()
