@@ -1,0 +1,35 @@
+# arXiv — 2007-04
+
+
+## On the Hardness of Approximating Stopping and Trapping Sets in LDPC Codes
+
+- **Status**: ✅
+- **Reason**: stopping/trapping set와 error-floor 예측 관련 이론이나 LDPC error floor 코드설계(E)에 직접 연관, 애매 시 in
+- **ID**: arxiv:0704.2258v2
+- **Type**: preprint
+- **Published**: 2007-04-18
+- **Authors**: Andrew McGregor, Olgica Milenkovic
+- **PDF**: https://arxiv.org/pdf/0704.2258v2
+- **Abstract**: We prove that approximating the size of stopping and trapping sets in Tanner graphs of linear block codes, and more restrictively, the class of low-density parity-check (LDPC) codes, is NP-hard. The ramifications of our findings are that methods used for estimating the height of the error-floor of moderate- and long-length LDPC codes based on stopping and trapping set enumeration cannot provide accurate worst-case performance predictions.
+
+## Low-density graph codes that are optimal for source/channel coding and binning
+
+- **Status**: ❌
+- **Reason**: LDGM+LDPC 결합 소스/채널 코딩·binning, 소스코딩·JSCC 영역으로 떼어낼 ECC 디코더 기법 없음
+- **ID**: arxiv:0704.1818v1
+- **Type**: preprint
+- **Published**: 2007-04-13
+- **Authors**: Martin J. Wainwright, Emin Martinian
+- **PDF**: https://arxiv.org/pdf/0704.1818v1
+- **Abstract**: We describe and analyze the joint source/channel coding properties of a class of sparse graphical codes based on compounding a low-density generator matrix (LDGM) code with a low-density parity check (LDPC) code. Our first pair of theorems establish that there exist codes from this ensemble, with all degrees remaining bounded independently of block length, that are simultaneously optimal as both source and channel codes when encoding and decoding are performed optimally. More precisely, in the context of lossy compression, we prove that finite degree constructions can achieve any pair $(R, D)$ on the rate-distortion curve of the binary symmetric source. In the context of channel coding, we prove that finite degree codes can achieve any pair $(C, p)$ on the capacity-noise curve of the binary symmetric channel. Next, we show that our compound construction has a nested structure that can be exploited to achieve the Wyner-Ziv bound for source coding with side information (SCSI), as well as the Gelfand-Pinsker bound for channel coding with side information (CCSI). Although the current results are based on optimal encoding and decoding, the proposed graphical codes have sparse structure and high girth that renders them well-suited to message-passing and other efficient decoding procedures.
+
+## Optimal Routing for Decode-and-Forward based Cooperation in Wireless Networks
+
+- **Status**: ❌
+- **Reason**: 무선 협력 릴레이 라우팅 최적화, LDPC는 성능비교용 부수 언급, 떼어낼 ECC 기법 없음
+- **ID**: arxiv:0704.0499v1
+- **Type**: preprint
+- **Published**: 2007-04-04
+- **Authors**: Lawrence Ong, Mehul Motani
+- **PDF**: https://arxiv.org/pdf/0704.0499v1
+- **Abstract**: We investigate cooperative wireless relay networks in which the nodes can help each other in data transmission. We study different coding strategies in the single-source single-destination network with many relay nodes. Given the myriad of ways in which nodes can cooperate, there is a natural routing problem, i.e., determining an ordered set of nodes to relay the data from the source to the destination. We find that for a given route, the decode-and-forward strategy, which is an information theoretic cooperative coding strategy, achieves rates significantly higher than that achievable by the usual multi-hop coding strategy, which is a point-to-point non-cooperative coding strategy. We construct an algorithm to find an optimal route (in terms of rate maximizing) for the decode-and-forward strategy. Since the algorithm runs in factorial time in the worst case, we propose a heuristic algorithm that runs in polynomial time. The heuristic algorithm outputs an optimal route when the nodes transmit independent codewords. We implement these coding strategies using practical low density parity check codes to compare the performance of the strategies on different routes.

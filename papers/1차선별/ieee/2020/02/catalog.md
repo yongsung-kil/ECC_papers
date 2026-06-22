@@ -1,0 +1,62 @@
+# IEEE Xplore — 2020-02 (1차선별 통과)
+
+
+## Construction of QC LDPC Codes With Low Error Floor by Efficient Systematic Search and Elimination of Trapping Sets
+
+- **Status**: ✅
+- **Reason**: QC-LDPC trapping set 제거로 low error floor 구성하는 새 코드 설계 — 바이너리 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8901173
+- **Type**: journal
+- **Published**: Feb. 2020
+- **Authors**: Bashirreza Karimi, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8901173
+- **Abstract**: We propose a systematic design of protograph-based quasi-cyclic (QC) low-density parity-check (LDPC) codes with low error floor. We first characterize the trapping sets of such codes and demonstrate, using edge coloring techniques, that the QC structure of the code eliminates some of the trapping set structures that can exist in a code with the same degree distribution and girth but lacking the QC structure. Based on this characterization, our design aims at eliminating a targeted collection of trapping sets. Considering the parent/child relationship between the trapping sets in the collection, we search for and eliminate those trapping sets that are in the collection but are not a child of any other trapping set in the collection. An efficient layered algorithm is designed for the search of these targeted trapping sets. Compared to the existing codes in the literature, the designed codes are superior in the sense that they are free of the same collection of trapping sets while having a smaller block length, or a larger collection of trapping sets while having the same block length. In addition, the efficiency of the search algorithm makes it possible to design codes with larger degrees which are free of trapping sets within larger ranges compared to the state-of-the-art.
+
+## Performance Bounds and Estimates for Quantized LDPC Decoders
+
+- **Status**: ✅
+- **Reason**: 양자화 LDPC 디코더(SPA/MSA)의 trapping/absorbing set 기반 FER 하한·추정 — 이식 가능 디코더/error floor 분석(C/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8897669
+- **Type**: journal
+- **Published**: Feb. 2020
+- **Authors**: Homayoon Hatami, David G. M. Mitchell, Daniel J. Costello +1
+- **PDF**: https://ieeexplore.ieee.org/document/8897669
+- **Abstract**: The performance of low-density parity-check (LDPC) codes at high signal-to-noise ratios (SNRs) is known to be limited by the presence of certain sub-graphs that exist in the Tanner graph representation of the code, for example trapping sets and absorbing sets. This paper derives a lower bound on the frame error rate (FER) of any LDPC code containing a given problematic sub-graph, assuming a particular message passing decoder and decoder quantization. A crucial aspect of the lower bound is that it is code-independent, in the sense that it can be derived based only on a problematic sub-graph and then applied to any code containing it. Due to the complexity of evaluating the exact bound, assumptions are proposed to approximate it, from which we can estimate decoder performance. Simulated results obtained for both the quantized sum-product algorithm (SPA) and the quantized min-sum algorithm (MSA) are shown to be consistent with the approximate bound and the corresponding performance estimates. Different classes of LDPC codes, including both structured and randomly constructed codes, are used to demonstrate the robustness of the approach.
+
+## Spatially Coupled LDPC Codes With Small Constraint Length and Low Error Floor
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 소제약길이+low error floor 위한 trapping set 제거 새 기법 — 바이너리 이식 가능 코드 설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8911359
+- **Type**: journal
+- **Published**: Feb. 2020
+- **Authors**: Sima Naseri, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8911359
+- **Abstract**: In this letter, we design time-invariant spatially coupled low-density parity-check (SC-LDPC) codes with small constraint length and low error floor. For this, we modify the codes in the literature that have (close to) minimal constraint length for a given degree distribution and girth, to improve their error floor. This is performed by eliminating (or minimizing the multiplicity of) some of the dominant trapping sets (TSs) of the codes and/or increasing the minimum distance. To reduce the multiplicity of the TSs effectively and efficiently, we devise a technique based on the parent/child relationship between TSs that aims at successively minimizing the multiplicity of TSs depending on their harmfulness.
+
+## Learning PHY Layer Parameters via SNR-Value Network
+
+- **Status**: ✅
+- **Reason**: RL 기반 LDPC 디코더 오프셋(min-sum offset) 자동 최적화 — 이식 가능 디코더 파라미터 학습 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9049722
+- **Type**: conference
+- **Published**: 17-20 Feb.
+- **Authors**: Ahmed Abotabl, Jung Hyun Bae, Kee-Bong Song
+- **PDF**: https://ieeexplore.ieee.org/document/9049722
+- **Abstract**: In a typical communications system design such as 5G cellular system, the optimal closed-form solutions are often available under certain assumptions of idealities. However, such optimal solutions frequently incur implementation complexity issues and are also susceptible to non-idealities. On the other hand,proximate solutions designed to handle such issues typically involve certain algorithmic parameters which cannot be determined in a closed-form, and an exhaustive effort is required for optimization of such parameters in a typical system design stage. In this paper, we propose a framework in which such optimization can be automated by continuously adapting signal- to-noise ratio (SNR) and parameters to be optimized for physical layer simulation on various randomly sampled environments. We show that this framework can also be explained by a theory of reinforcement learning (RL), which provides a guideline for detailed operation of running the framework. As a specific application, we discuss a problem of low-density, parity-check (LDPC) {decoder offset optimization and demonstrate that learned values perform close to the ones found by the exhaustive effort.
+
+## A New Fast Algorithm for Finding Capacity of Discrete Memoryless Thresholding Channels
+
+- **Status**: ✅
+- **Reason**: DMC 임계화 채널 용량 계산용 수정 k-means 알고리즘 — NAND read LLR 양자화/임계 최적화에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9049773
+- **Type**: conference
+- **Published**: 17-20 Feb.
+- **Authors**: Thuan Nguyen, Yu-Jung Chu, Thinh Nguyen
+- **PDF**: https://ieeexplore.ieee.org/document/9049773
+- **Abstract**: This paper proposes an efficient algorithm for finding the channel capacity of discrete memoryless thresholding channels (DMTCs) that are typically used in Pulse Amplitude Modulation (PAM). While there are efficient algorithms for determining capacity of a discrete memoryless channel (DMC), it is difficult to obtain the capacity of a DMTC. Unlike a typical DMC channel whose the capacity is a convex function of the input distribution, the capacity of a DMTC is a non-convex function of both the input distribution and decision thresholds. To resolve this problem, we propose an efficient algorithm for approximating the channel capacity of a DMTC using a novel modified k-means algorithm whose computational complexity is reduced by a factor of $ \frac{M}{\log M}$ over the standard k-means algorithm, where M relates to the precision resolution of the solution. Both theoretical and numerical results are provided to verify the proposed algorithm.

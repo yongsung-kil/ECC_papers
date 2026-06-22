@@ -1,0 +1,24 @@
+# arXiv — 2021-11
+
+
+## Capacity Optimal Generalized Multi-User MIMO: A Theoretical and Practical Framework
+
+- **Status**: ❌
+- **Reason**: GMU-MIMO 무선 응용, MU-LDPC는 OAMP/VAMP 수신기 기반 베이스라인 — NAND로 떼어낼 새 디코더/코드설계 없음
+- **ID**: arxiv:2111.11061v2
+- **Type**: preprint
+- **Published**: 2021-11-22
+- **Authors**: Yuhao Chi, Lei Liu, Guanghui Song +3
+- **PDF**: https://arxiv.org/pdf/2111.11061v2
+- **Abstract**: Conventional multi-user multiple-input multiple-output (MU-MIMO) mainly focused on Gaussian signaling, independent and identically distributed (IID) channels, and a limited number of users. It will be laborious to cope with the heterogeneous requirements in next-generation wireless communications, such as various transmission data, complicated communication scenarios, and massive user access. Therefore, this paper studies a generalized MU-MIMO (GMU-MIMO) system with more practical constraints, i.e., non-Gaussian signaling, non-IID channel, and massive users and antennas. These generalized assumptions bring new challenges in theory and practice. For example, there is no accurate capacity analysis for GMU-MIMO. In addition, it is unclear how to achieve the capacity optimal performance with practical complexity.   To address these challenges, a unified framework is proposed to derive the GMU-MIMO capacity and design a capacity optimal transceiver, which jointly considers encoding, modulation, detection, and decoding. Group asymmetry is developed to make a tradeoff between user rate allocation and implementation complexity. Specifically, the capacity region of group asymmetric GMU-MIMO is characterized by using the celebrated mutual information and minimum mean-square error (MMSE) lemma and the MMSE optimality of orthogonal approximate message passing (OAMP)/vector AMP (VAMP). Furthermore, a theoretically optimal multi-user OAMP/VAMP receiver and practical multi-user low-density parity-check (MU-LDPC) codes are proposed to achieve the capacity region of group asymmetric GMU-MIMO. Numerical results verify that the gaps between theoretical detection thresholds of the proposed framework with optimized MU-LDPC codes and QPSK modulation and the sum capacity of GMU-MIMO are about 0.2 dB. Moreover, their finite-length performances are about 1~2 dB away from the associated sum capacity.
+
+## Asymptotically Good Quantum and Locally Testable Classical LDPC Codes
+
+- **Status**: ✅
+- **Reason**: lifted product로 asymptotically good 고전 바이너리 LDPC(국소 검사가능) 구성 — 코드 구성 기법 이식 여지(E), 애매하므로 살림
+- **ID**: arxiv:2111.03654v2
+- **Type**: preprint
+- **Published**: 2021-11-05
+- **Authors**: Pavel Panteleev, Gleb Kalachev
+- **PDF**: https://arxiv.org/pdf/2111.03654v2
+- **Abstract**: We study classical and quantum LDPC codes of constant rate obtained by the lifted product construction over non-abelian groups. We show that the obtained families of quantum LDPC codes are asymptotically good, which proves the qLDPC conjecture. Moreover, we show that the produced classical LDPC codes are also asymptotically good and locally testable with constant query and soundness parameters, which proves a well-known conjecture in the field of locally testable codes.

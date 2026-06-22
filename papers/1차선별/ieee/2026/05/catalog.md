@@ -1,0 +1,50 @@
+# IEEE Xplore — 2026-05 (1차선별 통과)
+
+
+## Hardware-Efficient QC-LDPC Decoding Architecture With Reduced Bit-Width and Saturation Management
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 디코더 비트폭 축소·포화관리 VLSI 아키텍처 — NAND 디코더에 직접 이식 가능(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:11435440
+- **Type**: journal
+- **Published**: May 2026
+- **Authors**: Hyeongseok Moon, In-Cheol Park
+- **PDF**: https://ieeexplore.ieee.org/document/11435440
+- **Abstract**: In quantized layered low-density parity-check (LDPC) decoding, the saturated a posteriori probability (APP) value prevents extrinsic information from being correctly accumulated and overemphasizes certain error paths, making it necessary to use a larger APP representation. The proposed method compensates for the information loss caused by such saturation and eliminates the need for a larger APP bitwidth, reducing the APP bitwidth to the level of the check-to-variable message while preserving the decoding performance. This compensation is achieved by disabling APP updates when saturation occurs, starting from the iteration identified by the shortest cycles in the parity-check matrix. The proposed control preserves correct message passing and prevents the accumulation of error-path weights in the APP. In the prototype LDPC decoder, the proposed method requires only a lightweight circuit to detect saturation, incurring a negligible area overhead and almost no degradation of processing delay. As a result, the proposed architecture reduces area and power by 15% and 25%, respectively, and achieves a throughput-to-area ratio of 25.08 Gbps/itr/mm2, while maintaining the FER performance of the 7-bit APP representation.
+
+## On the Role of Extrinsic Value Exchange in Expectation Propagation for Coded MIMO Systems
+
+- **Status**: ✅
+- **Reason**: EP 검출기 LLR 통계 분석(negentropy로 Gaussianity 평가)으로 디코더 오류정정 능력 향상 — LLR 품질 분석은 NAND LDPC LLR 처리에 이식 가능(C 경계)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11464434
+- **Type**: conference
+- **Published**: 3-8 May 20
+- **Authors**: Fuga Kobayashi, Takumi Takahashi, Hideki Ochiai
+- **PDF**: https://ieeexplore.ieee.org/document/11464434
+- **Abstract**: This paper investigates the statistical properties of log-likelihood ratios (LLRs) at the output of an iterative signal detector based on expectation propagation (EP), highlighting the role of moment matching (MM)-based extrinsic value exchange in coded systems. Prior studies have mainly examined convergence behavior in asymptotic regimes; however, EP’s advantage is not always evident in practical finite-size uncoded multi-input multi-output (MIMO) detection, where probabilistic data association (PDA), which lacks extrinsic value exchange, can perform comparably to or even better than EP. In contrast, when channel coding is applied, EP consistently outperforms PDA. To explain this, we analyze the statistical properties of demodulator output LLRs and show that extrinsic value exchange not only ensures inter-iteration independence but also enhances the Gaussianity of LLRs. We quantify this effect using negentropy and demonstrate its benefit in improving the decoder’s error-correcting capability, thereby establishing the superiority of EP in coded systems.
+
+## Spatially-Coupled OTFS Systems via Block Markov Superposition Transmission
+
+- **Status**: ✅
+- **Reason**: Spatially-Coupled LDPC 구성+BMST, EXIT 차트 기반 SC 임계 최적화 — SC-LDPC 코드 설계 기법 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11464769
+- **Type**: conference
+- **Published**: 3-8 May 20
+- **Authors**: Jiayi Yang, Shuangyang Li, Qianfan Wang +4
+- **PDF**: https://ieeexplore.ieee.org/document/11464769
+- **Abstract**: This paper investigates a novel spatially coupled orthogonal time frequency space (SC-OTFS) transmission scheme by integrating block Markov superposition transmission (BMST) with OTFS modulation. We first statistically analyze the distribution of detector mutual information across coded blocks and establish a decoding-threshold-based lower bound to characterize the asymptotic performance of conventional LDPC-coded OTFS systems. The analysis reveals that increasing the code length yields only marginal coding gains in typical doubly-selective channels with limited resolvable paths. Motivated by this observation, we propose an SC-OTFS system in which a portion of each previously coded block is superimposed onto the current block and subsequently modulated using OTFS, thereby exploiting both coding gain and inter-block diversity gain in high-mobility channels. Furthermore, an extrinsic information transfer (EXIT) chart analysis is developed for the SC-OTFS system, which enables optimization of the critical superposition fraction based on decoding thresholds. Simulation results demonstrate that this optimization leads to a significant performance improvement, achieving more than 3 dB gain over conventional 5G LDPC-coded OTFS systems.
+
+## Would Learning Help? Adaptive CRC-QC-LDPC Selection for Integrity in 5G-NR V2X
+
+- **Status**: ✅
+- **Reason**: 5G-NR V2X에서 QC-LDPC 코딩 레이트 및 CRC 다항식을 컨텍스트 밴딧으로 온라인 선택하는 기법으로, QC-LDPC 파라미터 적응 선택 방법론이 스토리지 컨트롤러에 이식 가능(E); 무선 특이적이나 판단 애매하여 in으로 보존.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11532867
+- **Type**: conference
+- **Published**: 12-14 May 
+- **Authors**: Sarah Al-Shareeda, Gulcihan Ozdemir, Arouj Fatima +4
+- **PDF**: https://ieeexplore.ieee.org/document/11532867
+- **Abstract**: Vehicle-to-everything (V2X) communications impose stringent physical-layer integrity requirements, particularly under short-packet transmission and mobility-induced channel variation. This paper studies whether standard-compliant online selection of Cyclic Redundancy Check (CRC) polynomials and Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) coding rates can reduce silent (undetected) errors in $mathbf{5 G}$ New Radio (5GNR) V2X links. The joint configuration problem is formulated as a lightweight Contextual Bandit (CB) with a small, discrete action space, and a discounted LinUCB policy is evaluated against greedy online adaptation and a conservative fixed baseline. A 5G-NR-compliant physical-layer simulation is developed using Sionna, modeling mobility through time-correlated Rayleigh fading, where vehicle speed governs channel correlation, and non-stationary interference via a two-state Markov process. The learning agent operates on coarse receiver feedback, including a noisy Signal-to-Noise Ratio (SNR) estimate and indicators of burst interference and deep fades, and targets minimization of the Undetected Error Probability ($P_{U E}$) while accounting for the Detected Error Probability ($P_{D E}$). Overall, our objective is to delineate the mobility regimes in which learning-assisted CRC-QC-LDPC configuration improves physical-layer integrity in 5G-NR V2X systems. Our results indicate that learningassisted adaptation is most effective at low to moderate mobility, reducing $P_{U E}$ by up to $\mathbf{5 0 - 7 0 \%}$ relative to greedy selection in the low-SNR regime (-5 to $5 \mathbf{~ d B}$) and approaching the best fixed configuration at higher $E_{b} / N_{0}$. At high mobility ($\geq 180 \mathbf{~ k m} / \mathbf{h}$), fast channel decorrelation weakens temporal predictability, limiting the effectiveness of online learning and reducing performance differences across policies.

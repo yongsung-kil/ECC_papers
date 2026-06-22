@@ -1,0 +1,122 @@
+# IEEE Xplore — 2018-02 (1차선별 통과)
+
+
+## 2-D LDPC Codes and Joint Detection and Decoding for Two-Dimensional Magnetic Recording
+
+- **Status**: ✅
+- **Reason**: native 2D 바이너리 LDPC 코드 구성 + generalized BP 기반 결합검출디코딩(E/C) — 바이너리 LDPC 신규 구성·디코더, 스토리지(자기기록) ECC
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8006231
+- **Type**: journal
+- **Published**: Feb. 2018
+- **Authors**: Chaitanya Kumar Matcha, Shounak Roy, Mohsen Bahrami +2
+- **PDF**: https://ieeexplore.ieee.org/document/8006231
+- **Abstract**: Two-dimensional magnetic recording (TDMR) is a promising technology for boosting areal densities (ADs) using sophisticated signal processing algorithms within a systems framework. The read/write channel architectures have to effectively tackle 2-D intersymbol interference (ISI), 2-D synchronization errors, media and electronic noise sources, as well as thermal asperities resulting in burst erasures. The 1-D low-density parity check (LDPC) codes are well studied to correct large 1-D burst errors/erasures. However, such 1-D LDPC codes are not suitable for correcting 2-D burst errors/erasures due to the 2-D span of errors. In this paper, we propose construction of a native 2-D LDPC code to effectively correct 2-D burst erasures. We also propose a joint detection and decoding engine based on the generalized belief propagation algorithm to simultaneously handle 2-D ISI, as well as correct bit/burst errors for TDMR channels. This paper is novel in two aspects: 1) we propose the construction of native 2-D LDPC codes to correct large 2-D burst erasures and 2) we develop a 2-D joint signal detection-decoder engine that incorporates 2-D ISI constraints, and modulation code constrains along with LDPC decoding. The native 2-D LDPC code can correct >20% more burst erasures compared with the 1-D LDPC code over a 128 × 256 2-D page of detected bits. Also, the proposed algorithm is observed to achieve a signal-to-noise ratio gain of >0.5 dB in bit error rate performance (translating to 10% increase in ADs around the 1.8 Tb/in2 regime with grain sizes of 9 nm) as compared with a decoupled detector-decoder system configuration over a small 2-D LDPC code of size 16 × 16. The efficacy of our proposed algorithm and system architecture is evaluated by assessing AD gains via simulations for a TDMR configuration comprising of a 2-D generalized partial response over the Voronoi media model assuming perfect 2-D synchronization.
+
+## LDPC Code Design for Distributed Storage: Balancing Repair Bandwidth, Reliability, and Storage Overhead
+
+- **Status**: ✅
+- **Reason**: 분산스토리지용 바이너리 LDPC 코드 설계(factor graph 차수·stopping number), B/E 스토리지 ECC 구성
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8094003
+- **Type**: journal
+- **Published**: Feb. 2018
+- **Authors**: Hyegyeong Park, Dongwon Lee, Jaekyun Moon
+- **PDF**: https://ieeexplore.ieee.org/document/8094003
+- **Abstract**: Distributed storage systems suffer from significant repair traffic generated due to the frequent storage node failures. This paper shows that properly designed low-density parity-check (LDPC) codes can substantially reduce the amount of required block downloads for repair thanks to the sparse nature of their factor graph representation. In particular, with a careful construction of the factor graph, both low repair-bandwidth and high reliability can be achieved for a given code rate. First, a formula for the average repair bandwidth of LDPC codes is developed. This formula is then used to establish that the minimum repair bandwidth can be achieved by forcing a regular check node degree in the factor graph. Moreover, it is shown that given a fixed code rate, the variable node degree should also be regular to yield minimum repair bandwidth, under some reasonable minimum variable node degree constraint. It is also shown that for a given repair-bandwidth requirement, LDPC codes can yield substantially higher reliability than the currently utilized Reed-Solomon codes. Our reliability analysis is based on a formulation of the general equation for the mean-time-to-data-loss (MTTDL) associated with LDPC codes. The formulation reveals that the stopping number is closely related to the MTTDL. It is further shown that LDPC codes can be designed such that a small loss of repair-bandwidth optimality may be traded for a large improvement in erasure-correction capability and thus the MTTDL.
+
+## A 588-Gb/s LDPC Decoder Based on Finite-Alphabet Message Passing
+
+- **Status**: ✅
+- **Reason**: finite-alphabet 메시지패싱 LDPC 디코더+unrolled full-parallel HW(588Gb/s), C/D 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8113527
+- **Type**: journal
+- **Published**: Feb. 2018
+- **Authors**: Reza Ghanaatian, Alexios Balatsoukas-Stimming, Thomas Christoph Müller +4
+- **PDF**: https://ieeexplore.ieee.org/document/8113527
+- **Abstract**: An ultrahigh throughput low-density parity-check (LDPC) decoder with an unrolled full-parallel architecture is proposed, which achieves the highest decoding throughput compared to previously reported LDPC decoders in the literature. The decoder benefits from a serial message-transfer approach between the decoding stages to alleviate the well-known routing congestion problem in parallel LDPC decoders. Furthermore, a finite-alphabet message passing algorithm is employed to replace the VN update rule of the standard min-sum (MS) decoder with lookup tables, which are designed in a way that maximizes the mutual information between decoding messages. The proposed algorithm results in an architecture with reduced bit-width messages, leading to a significantly higher decoding throughput and to a lower area compared to an MS decoder when serial message transfer is used. The architecture is placed and routed for the standard MS reference decoder and for the proposed finite-alphabet decoder using a custom pseudo-hierarchical backend design strategy to further alleviate routing congestions and to handle the large design. Postlayout results show that the finite-alphabet decoder with the serial message-transfer architecture achieves a throughput as large as 588 Gb/s with an area of 16.2 mm2 and dissipates an average power of 22.7 pJ per decoded bit in a 28-nm fully depleted silicon on isulator library. Compared to the reference MS decoder, this corresponds to 3.1 times smaller area and 2 times better energy efficiency.
+
+## Efficient Coding Architectures for Reed–Solomon and Low-Density Parity-Check Decoders for Magnetic and Other Data Storage Systems
+
+- **Status**: ✅
+- **Reason**: D/C: layered/non-layered min-sum + 비균일 양자화(NUQ) LDPC 디코더 FPGA 구현, 블록RAM 절감 — NAND LDPC 이식 가능 HW·양자화 기법
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8249761
+- **Type**: journal
+- **Published**: Feb. 2018
+- **Authors**: Arijit Mondal, Satyannarayana Thatimattala, Vamshi Krishna Yalamaddi +1
+- **PDF**: https://ieeexplore.ieee.org/document/8249761
+- **Abstract**: High-performance error correction codes are used in high-density data storage devices to overcome noise and channel impairments. In this paper, we develop novel and efficient decoding architectures for Reed-Solomon (RS) and low-density parity-check (LDPC) codes that are used in almost all data storage devices. First, we present a high-speed low-latency hard-decision-based pipelined RS decoder architecture that computes the error locator polynomial in exactly 2t clock cycles without parallelism. The RS decoder is a two-stage pipelined engine operating at the least latency possible, thereby, significantly reducing the size of the delay buffer. The RS decoder is implemented using Cadence tools and Kintex-7 field programmable gate array (FPGA). The technology-scaled normalized throughput of the pipelined RS decoder is almost two times compared with the existing decoders. The overall processing latency is reduced by almost 80% compared with the existing designs. Second, we design a high-throughput LDPC decoder using layered and non-layered min-sum algorithm based on non-uniform quantization (NUQ) on an FPGA kit. Unlike the standard state-of-the-art uniform quantization used in virtually all decoder circuits, our NUQ technique: 1) achieves a slight performance improvement of ~0.1 dB in the signal-to-noise ratio using equal number of bits and 2) yields 20% area savings (using 1 bit less) for the block RAMs used for storing intermediate check node and variable node messages.
+
+## An Iterative BP-CNN Architecture for Channel Decoding
+
+- **Status**: ✅
+- **Reason**: C: BP-CNN 반복 디코더(BP에 CNN 잔차 노이즈 추정 결합) — 부호 비의존 BP 개선 신경망 디코더, NAND LDPC BP 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8259241
+- **Type**: journal
+- **Published**: Feb. 2018
+- **Authors**: Fei Liang, Cong Shen, Feng Wu
+- **PDF**: https://ieeexplore.ieee.org/document/8259241
+- **Abstract**: Inspired by the recent advances in deep learning, we propose a novel iterative belief propagation - convolutional neural network (BP-CNN) architecture for channel decoding under correlated noise. This architecture concatenates a trained CNN with a standard BP decoder. The standard BP decoder is used to estimate the coded bits, followed by a CNN to remove the estimation errors of the BP decoder and obtain a more accurate estimation of the channel noise. Iterating between BP and CNN will gradually improve the decoding SNR and, hence, result in better decoding performance. To train a well-behaved CNN model, we define a new loss function that involves not only the accuracy of the noise estimation but also the normality test for the estimation errors, i.e., to measure how likely the estimation errors follow a Gaussian distribution. The introduction of the normality test to the CNN training shapes the residual noise distribution and further reduces the bit error rate of the iterative decoding, compared to using the standard quadratic loss function. We carry out extensive experiments to analyze and verify the proposed framework.11Code is available at https://github.com/liangfei-info/Iterative-BP-CNN.
+
+## Learning to Decode LDPC Codes with Finite-Alphabet Message Passing
+
+- **Status**: ✅
+- **Reason**: DNN 기반 LDPC 디코더+3비트 유한알파벳 메시지 양자화-C 신경망 디코더 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8503199
+- **Type**: conference
+- **Published**: 11-16 Feb.
+- **Authors**: Bane Vasić, Xin Xiao, Shu Lin
+- **PDF**: https://ieeexplore.ieee.org/document/8503199
+- **Abstract**: In this paper, we discuss the perspectives of utilizing deep neural networks (DNN) to decode Low-Density Parity Check (LDPC) codes. The main idea is to build a neural network to learn and optimize a conventional iterative decoder of LDPC codes. A DNN is based on Tanner graph, and the activation functions emulate message update functions in variable and check nodes. We impose a symmetry on weight matrices which makes it possible to train the DNN on a single codeword and noise realizations only. Based on the trained weights and the bias, we further quantize messages in such DNN-based decoder with 3-bit precision while maintaining no loss in error performance compared to the min-sum algorithm. We use examples to present that the DNN framework can be applied to various code lengths. The simulation results show that, the trained weights and bias make the iterative DNN decoder converge faster and thus achieve higher throughput at the cost of trivial additional decoding complexity.
+
+## Reed-Solomon-Based Quasi-Cyclic LDPC Codes: Designs, Cycle Structure and Erasure Correction
+
+- **Status**: ✅
+- **Reason**: RS 기반 QC-LDPC 신규 구성(girth8, cycle 구조, erasure 정정)-E/B 바이너리 코드설계
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8503226
+- **Type**: conference
+- **Published**: 11-16 Feb.
+- **Authors**: Xin Xiao, William E. Ryan, Bane Vasić +2
+- **PDF**: https://ieeexplore.ieee.org/document/8503226
+- **Abstract**: This paper presents some new results on QC-LDPC codes constructed based on Reed-Solomon (RS) codes. Results include designs and constructions of RS-based QC-LDPC codes with girth 8, cycle structure in their Tanner graphs, and correction of erasures.
+
+## Improved Trellis-Based Algorithm for Locating and Breaking Cycles in Bipartite Graphs with Applications to LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Tanner 그래프 사이클 탐지·제거(girth 향상) 신규 trellis 알고리즘, QC-LDPC 구조 활용 — 카테고리 E 코드설계 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8503249
+- **Type**: conference
+- **Published**: 11-16 Feb.
+- **Authors**: Juane Li, Shu Lin, Khaled Abdel-Ghaffar
+- **PDF**: https://ieeexplore.ieee.org/document/8503249
+- **Abstract**: LDPC codes are typically decoded using belief propagation decoding algorithms applied to their Tanner graphs. Cycles of short lengths in these graphs, which are bipartite graphs representing parity-check equations of the codes, can negatively impact the performance of the decoder. In this paper, a trellis-based algorithm is presented to locate cycles in bipartite graphs. This algorithm is an improvement in complexity and run-time over the one developed by Lan et al. in 2004. When applied to Tanner graphs of quasi-cyclic LDPC codes, the newly proposed algorithm can exploit the structure of their parity-check matrices to cut the complexity further. Locating cycles in the Tanner graphs of codes allows for eliminating them to increase the girth and thus improve performance.
+
+## An approach to evaluating the number of potential cycles in an all-one base matrix
+
+- **Status**: ✅
+- **Reason**: all-one base matrix 잠재 사이클 수 평가 신규 방법, 고girth LDPC 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8323661
+- **Type**: conference
+- **Published**: 11-14 Feb.
+- **Authors**: Sheng Jiang, F.C.M. Lau
+- **PDF**: https://ieeexplore.ieee.org/document/8323661
+- **Abstract**: The “Tree Method” is usually used to identify potential cycles in low-density parity-check codes. However, with the increasing demand of high girth codes, the method becomes hard to implement because of the exponential increase of both space complexity and time complexity. In this paper, a new method is introduced to evaluate potential cycles for all-one base matrix. The method applies to large cycle length and arbitrary size base matrix. The principle of potential cycle and potential cycle duplication are studied to support the new approach. Instead of doing low efficient exhaustive search, the approach gives the number of potential cycles without duplication directly. The results of cycle numbers are given, which are verified by the “Tree Method”.
+
+## An approach to evaluating the number of potential cycles in an all-one base matrix
+
+- **Status**: ✅
+- **Reason**: 8323661 중복본, 동일하게 신규 사이클 평가법으로 코드설계(E) 포함
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8323662
+- **Type**: conference
+- **Published**: 11-14 Feb.
+- **Authors**: Sheng Jiang, F.C.M. Lau
+- **PDF**: https://ieeexplore.ieee.org/document/8323662
+- **Abstract**: The “Tree Method” is usually used to identify potential cycles in low-density parity-check codes. However, with the increasing demand of high girth codes, the method becomes hard to implement because of the exponential increase of both space complexity and time complexity. In this paper, a new method is introduced to evaluate potential cycles for all-one base matrix. The method applies to large cycle length and arbitrary size base matrix. The principle of potential cycle and potential cycle duplication are studied to support the new approach. Instead of doing low efficient exhaustive search, the approach gives the number of potential cycles without duplication directly. The results of cycle numbers are given, which are verified by the “Tree Method”.

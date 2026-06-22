@@ -1,0 +1,230 @@
+# IEEE Xplore — 2025-07 (1차선별 통과)
+
+
+## RXO-LDPC: A Physics-Inspired Relaxation Oscillator-Based Solver Leveraging Six-Body Spin Interactions for Soft Decoding of LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 28nm CMOS 구현 물리 영감 RXO 기반 LDPC soft 디코더 HW — BP 대비 BER 3 오더 개선, HW 아키텍처(D) 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:11052258
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Evangelos Dikopoulos, Luke Wormald, Ying-Tuan Hsu +4
+- **PDF**: https://ieeexplore.ieee.org/document/11052258
+- **Abstract**: Physics-inspired computing harnesses continuous-time (CT) operation, massive parallelism, and direct compute load mapping to coupled CMOS-based spins to accelerate solving complex optimization problems. This work advances the field by introducing relaxation oscillator (RXO)-low-density parity check (LDPC), a combinatorial optimization problem (COP) engine that natively supports six-body spin interactions for efficient, robust, and one-shot oscillator-based soft decoding of LDPC codes. The proposed RXO spins feature a capacitor-DAC-based initialization structure, allowing precise mapping of soft information to initial spin phases for high-performance decoding. A crossbar-based feedback system facilitates six-body spin interactions by directly coupling spins based on the COP graph. Implemented in 28-nm CMOS technology, the prototype achieves a frame error rate (FER) and bit error rate (BER) of  $1.36{\times }10{^{-6}}$  and  $1.89{\times }10{^{-7}}$ , respectively, at 7-dB SNR. The measured BER is more than three orders of magnitude lower than for belief propagation (BP) decoding, for channels with 2–5-dB SNR. The measured energy efficiency of 7.28 pJ/bit exceeds the normalized efficiencies of state-of-the-art decoders. Evaluated with more than 100 million decoding cycles, the system demonstrates reliable performance across a wide range of SNRs, supply voltages, temperatures, and for different dies. These measurement results highlight the RXO-based architecture’s potential as an accelerator for directly solving COPs with multi-body spin interactions.
+
+## Margin Propagation Based XOR-SAT Solvers for Decoding of LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Margin Propagation 기반 XOR-SAT LDPC 디코더: 곱셈기 불필요한 저복잡도 소프트 비트플리핑 알고리즘, NAND 디코더에 이식 가능 (Category C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10806722
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Ankita Nandi, Shantanu Chakrabartty, Chetan Singh Thakur
+- **PDF**: https://ieeexplore.ieee.org/document/10806722
+- **Abstract**: Decoding of Low-Density Parity Check (LDPC) codes can be viewed as a special case of XOR-SAT problems, for which low-computational complexity bit-flipping algorithms have been proposed in the literature. However, a performance gap exists between the bit-flipping LDPC decoding algorithms and the benchmark LDPC decoding algorithms, such as the Sum-Product Algorithm (SPA). In this paper, we propose an XOR-SAT solver using log-sum-exponential functions and demonstrate its advantages for LDPC decoding. This is then approximated using the Margin Propagation formulation to attain a low-complexity LDPC decoder. The proposed algorithm uses soft information to decide the bit-flips that maximize the number of parity check constraints satisfied over an optimization function. The proposed solver can achieve results that are within 0.1dB of the Sum-Product Algorithm for the same number of code iterations. It is also at least  $10 \times $  lower than other Gradient-Descent Bit Flipping decoding algorithms, which are also bit-flipping algorithms based on optimization functions. The approximation using the Margin Propagation formulation does not require any multipliers, resulting in significantly lower computational complexity than other soft-decision Bit-Flipping LDPC decoders.
+
+## Effective IDS Error Correction Algorithms for DNA Storage Channels With Multiple Output Sequences
+
+- **Status**: ✅
+- **Reason**: DNA 스토리지 IDS 오류 정정: LDPC 외부 코드와 Embedded Normalized Min-Sum(ENMS) 디코딩 기법 제안, min-sum 변형 알고리즘 이식 가능 (Category C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10955696
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Caiyun Deng, Guojun Han, Pengchao Han +1
+- **PDF**: https://ieeexplore.ieee.org/document/10955696
+- **Abstract**: DNA data storage is a cutting-edge storage technique due to its high density, replicability, and long-term capability. It involves encoding, insertion, deletion, and substitution (IDS) channels for data synthesis and sequencing, and decoding processes. The IDS channels that feature multiple output sequences are prone to IDS errors, complicating the decoding process and degrading the performance of DNA data storage. To address this issue, we investigate effective IDS error correction algorithms considering two encoding schemes in DNA data storage. Specifically in the encoding process, we use marker codes (MC) and embedded marker codes (EMC) as inner codes, respectively, both connected to low-density parity-check (LDPC) codes as outer codes. First, we propose the segmented progressive matching (SPM) algorithm to infer the consensus sequence from multiple output sequences, thereby facilitating the decoding processes. Moreover, when using MC as the inner code, we propose a synchronous decoding algorithm based on the Hidden Markov Model (SDH) to infer the a posteriori probability (APP) of base symbols, which supports the external decoding algorithm. Furthermore, when the inner code is EMC, we propose the iterative external decoding (IED) algorithm. IED integrates synchronous decoding with embedded normalized min-sum decoding (ENMS) to achieve an enhanced APP for external decoding, enabling lower bit-error rate (BER) transmission. Meanwhile, we reduce the complexity of the external decoder by minimizing checksum node computations. Comparing the two schemes reveals that the SDH algorithm with MC as the inner code offers a lightweight solution for DNA data storage. In contrast, the IED with EMC demonstrates superior decoding performance with a linear complexity scale by the number of iterations. Compared with existing studies, simulation results show that our proposed decoding algorithm reduces the BER by  ${21}.{72}\% \sim {99}.{75}\%$ .
+
+## Representative OSD with Local Constraints of CA-Polar Codes
+
+- **Status**: ✅
+- **Reason**: MWSGM 기반 OSD 변형(LC-ROSD)으로 병렬 GE 및 복잡도 감소 — OSD는 LDPC에도 적용 가능한 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11151187
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Yiwen Wang, Qianfan Wang, Jifan Liang +1
+- **PDF**: https://ieeexplore.ieee.org/document/11151187
+- **Abstract**: In this paper, we propose an algorithm to transform a generator matrix of a linear block code into a minimum weight staircase generator matrix (MWSGM). This allows us to apply the representative ordered statistics decoding with local constraints (LC-ROSD) algorithm to cyclic redundancy check (CRC) aided polar (CA-polar) codes. Distinguished from the conventional ordered statistics decoding (OSD), the LC-ROSD implements parallel Gaussian elimination (GE) for MWSGM instead of serial GE for a general matrix, potentially reducing the decoding latency. Numerical results show that the performance of 5G CA-polar codes under LC-ROSD is better than that of CRC aided successive cancellation list (CA-SCL) decoding and can approach the corresponding maximum likelihood (ML) lower bounds at different code rates. The numerical results also show that the LC-ROSD with MWSGM has lower decoding complexity than the CA-SCL decoding in the high signal-to-noise ratio (SNR) region.
+
+## Multiple-Masks Error Correction Code Transformer for Short Block Codes
+
+- **Status**: ✅
+- **Reason**: Transformer 기반 신경망 디코더(MM ECCT)로 short block code 성능 향상 — NAND LDPC 신경망 디코더(C)에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10960678
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Seong-Joon Park, Hee-Youl Kwak, Sang-Hyo Kim +3
+- **PDF**: https://ieeexplore.ieee.org/document/10960678
+- **Abstract**: With the broadening applications of deep learning, neural decoders have emerged as a key research focus, specifically aimed at improving the decoding performance of conventional decoding algorithms. In particular, error correction code transformer (ECCT), which utilizes the transformer architecture, has achieved state-of-the-art performance among neural network-based decoders. We present three technical contributions to significantly enhance the performance of ECCT. First, we propose a novel transformer architecture of ECCT, termed the multiple-masks ECCT (MM ECCT). We employ multiple masked self-attention blocks with different mask matrices in a parallel manner to learn diverse relationships among the codeword bits. Second, we discover that constructing mask matrices based on systematic parity check matrices (PCMs) can make the attention maps sparse, which not only enhances the decoding performance but also reduces computational complexity. Finally, we propose using complementary mask matrices derived from cyclic permutations of the systematic PCM. These complementary mask matrices are specifically designed to enhance the decoding of cyclic codes. Our extensive simulation results show that the proposed MM ECCT architecture with carefully designed mask matrices outperforms the original ECCT by a large margin, achieving state-of-the-art decoding performance among neural decoders. The source code is available at https://github.com/iil-postech/mm-ecct.
+
+## A High Performance and Low Complexity LDPC Decoding Strategy for Space-Air–Ground-Sea Integrated Communication Networks
+
+- **Status**: ✅
+- **Reason**: Enhanced 2D-SCMSA: min-sum 변형 디코더 알고리즘으로 NAND LDPC 디코더에 이식 가능 (Category C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10787111
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Xinyuan Ren, Jiahao Zhang, Chao Chen +4
+- **PDF**: https://ieeexplore.ieee.org/document/10787111
+- **Abstract**: In the coming sixth-generation era, space-air–ground-sea integrated (SAGSI) communication networks will be rapidly developed, with broader coverage, connectivity, security, and so on. The various communication requirements call for a decoding algorithm with lower complexity and higher coding gain for the channel code. Inspired by this point and based on the fifth-generation networks standard, this paper proposes a high-performance and low-complexity Low-Density Parity-Check (LDPC) decoding strategy for SAGSI communication networks. Based on a two-dimensional self-corrected min-sum algorithm (2D-SCMSA), the message reliability can be improved by the proposed Enhanced 2D-SCMSA (E-2D-SCMSA) while considering the erasure range of the variable node message. For given LDPC codes, the simulation results show that the proposed E-2D-SCMSA can achieve a performance gain of approximately 0.1 dB at bit error rate (BER) of $10^{-4}$ compared to 2D-SCMSA with a negligible increase in computational complexity. Moreover, the performance gap between the proposed E-2D-SCMSA and likelihood ratio belief-propagation algorithm is less than 0.1 dB at BER of $10^{-4}$ .
+
+## A Sub-0.8-pJ/bit Universal Soft-Detection Decoder Using ORBGRAND
+
+- **Status**: ✅
+- **Reason**: ORBGRAND 코드 무관 ML 소프트 디코더를 40nm CMOS에 구현한 D 카테고리 논문; 임의 이진 선형 코드(LDPC 포함) 지원 및 sub-pJ/bit 에너지 효율이 NAND 컨트롤러에 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:10768996
+- **Type**: journal
+- **Published**: July 2025
+- **Authors**: Arslan Riaz, Alperen Yasar, Furkan Ercan +6
+- **PDF**: https://ieeexplore.ieee.org/document/10768996
+- **Abstract**: Guessing random additive noise decoding (GRAND) has enabled the practical implementation of maximum likelihood (ML) or near-ML decoding, shifting the paradigm of code-specific decoder design to a code-agnostic decoding architecture. Ordered reliability bits GRAND (ORBGRAND) is a soft-detection variant of GRAND that uses soft information to guide its query order to significantly improve the decoding performance. This work presents the first-integrated energy-efficient hardware implementation of ORBGRAND to achieve ultra-low energy (sub-pJ/bit) and power consumption (5 mW) while using a small core area of 0.4 mm2 in 40-nm CMOS. The proposed architecture enables dynamic power savings by implementing an efficient sorter that allows the decoder to use the sorted bits immediately without waiting for the entire list to be sorted and an efficient landslide unit that generates noise effect sequences in parallel. The chip is implemented in 40-nm CMOS with a re-configurable architecture that enables decoding of any binary linear code from 32 to 256 bits of code length and 0.8–1 code rate. For a code length of 256 bits and a code rate of 0.94, it provides a measured energy consumption of 0.76 pJ/bit and power consumption of 4.9 mW from a 1.0-V supply voltage at an operating frequency of 90 MHz providing a throughput of 6.5 Gb/s and a latency of 40 ns at a targeted frame error rate (FER) of 10-7.
+
+## A Study of the Performance of LDPC Codes under Various Decoding Algorithms and Schedules
+
+- **Status**: ✅
+- **Reason**: Sum-Product·NMS·OMS × Flooding·Layered·Residual BP 스케줄 체계 비교 및 파라미터 최적화 — 이식 가능한 디코더 알고리즘·스케줄 가이드라인(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11170007
+- **Type**: conference
+- **Published**: 8-11 July 
+- **Authors**: Sangwon Chae, Hyojeong Choi, Gangsan Kim +2
+- **PDF**: https://ieeexplore.ieee.org/document/11170007
+- **Abstract**: Low-Density Parity-Check (LDPC) codes have been widely used in modern communication standards due to their strong error correction capabilities. This paper presents an experimental evaluation of a (1200, 600) irregular LDPC code over an additive white Gaussian noise (AWGN) channel, systematically comparing three decoding algorithms (Sum-Product, Normalized Min-Sum, and Offset Min-Sum) with three scheduling methods (Flooding, Layered Belief Propagation, and Residual Belief Propagation). Parameter sweeps are performed to determine the optimal normalization factor ($\alpha$) for the Normalized Min-Sum and the offset factor ($\beta$) for the Offset Min-Sum. A comparative analysis is then performed on the frame error rate (FER) and convergence behavior of each algorithm and scheduling configuration, considering the maximum number of iterations set at 10 and 25. The results show that the Offset Min-Sum algorithm with $\beta=0.5$ and Layered Belief Propagation scheduling provides an acceptable trade-off between complexity and error-correction performance, closely matching the Sum-Product algorithm but at a lower computational cost. Although Residual Belief Propagation converges quickly at lower signal-to-noise ratios, it exhibits a high error floor. These findings provide practical guidelines for selecting optimal decoding configurations in resource-constrained applications.
+
+## Iterative Detection, Decoding and Channel Estimation for Multiple-RIS Assisted MIMO Systems
+
+- **Status**: ✅
+- **Reason**: LDPC 인코딩 파일럿(패리티 비트 활용) 기반 반복적 채널 추정 기법 — LDPC 디코더 반복처리 응용 기법(C). 애매하지만 이식 가능성이 있어 Phase 3 재검토 권장.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11143508
+- **Type**: conference
+- **Published**: 7-10 July 
+- **Authors**: Roberto C. G. Porto, Rodrigo C. de Lamare
+- **PDF**: https://ieeexplore.ieee.org/document/11143508
+- **Abstract**: This work proposes an iterative detection, decoding and channel estimation scheme for multiple-antenna systems assisted by multiple reflective intelligent surfaces (RIS). A novel channel estimation technique that exploits low-density parity-check (LDPC) codes and iterative processing is developed to enhance estimation accuracy while reducing the number of required pilot symbols. The key idea is to exploit encoded pilots to improve the iterative process, enabling the use of not only pilot bits but also parity bits from the coded packet to refine channel estimation. Simulations analyze a sub-6 GHz scenario where the channel propagation is not sparse and multiple RIS are deployed, considering both LOS and NLOS conditions. Numerical results show significant performance gains for the proposed scheme and estimator over competing approaches.
+
+## Low-Density Parity Check (LDPC) Architecture Using Verilog
+
+- **Status**: ✅
+- **Reason**: LDPC 인코더/디코더 Verilog HW 구현(Bit-Flipping·Min-Sum·Sum-Product), 처리량·자원 최적화 — 이식 가능 HW 아키텍처(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:11158053
+- **Type**: conference
+- **Published**: 4-5 July 2
+- **Authors**: Abhay Chopde, Dhruvesh Kamble, Kapil Sangameshwar +1
+- **PDF**: https://ieeexplore.ieee.org/document/11158053
+- **Abstract**: Low-density Parity-Check (LDPC) codes have significantly been a vital resource in modern communication systems due to their close-to-capacity error-correcting capabilities and tendency to align well with various applications. The paper describes the architecture design and implementation of an LDPC encoder and decoder using Verilog. As for the state-of-the-art study on encoding and decoding, particularly referring to iterative methods for example, Bit-Flipping, Min-Sum, and Sum-Product algorithms, were considered. These methods are evaluated in terms of BER performance, computational complexity, and hardware efficiency. The proposed architecture is systematic encoder decoder integrated efficiently in such a way that it is optimized for high throughput and low resource utilization. Simulation results indicated the aptitude of the system in correcting transmission errors with respect to different noise conditions. It will depict its applicability in wireless communication in 5G networks and deep-space missions. These results show a possibility of LDPC codes to balance efficiency and reliability, hence provide significant contributions toward the advance of error-correcting systems.
+
+## A New Class of Codes with Error Localization and its Noise Immunity: Core Concept
+
+- **Status**: ✅
+- **Reason**: New code class with error localization, modified cascade/generalized cascade codes enabling novel decoding algorithms; portable code-design/decoder (C/E).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11079325
+- **Type**: conference
+- **Published**: 30 June-3 
+- **Authors**: Victor V. Zyablov, Sergey L. Portnoy, Sergey E. Nikitin +2
+- **PDF**: https://ieeexplore.ieee.org/document/11079325
+- **Abstract**: The possibility of reinterpreting established coding structures is considered. A new modification of traditional cascade and generalized cascade codes is proposed, which, in turn, gives rise to a fundamentally new family of codes and opens up prospects for the development of novel decoding algorithms. Three examples of code constructions with error localization are presented, along with the results of their simulation. Directions for further research on new classes of codes are outlined.
+
+## Complexity-Efficient LLR Estimation Using Piecewise Polynomial Fitting for LDPC Decoding in 100 Gb/S Bandwidth-Limited Flexible-Rate IM/DD System
+
+- **Status**: ✅
+- **Reason**: piecewise polynomial fitting 기반 저복잡도 LLR 추정 for LDPC decoding — LLR 양자화/추정 기법은 NAND LDPC에 직접 이식 가능(A/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11109143
+- **Type**: conference
+- **Published**: 29 June-3 
+- **Authors**: Yiao Zhang, Xiangchen Kong, Yanlu Huang +5
+- **PDF**: https://ieeexplore.ieee.org/document/11109143
+- **Abstract**: We demonstrate a low complexity LLR estimation method based on piecewise polynomial fitting for LDPC decoding in 100 Gb/s bandwidth-limited flexible-rate IM/DD system, which reduces complexity by more than 90 % while maintaining almost equivalent performance.
+
+## LDPC decoder based on a minimalist bipartite GCN
+
+- **Status**: ✅
+- **Reason**: 미니멀 이분그래프 GCN 기반 LDPC 디코더 제안 — 신경망 디코더(C)로 NAND LDPC 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11145491
+- **Type**: conference
+- **Published**: 28-31 July
+- **Authors**: Yiqun Pan, Qinghua Tian, Fangxu Yang +5
+- **PDF**: https://ieeexplore.ieee.org/document/11145491
+- **Abstract**: This paper proposes a Low-Density Parity-Check (LDPC) decoder based on a minimalist bipartite graph convolutional neural network (GCN). The proposed method has been validated in a 16QAM coherent optical communication simulation system.
+
+## Highly Efficient Information Reconciliation Based on Correlation Thresholding Driven by Experimental Data in Classical Key Distribution
+
+- **Status**: ✅
+- **Reason**: 상관 임계화로 LDPC 디코딩 반복 76.8% 감소; early-termination류 디코딩 효율 기법(C)으로 이식 가능성 있어 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11145588
+- **Type**: conference
+- **Published**: 28-31 July
+- **Authors**: Manlin Guo, Linjie Xu, Xiaogang Wang +4
+- **PDF**: https://ieeexplore.ieee.org/document/11145588
+- **Abstract**: An ET-based adaptive scheme for classical key post-processing reduces LDPC decoding iterations by 76.8% and high-error FER by 74.2%, greatly improving efficiency and lowering computational cost.
+
+## A Study on the Fitness of GA for Improving SP Decoding Performance
+
+- **Status**: ✅
+- **Reason**: SMR HDD용 LDPC SP 디코더에 신경망 LLR 갱신+GA 최적화 적용, 스토리지 ECC 디코더 알고리즘으로 이식 가능(B/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11192636
+- **Type**: conference
+- **Published**: 28-30 July
+- **Authors**: Madoka Nishikawa, Yasuaki Nakamura, Yasushi Kanai +1
+- **PDF**: https://ieeexplore.ieee.org/document/11192636
+- **Abstract**: We study low-density parity-check (LDPC) coding and iterative decoding methods for shingled magnetic recording (SMR) in ultra-high-density hard disk drives (HDDs). Previously, we applied a neural network to evaluate the log-likelihood ratios (LLRs) related to row operations in the sum-product (SP) decoder for LDPC code. Then, we updated the LLR considering the influence of noise depending on the recording pattern by providing the LLRs for the decoding target and its adjacent bits to the neural network in SP decoding. Furthermore, we explored the optimal parameters to update the LLRs by applying the genetic algorithm (GA). In this study, to explore more optimal update parameters, we propose the fitness to enhance the selection accuracy of the LLR to be updated and the number of updating targets. Then, we aim to improve the performance of SP decoding based on the GA results. As a result, applying the proposed fitness to GA remains in high selection accuracy and increases the number of updating targets in SP decoding. Also, it achieves error-free performance with fewer iterations of turbo equalization compared to the conventional fitness.
+
+## Overview of LDPC Decoding Based on Deep Learning
+
+- **Status**: ✅
+- **Reason**: 딥러닝(CNN/ResNet/KAN) 기반 LDPC 디코딩 종합 — 신경망 디코더로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11427203
+- **Type**: conference
+- **Published**: 25-27 July
+- **Authors**: Xiangwei Ren, Tao Tang, Hong Wen +3
+- **PDF**: https://ieeexplore.ieee.org/document/11427203
+- **Abstract**: LDPC codes, as an error correcting code close to the Shannon limit, are widely used in modern communication systems such as 5 G, satellite communication, deep space communication, and other fields. Traditional LDPC decoding algorithms, such as belief propagation (BP) algorithm and its variants, have achieved good performance, but face challenges such as high complexity and slow convergence, especially when dealing with long code lengths and high noise scenarios. The rise of deep learning has brought new opportunities for LDPC decoding, and its powerful features learning and pattern recognition capabilities are expected to break through the bottleneck of traditional decoding. Based on the overview of deep neural network decoding methods for LDPC codes by data-driven and model driven approaches, this paper analysis and comparison of error rate performance of short code $\mathbf{H} (8,16)$ matrix by convolutional neural networks (CNN), residual network (ResNet), and Kolmogorov-Arnold Network (KAN).
+
+## Intelligent Channel Coding Using Graph Neural Networks: A Machine Learning Perspective
+
+- **Status**: ✅
+- **Reason**: GNN 기반 LDPC 디코더 개선(Tanner 그래프), 신경망 디코더(C) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11171308
+- **Type**: conference
+- **Published**: 21-23 July
+- **Authors**: K. Koushik, M. Thilakeshwari, T. Likith Vignesh +2
+- **PDF**: https://ieeexplore.ieee.org/document/11171308
+- **Abstract**: Wireless communication is rapidly evolving, and this evolution has led to increasing demands for better error correction, lower latency, and higher adaptability, particularly in Beyond 5G (B5G) networks. Traditional channel coding methods like Low-density Parity-check (LDPC) and Turbo codes often struggle to meet these advanced requirements. To address this challenge, we explore the use of Graph Neural Networks (GNNs) to enhance LDPC decoding. By imposing the structured nature of the Tanner graph, GNNs improve decoding accuracy, optimize bit error rate (BER), and adapt to changing signal conditions in real-time. We implement and evaluate our approach using MATLAB and Python, training our ML-based decoder on varying SNR levels to ensure robustness. The results show that integrating machine learning into LDPC decoding significantly enhances error correction and communication reliability. This work highlights the potential of ML-driven techniques in shaping the future of wireless networks.
+
+## Deep Learning-Based Decoding of Protograph LDPC Codes for Spin-Transfer Torque Magnetic Random Access Memory
+
+- **Status**: ✅
+- **Reason**: protograph LDPC용 NN 기반 디코더+transfer learning — 신경망 디코더 기법(C). STT-MRAM 메모리 응용, 바이너리 P-LDPC, 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11208063
+- **Type**: conference
+- **Published**: 16-18 July
+- **Authors**: Jie Dong, Kui Cai, Zhen Mei +2
+- **PDF**: https://ieeexplore.ieee.org/document/11208063
+- **Abstract**: Spin-transfer torque magnetic random access memory (STT-MRAM) has attracted significant attention as a promising memory technology for consumer electronics. However, its reliability is severely degraded by process variation and thermal fluctuation, which lead to both write and read errors. An increase in working temperature also results in an unknown resistance offset. In this paper, we first propose novel neural network (NN)-based decoding schemes for protograph low-density parity-check (P-LDPC) codes with parallel edges in the base graph. We further develop a transfer learning (TL)-based approach to mitigate the resistance offset, which can reduce the training data size by 90%. Simulation results demonstrate the effectiveness of these approaches in improving decoding performance in the presence of various channel impairments of STT-MRAM.
+
+## Low-Complexity LDPC Decoder for Cloud Based Architectures
+
+- **Status**: ✅
+- **Reason**: 저복잡도 LDPC 소프트 디코더 근사(PL/다항식/ML/min-sum 변형) 제안 — min-sum 변형 디코더 새 기여, C 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:11306760
+- **Type**: conference
+- **Published**: 10-13 July
+- **Authors**: Satya Kumar Vankayala, Tirthankar Mittra, Thirumulanathan D +3
+- **PDF**: https://ieeexplore.ieee.org/document/11306760
+- **Abstract**: LDPC code structure allows high parallelism to deliver the high demanding data rates, but the LDPC decoder does not perform well concerning the low latency requirements needed for high-speed applications. This is partly due to the soft decoder involving the computation of non-linear functions with high computational complexity. Virtualized radio access networks (VRANs) are a new paradigm that brings software-based network functions to run on the cloud. In this paper, we propose four LDPC soft decoder approximations: a piecewise linear (PL) approximation, a polynomial approximation, a machine learning (ML) based approximation, and a modification of min-sum approximation using regression methods. We show that the approximations retain a comparable BLER performance and, at the same time, bring down the computational complexity of the decoder. We also show that the BLER performance of our approximations is significantly better than the well-known min-sum approximation. Our methods are suitable for direct implementation in cloud based VRAN systems.

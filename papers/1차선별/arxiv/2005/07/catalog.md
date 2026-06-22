@@ -1,0 +1,14 @@
+# arXiv — 2005-07 (1차선별 통과)
+
+
+## The error-floor of LDPC codes in the Laplacian channel
+
+- **Status**: ✅
+- **Reason**: min-sum 디코딩의 error-floor를 instanton 방법으로 분석 — error floor는 포함 카테고리E, 디코더 동작 분석으로 이식 가능.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:cs/0507031v2
+- **Type**: preprint
+- **Published**: 2005-07-12
+- **Authors**: M. G. Stepanov, M. Chertkov
+- **PDF**: https://arxiv.org/pdf/cs/0507031v2
+- **Abstract**: We analyze the performance of Low-Density-Parity-Check codes in the error-floor domain where the Signal-to-Noise-Ratio, s, is large, s >> 1. We describe how the instanton method of theoretical physics, recently adapted to coding theory, solves the problem of characterizing the error-floor domain in the Laplacian channel. An example of the (155,64,20) LDPC code with four iterations (each iteration consisting of two semi-steps: from bits-to-checks and from checks-to-bits) of the min-sum decoding is discussed. A generalized computational tree analysis is devised to explain the rational structure of the leading instantons. The asymptotic for the symbol Bit-Error-Rate in the error-floor domain is comprised of individual instanton contributions, each estimated as ~ \exp(-l_{inst;L} s), where the effective distances, l_{inst;L}, of the the leading instantons are 7.6, 8.0 and 8.0 respectively. (The Hamming distance of the code is 20.) The analysis shows that the instantons are distinctly different from the ones found for the same coding/decoding scheme performing over the Gaussian channel. We validate instanton results against direct simulations and offer an explanation for remarkable performance of the instanton approximation not only in the extremal, s -> \infty, limit but also at the moderate s values of practical interest.

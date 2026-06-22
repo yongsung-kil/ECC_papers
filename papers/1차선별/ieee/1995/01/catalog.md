@@ -1,0 +1,14 @@
+# IEEE Xplore — 1995-01 (1차선별 통과)
+
+
+## Codes and iterative decoding on general graphs
+
+- **Status**: ✅
+- **Reason**: Tanner 그래프 기반 반복(iterative) 디코딩의 토대 — LDPC BP 메시지패싱으로 직접 이식되는 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:550455
+- **Type**: conference
+- **Published**: 1995
+- **Authors**: N. Wiberg, H. . -A. Loeliger, R. Kotter
+- **PDF**: https://ieeexplore.ieee.org/document/550455
+- **Abstract**: Until recently, most known decoding procedures for error-correcting codes were based either on algebraically calculating the error pattern or on some sort of tree or trellis search. With the advent of turbo coding, a third decoding principle has finally had its breakthrough: iterative decoding. With respect to Viterbi decoding, a code is most naturally described by means of a trellis diagram. The main thesis of the present paper is that, with respect to iterative decoding, the natural way of describing a code is by means of a Tanner graph, which may be viewed as a generalized trellis. More precisely, it is the "time axis" of a trellis that is generalized to a Tanner graph.

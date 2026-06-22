@@ -1,0 +1,38 @@
+# arXiv — 2017-01 (1차선별 통과)
+
+
+## Floor Scale Modulo Lifting for QC-LDPC codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 리프팅 신규 기법(floor scale modulo lifting)으로 짧은 사이클 감소·메모리 절감, 바이너리 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1701.07521v2
+- **Type**: preprint
+- **Published**: 2017-01-25
+- **Authors**: Nikita Polyanskii, Vasiliy Usatyuk, Ilya Vorobyev
+- **PDF**: https://arxiv.org/pdf/1701.07521v2
+- **Abstract**: In the given paper we present a novel approach for constructing a QC-LDPC code of smaller length by lifting a given QC-LDPC code. The proposed method can be considered as a generalization of floor lifting. Also we prove several probabilistic statements concerning a theoretical improvement of the method with respect to the number of small cycles. Making some offline calculation of scale parameter it is possible to construct a sequence of QC-LDPC codes with different circulant sizes generated from a single exponent matrix using only floor and scale operations. The only parameter we store in memory is a constant needed for scaling.
+
+## On Advisability of Designing Short Length QC-LDPC Codes Using Perfect Difference Families
+
+- **Status**: ✅
+- **Reason**: PDF/CDT 기반 신규 QC-LDPC 구성으로 girth·짧은사이클·minimum distance 제어, 바이너리 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1701.06218v1
+- **Type**: preprint
+- **Published**: 2017-01-22
+- **Authors**: A. Tasdighi, M. R. Sadeghi
+- **PDF**: https://arxiv.org/pdf/1701.06218v1
+- **Abstract**: A simple and general definition of quasi cyclic low density parity check (QC LDPC) codes which are constructed based on circulant permutation matrices (CPM) is proposed. As an special case of this definition, we first represent one type of so called combinatorially designed multiple edge protograph codes. The code construction is mainly based on perfect difference families (PDF) and is called Construction 1. Secondly, using the proposed Construction 1 along with a technique named as column dispersion technique (CDT), we design several types of multiple-edge CPM QC LDPC codes (codes with Construction 2) in a wide range of rates, lengths, girths and minimum distances. Parameters of some of these codes are reported in tables. Also included in this paper are the multiplicities of short simple cycles of length up to 10 in Tanner graph of our constructed codes. Our experimental results for short to moderate length codes show that although minimum distances of codes play an important role in waterfall region, the higher the number of short simple cycles is, the better (sharper) the waterfall is. The performances of many codes such as WiMAX, PEG, array, MacKay, algebraic and combinatorial, and also, symmetrical codes have compared with our constructed codes. Based on our numerical results and regardless of how a code is constructed, those with higher number of short simple cycles and higher minimum distances, have better waterfalls.
+
+## High Rate LDPC Codes from Difference Covering Arrays
+
+- **Status**: ✅
+- **Reason**: 차분커버링 배열 기반 신규 고율 LDPC 구성(girth>=6, min dist 6), 바이너리 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1701.05686v1
+- **Type**: preprint
+- **Published**: 2017-01-20
+- **Authors**: D. Donovan, A. Rao, E. Şule Yazıcı
+- **PDF**: https://arxiv.org/pdf/1701.05686v1
+- **Abstract**: This paper presents a combinatorial construction of low-density parity-check (LDPC) codes from difference covering arrays. While the original construction by Gallagher was by randomly allocating bits in a sparse parity-check matrix, over the past 20 years researchers have used a variety of more structured approaches to construct these codes, with the more recent constructions of well-structured LDPC coming from balanced incomplete block designs (BIBDs) and from Latin squares over finite fields. However these constructions have suffered from the limited orders for which these designs exist. Here we present a construction of LDPC codes of length $4n^2 - 2n$ for all $n$ using the cyclic group of order $2n$. These codes achieve high information rate (greater than 0.8) for $n \geq 8$, have girth at least 6 and have minimum distance 6 for $n$ odd.

@@ -1,0 +1,242 @@
+# IEEE Xplore — 2021-10 (1차선별 통과)
+
+
+## Sign-Preserving Min-Sum Decoders
+
+- **Status**: ✅
+- **Reason**: Sign-Preserving Min-Sum 신규 유한정밀 LDPC 디코더 — 2~4bit 양자화로 OMS 대비 메모리/throughput 개선, FPGA 검증. NAND LLR 양자화에 직접 이식 가능(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9493163
+- **Type**: journal
+- **Published**: Oct. 2021
+- **Authors**: Franklin Cochachin, Emmanuel Boutillon, David Declercq
+- **PDF**: https://ieeexplore.ieee.org/document/9493163
+- **Abstract**: This paper proposes a new finite precision iterative decoder for low-density parity-check (LDPC) codes. The proposed decoder, named Sign-Preserving Min-Sum (SP-MS), significantly improves the decoding performance compared to the classical Offset Min-Sum (OMS) decoder when messages are quantized on  $q=2$ , 3, or 4 bits. The particularity of the SP-MS decoder is that messages cannot take the 0 value, and can fully benefit from the  $q$  bits of precision. The optimization of the SP-MS decoder is investigated in the asymptotic limit of the code length using density evolution (DE). Our study shows that 3-bit SP-MS decoders can achieve the same error-correcting performance as 5-bit OMS decoders, and 2-bit SP-MS decoders outperform 3-bit OMS decoders. The finite-length simulations confirm the conclusions of the DE analysis for several LDPC codes. Our SP-MS decoder shows a signal-to-noise ratio (SNR) gain up to 0.43 dB, with a memory/wire reduction of up to 40%, compared to the OMS decoder. Moreover, the SP-MS decoder converges faster and uses fewer iterations than the OMS decoder, with an improvement of up to 83.3% of the average decoding throughput. On an FPGA, the SP-MS decoder reduces resource utilization by up to 56% compared to the OMS decoder.
+
+## About Usage of Metrics in Decoding of LDPC Codes in Two-State Channels with Memory
+
+- **Status**: ✅
+- **Reason**: 메모리 채널 LDPC 신드롬 디코딩 metric/coset leader 선택 — 디코딩 알고리즘 기여, 애매하나 in으로 보존(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9606474
+- **Type**: conference
+- **Published**: 25-29 Oct.
+- **Authors**: Alina M. Veresova, Anna A. Fominykh, Andrei A. Ovchinnikov
+- **PDF**: https://ieeexplore.ieee.org/document/9606474
+- **Abstract**: The applying of low-density parity-check codes is considered over two-state channels with memory described by Markov and Gilbert models. The error probability using different strategies of syndrome decoding is estimated. The method of choosing the coset leaders is proposed which provides the error probability close to maximum-likelihood decoding for the considered codes.
+
+## Analysis of Binary and Ternary Message Passing Decoding for Generalized LDPC Codes
+
+- **Status**: ✅
+- **Reason**: generalized LDPC 바이너리/터너리 메시지패싱 디코더 + density evolution — 저비트 메시지 디코더는 NAND LDPC HW에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9606468
+- **Type**: conference
+- **Published**: 25-29 Oct.
+- **Authors**: Emna Ben Yacoub, Gianluigi Liva
+- **PDF**: https://ieeexplore.ieee.org/document/9606468
+- **Abstract**: Binary and a ternary message passing decoding algorithms for generalized low-density parity-check codes are defined and analyzed. In all algorithms, the variable nodes exploit soft channel information. However, the exchanged messages between variable and check nodes are binary or ternary. Two types of local decoders are assumed at the check nodes, namely an optimum a-posteriori probability soft-input soft-output decoder, and a more practical bounded distance decoder. A density evolution analysis for irregular code ensembles is developed for all the introduced algorithms, which allows obtaining the scaling coefficients needed for the variable node operation. Finite-length simulation results confirm the validity of the asymptotic analysis.
+
+## Deep Neural Network Based Decoding of Short 5G LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 5G QC-LDPC DNN 디코더(weight sharing, residual, min-sum 활성화) — 신경망 디코더 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9606471
+- **Type**: conference
+- **Published**: 25-29 Oct.
+- **Authors**: Kirill Andreev, Alexey Frolov, German Svistunov +2
+- **PDF**: https://ieeexplore.ieee.org/document/9606471
+- **Abstract**: We investigate the application of machine learning techniques (in particular, deep neural networks, DNN) to improve the decoding algorithms of short quasi-cyclic low-density paritycheck (LDPC) codes adopted to the 5G standard. We note that straightforward application of general-purpose DNNs is not possible due to the curse of dimensionality problem – the training set size grows exponentially with the number of information bits. In our opinion, the only way to deal with this problem is to combine deep learning methods with existing decoding algorithms. We start with a Tanner-based neural network decoder with Min-Sum activation functions proposed by Nachmani et al. and extend it as follows. First, the quasi-cyclic nature of 5G LDPC codes allows us to use a single weight per circular matrix (circulant). We refer to this as weight sharing. This idea significantly reduces the training time, preserving the error-correcting performance. Second, we add residual connections to our NN architecture. Residual connections improve the performance and reduce the training time. We also present the results for the rate and length adaptation techniques. Rate adaptation allows multiple DNNs corresponding to different coding rates to run with a single set of trained weights. Length adaptation allows optimally reusing weights for multiple lifting size indices.
+
+## Impulse Noise Suppression for G.hn Broadband Power-Line Communication in Smart Grid
+
+- **Status**: ✅
+- **Reason**: 임펄스 노이즈 제거 후 LDPC 디코더 likelihood(LLR) 계산 수정 — LLR 보정 기법은 NAND read 노이즈에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9632312
+- **Type**: conference
+- **Published**: 25-28 Oct.
+- **Authors**: Szu-Lin Su, Nan-Hsiung Huang, Jing-Fen Yang
+- **PDF**: https://ieeexplore.ieee.org/document/9632312
+- **Abstract**: Power-line communication (PLC) system can exchange information over the existing electrical grid without much extra implementation cost. Such system will play an important role in the future Smart Grid. However, the system performance of PLC systems will be severely degraded by the multipath fading and random impulse noise (IN). This paper intends to evaluate the performance of different IN detection and reduction schemes combined with low-density parity check (LDPC) decoding for the PLC systems based on G.hn (Gigabit Home Networking) specification. In particular, to improve the system performance, we modify the likelihood value calculation of the LDPC decoder with the information of signal-power and noise-power change due to the process of IN reduction and equalizer.
+
+## Hierarchical Min-Sum Algorithm Based on Dynamic Scaling Factor for LDPC Decoding
+
+- **Status**: ✅
+- **Reason**: 동적 스케일링 팩터 기반 계층적 min-sum 변형(DSF-HMS) 디코더 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9738340
+- **Type**: conference
+- **Published**: 24-27 Oct.
+- **Authors**: Ruotong Wang, Qinghua Tian, Zexuan Jing +4
+- **PDF**: https://ieeexplore.ieee.org/document/9738340
+- **Abstract**: In roder to adjust the log-likelihood ratios (LLRs), we design a hierarchical min-sum algorithm based on dynamic scaling factor (DSF-HMS). The results show that the proposed algorithm can improve the decoding performance.
+
+## An Efficient Refresh Strategy of Flash Memory via High Delay Blocks in LDPC
+
+- **Status**: ✅
+- **Reason**: 플래시 LDPC 고지연 블록 기반 refresh 전략 — NAND 직접 (A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9660282
+- **Type**: conference
+- **Published**: 22-24 Oct.
+- **Authors**: Peixuan Li, Yaofang Zhang, Deli Yin +1
+- **PDF**: https://ieeexplore.ieee.org/document/9660282
+- **Abstract**: With the development of flash memory, its storage density is gradually increased. A single flash memory cell can store more bits. But this makes it much less reliability. LDPC (i.e., Low Density Parity Check Code) has powerful error correction ability, which can help flash to solve this problem. However, there is a key problem with LDPC as an error-correcting code. It will make flash storage devices with low reliability suffer from high error correction delay. In this case, flash storage devices have greatly increased read latency, which affects device performance. In this work, we define high latency blocks according to LDPC latency of blocks, and propose a self-adaptive refresh scheme to reduce the read latency of flash storage devices. The basic idea is to refresh high latency blocks whenever it is detected to optimize read performance. In a periodic refresh mode, we test the performance of the refresh scheme in the case of wide workloads with different read and write ratios. The scheme reduces the average response time of flash storage devices by 6%-40% against baseline refresh schemes.
+
+## Design of Protograph LDPC Codes for the Unequal Power Two-User Downlink System
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 LDPC 코드설계+TU-EXIT 분석 — 바이너리 LDPC 코드설계 기법, NOMA특화이나 이식성 애매하여 Phase3 재검토(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9613319
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Wei Zhang, Pingping Chen, Zhaopeng Xie +1
+- **PDF**: https://ieeexplore.ieee.org/document/9613319
+- **Abstract**: In this paper, we design protograph low-density parity-check (LDPC) codes for two-user downlink nonorthogonal multiple access (NOMA). In the downlink system, we consider successive interference cancellation (SIC) decoding by exchanging the external information of two users, referred to as the E-SIC. To improve the performance of downlink NOMA, 1) we use a two-user protograph-based extrinsic information transfer chart (TU-EXIT) analysis for two-user downlink system. The analysis takes into account the protograph structure, allowing an accurate and simple prediction of the decoding threshold; 2) we then design protograph LDPC codes of different code rates with the help of the TU-EXIT. Simulation results show that, in the downlink system, the proposed protograph LDPC codes can obtain significant performance gains over the optimized irregular LDPC codes for both the high and low code rates.
+
+## Lowering the Error Floor of Quantized NR LDPC Decoders by a Post-Processing on Trapping Sets
+
+- **Status**: ✅
+- **Reason**: 양자화 NMS 디코더+트래핑셋 후처리로 error floor 저감 — 이식 가능 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9613326
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Hai He, Ming Jiang, Mingyang Zhu +1
+- **PDF**: https://ieeexplore.ieee.org/document/9613326
+- **Abstract**: This paper presents a novel two-stage quantized iterative decoder to lower the error floor for new radio low-density parity-check (NR LDPC) codes. In the first stage, quantized normalized min-sum (NMS) decoding algorithm is used to guarantee the performance of waterfall region. The second stage is executed if the syndrome reaches the specific criterion about the number of unsatisfied check constraints. The cyclic-shifting CRC detection (CSCD) and syndrome assistant CSCD (SA-CSCD) algorithm designed to flip the error bits in possible positions based on the error patterns and the base graph (BG) to lower the error floor. Simulation results show that the proposed algorithm can effectively lower the error floor of NR LDPC while maintaining an acceptable complexity.
+
+## Optimized Construction of Short and High Rate Protograph QC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 단거리 고부호율 프로토그래프 QC-LDPC 구성, PEG+QCI-ACE로 girth·error floor 개선 — 이식 가능 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9613550
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Jianrong Bao, Xiaorong Xu, Chao Liu +2
+- **PDF**: https://ieeexplore.ieee.org/document/9613550
+- **Abstract**: To obtain efficient and pragmatic channel codes high signal-to-noise ratios (SNRs), an optimized construction of short and high rate protograph quasi-cyclic (QC) low-density parity-check (LDPC) codes is presented. Based on an optimized protograph template, the code framework is firstly produced by the extensions of the variable nodes. By enlarging the dimension of the sub-matrices related to the protograph framework, the base quasi-cyclic (QC) matrix is generated with required code rate and length. Then, the elements in the base matrix are split with even smaller square sub-matrices of the same row and column weights. In this procedure, a progressive edge growth (PEG) algorithm is employed to find the optimized positions of the QC submatrices, which brings larger girth for better code performance. Also the circulant offsets in all QC sub-matrices are optimally searched by a QC improved approximated cycle extrinsic message degree (QCI-ACE) algorithm, which improves the relationship of the unavoidable loops in the code's Tanner graph and thus it improves the error floor. Simulation results show that the codes produced by the proposed method demonstrate quite good bit error rate (BER) performance. In addition, they exhibit good properties of high spectrum efficiency by the high code rate, as well as the low complexity by the short code length. Therefore, the proposed code construction can be efficiently applied in the design of short and high rate protograph QC-LDPC codes with high rate and rational complexity.
+
+## Early Termination Scheme for 5G NR LDPC Code
+
+- **Status**: ✅
+- **Reason**: C: 5G NR layered QC-LDPC의 신규 조기종료 기법, 반복수 18.7% 감소 — 바이너리 LDPC 디코더 이식 가능.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9621117
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Nam-Il KIM, Jin-Up KIM
+- **PDF**: https://ieeexplore.ieee.org/document/9621117
+- **Abstract**: According to its excellent error recovery capability, Low Density Parity Check code has been adopted as a channel coding method for 5G NR data channels. This paper proposes a novel early termination scheme of the layered quasi-cyclic LDPC code decoder for a 5G NR data channel. In terms of early termination and error correction performance, the proposed scheme shows improved performance compared to the conventional scheme. Simulation results show that 18.7% reduction with regard to average iteration numbers can be achieved compared to the traditional termination schemes, such as syndrome check(SDC) and hard decision aid(HDS). Furthermore, the proposed scheme shows error correction performance improvement of 0.2dB.
+
+## Polar Codes for Fast Converging Belief-Propagation Decoding
+
+- **Status**: ✅
+- **Reason**: C(예외): polar BP 수렴 가속 위한 puncture/extend 설계 — BP 메시지패싱 수렴 개선 기법으로 이식성 애매하나 바이너리 BP 관련, 살려 Phase 3 재검토.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9621078
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Seokju Han, Jeongseok Ha
+- **PDF**: https://ieeexplore.ieee.org/document/9621078
+- **Abstract**: In this work, we propose a polar code design which targets at improving convergence of belief-propagation (BP) decoding. That is, the designed polar codes can achieve a target error rate at a smaller number of iterations. In particular, we will show that reliabilities on some coded bits have stronger effects on the initial log-likelihood ratio (LLR) propagation during BP decoding. By utilizing the property, we carefully puncture and extend polar codes to speed up the convergence of BP decoding. It will be shown that polar codes based on the proposed design achieve either a target error rate at a smaller number of iterations or an improved error-rate performance at a given number of iterations as compared to existing polar codes.
+
+## Machine Learning-Based Error Recovery System for NAND Flash Memory with Process Variation
+
+- **Status**: ✅
+- **Reason**: A: NAND 플래시 직접 — ML 기반 에러복구, on-cell ratio로 디코딩 모드 선택, retention/PV 대응. NAND ECC 컨트롤러 기법.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9620949
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Seonmin Lee, Jeongju Jee, Hyuncheol Park
+- **PDF**: https://ieeexplore.ieee.org/document/9620949
+- **Abstract**: The storage capacity of NAND flash memory has been significantly improved with advanced scaling and multi-leveling technologies. However, due to decreased intervals between voltage windows, NAND flash memory systems become vulnerable to retention and program/erase (P/E) cycling errors. Moreover, significant process variation resulting from the fabrication process results in different reliabilities among flash blocks. In this paper, we propose a machine learning-based error recovery system for low-latency NAND flash memory. In the NAND flash controller, the retention time and process variation are inaccessible in general. Therefore, it is difficult for the controller to select an appropriate decoding mode, resulting in increased latency. To replace the inaccessible information, we utilize the on-cell ratio as alternative information. The proposed error recovery system selects an optimal decoding mode which ensures successful error recovery with the minimum average read latency. Through simulation, we show that the proposed system predicts an optimal decoding mode with high accuracy. Moreover, average read latency performance is significantly improved compared to other baselines.
+
+## Communication-Efficient LDPC Code Design for Data Availability Oracle in Side Blockchains
+
+- **Status**: ✅
+- **Reason**: PEG 기반 신규 LDPC 코드구성(DE-PEG) 제안 — 바이너리 LDPC 코드설계 신규 기여로 NAND에 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9611473
+- **Type**: conference
+- **Published**: 17-21 Oct.
+- **Authors**: Debarnab Mitra, Lev Tauz, Lara Dolecek
+- **PDF**: https://ieeexplore.ieee.org/document/9611473
+- **Abstract**: A popular method of improving the throughput of blockchain systems is by running smaller side blockchains that push the hashes of their blocks onto a trusted blockchain. Side blockchains are vulnerable to stalling attacks where a side blockchain node pushes the hash of a block to the trusted blockchain but makes the block unavailable to other side blockchain nodes. Recently, Shenget al. proposed a data availability oracle based on LDPC codes and a data dispersal protocol as a solution to the above problem. While showing improvements, the codes and dispersal protocol were designed disjointly which may not be optimal in terms of the communication cost associated with the oracle. In this paper, we provide a tailored dispersal protocol and specialized LDPC code construction based on the Progressive Edge Growth (PEG) algorithm, called the dispersal-efficient PEG (DE-PEG) algorithm, aimed to reduce the communication cost associated with the new dispersal protocol. Our new code construction reduces the communication cost and, additionally, is less restrictive in terms of system design. Full paper version [1]: https://arxiv.org/pdf/2105.06004.pdf
+
+## Combined polar-LDPC design for channels with high noise
+
+- **Status**: ✅
+- **Reason**: polar+LDPC 결합 디코딩으로 BP가 정보비트만 재계산하고 polar SCL과 교번 — 부호 비의존 BP 디코딩 절차 변형이 LDPC BP에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9611452
+- **Type**: conference
+- **Published**: 17-21 Oct.
+- **Authors**: Ilya Dumer, Navid Gharavi
+- **PDF**: https://ieeexplore.ieee.org/document/9611452
+- **Abstract**: We combine polar and LDPC codes to address data correction for various low-power applications. We first use long low-rate LDPC codes that have parity checks of a low weight. Decoding performs several iterations of the belief propagation (BP) algorithm that recalculates the information bits only. Partially corrected bits are then passed to a short polar code that uses successive cancellation list (SCL) decoder. The newly corrected bits then serve as the new inputs for an LDPC decoder. For codes of rate less than 0.1, the algorithm performs on par with a CA-SCL decoder, while substantially reducing its latency.
+
+## A Random Construction Method of SC-LDPC Code with Changed Check Structure
+
+- **Status**: ✅
+- **Reason**: PEG 기반 SC-LDPC 새 커플링 구성법(coupling edge 추가)으로 코드 설계 기여(E); 바이너리 입력 AWGN, 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9658017
+- **Type**: conference
+- **Published**: 13-16 Oct.
+- **Authors**: Cong Xie, Jian Yang, Hai Tian +2
+- **PDF**: https://ieeexplore.ieee.org/document/9658017
+- **Abstract**: In order to meet the reliability requirements of 6G mobile communication, this paper proposes a construction method of spatially coupled low density parity check codes based on PEG algorithm. A new coupling algorithm is designed. Without changing the structure of the matrix, the coupling matrix is redesigned and the number of coupling edges is added. Simulation results show that this design has better decoding performance than 5G-NR-LDPC in binary input additive white Gaussian noise channel.
+
+## Design of Nested QC-LDPC Codes for Compute-Forward Multiple Access
+
+- **Status**: ✅
+- **Reason**: 수정 P-EXIT 분석과 nested QC-LDPC 구성 기법(E) 제시; CFMA 응용이나 QC-LDPC 코드 설계/확장 기법 이식 가능, 애매하면 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9658053
+- **Type**: conference
+- **Published**: 13-16 Oct.
+- **Authors**: Shenzuo He, Yifei Zhang, Ying Li
+- **PDF**: https://ieeexplore.ieee.org/document/9658053
+- **Abstract**: Compute-forward multiple access (CFMA) is a new-type multiple-access technique in recent years, whose most significant advantage is that it can achieve the whole capacity region of the multiple-access channel (MAC) without time sharing or rate splitting. In this work, we propose a modified protograph-based extrinsic information transfer (P- EXIT) technique to analyse and optimize the iterative decoding performances of quasi-cyclic low density parity check (QC-LDPC) codes in CFMA. In addition, a kind of extending technique is designed to construct nested QC-LDPC codes for CFMA. The simulation results show that the nested QC-LDPC codes constructed by our method work efficiently in CFMA system and have a gap of 1.186dB from Shannon Bound at bit error rate of 10-6.
+
+## A Flexible FPGA Based QC-LDPC Decoder for the Adaptive Coding and Modulation Scheme of Broadband Satellite Communication System
+
+- **Status**: ✅
+- **Reason**: 유연 코드율/길이 QC-LDPC FPGA 디코더, normalized min-sum layered 구현 — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9657842
+- **Type**: conference
+- **Published**: 13-16 Oct.
+- **Authors**: Xiaxia Cui, Dongdong Wang, Chenhua Sun +2
+- **PDF**: https://ieeexplore.ieee.org/document/9657842
+- **Abstract**: We designed a FPGA based LDPC Decoder for decoding Type-I QC-LDPC codes with flexible code rate and code length, by which the channel adaptation could be realized with very fine granularity. In addition, the decoder shows good bit error rate (BER) performance whose performance loss is only O.6dB at the BER of 10−6, compared with the theoretical performance when decoding the same LDPC codes using normalized Min-Sum based layered decoding algorithm.
+
+## Extended RISC-V hardware architecture for future digital communication systems
+
+- **Status**: ✅
+- **Reason**: RISC-V 확장 ASIP로 LDPC 등 다중 부호 유연 디코딩 HW 아키텍처(D); LDPC 클럭 사이클 절감 정량 결과, 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9605070
+- **Type**: conference
+- **Published**: 13-15 Oct.
+- **Authors**: Maël Tourres, Cyrille Chavet, Bertrand Le Gal +2
+- **PDF**: https://ieeexplore.ieee.org/document/9605070
+- **Abstract**: The fast deployment of IoT (Internet-of-Things) devices for a few years has been impressive and the progressive deployment of 5G will accelerate things even further. Indeed, this standard opens the door to a new generation of standards aiming at a convergence of networks and communication protocols (Wi-fi, LTE, 4G, etc.). These results in the need for flexible implementations of different families of codes as for instance, Turbo, LPDC and Polar codes.In this context, the work presented in this article proposes to design such flexible ASIP (application-specific instruction set processor) in an IoT context. The approach discussed is supported by experimental results obtained on the basis of a RISC-V architecture to which specific instruction sets have been added. Results demonstrate a reduction of the required processing clock cycles up to 47.7%, 29.8%, 16.5% and 9.7% for Polar, LDPC, NB-LDPC and Turbo (LTE) codes, respectively.
+
+## A Dynamically Reconfigurable QC-LDPC Implementation for Iris Recognition
+
+- **Status**: ✅
+- **Reason**: 다중모드 QC-LDPC 디코더 FPGA Dynamic Partial Reconfiguration 구현(전력효율) — 응용은 홍채지만 재구성형 HW 아키텍처 이식 가능(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9622068
+- **Type**: conference
+- **Published**: 12-15 Oct.
+- **Authors**: Longyu Ma, Chiu Wing Sham, Chun Yan Lo +1
+- **PDF**: https://ieeexplore.ieee.org/document/9622068
+- **Abstract**: Extracting and analyzing iris textures for biometric recognition has been extensively studied. As the transition of iris recognition from lab technology to nation-scale applications, high complexity becomes a critical concern in most systems in either time or space. It leads to unfitness for embedded devices. In this paper, an iris recognition system is introduced by employing a minimal set of computer vision modules and a multi-mode QC-LDPC decoder. This system can alleviate variability and noise caused by iris acquisition and the follow-up process. Several classes of QC-LDPC code from IEEE 802.16 are investigated for the validity of accuracy improvement. We show that we can apply Dynamic Partial Reconfiguration technology to implement the multi-mode QC-LDPC decoder for the iris recognition system. The results show that the implementation is power-efficient and the system is suitable for edge applications.

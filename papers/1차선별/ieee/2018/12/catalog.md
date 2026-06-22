@@ -1,0 +1,434 @@
+# IEEE Xplore — 2018-12 (1차선별 통과)
+
+
+## Hardware-Efficient Node Processing Unit Architectures for Flexible LDPC Decoder Implementations
+
+- **Status**: ✅
+- **Reason**: D: 유연 LDPC 디코더용 노드 처리 유닛(NPU) HW 아키텍처 신규 구성법, FPGA 효율 개선 — NAND 디코더 HW 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8293845
+- **Type**: journal
+- **Published**: Dec. 2018
+- **Authors**: Peter Hailes, Lei Xu, Robert G. Maunder +2
+- **PDF**: https://ieeexplore.ieee.org/document/8293845
+- **Abstract**: In low-density parity check (LDPC) decoder implementations, the architecture of the node processing units (NPUs) has a significant impact both on the hardware resource requirements and on the processing throughput. Additionally, some NPU architectures impose limitations on the decoder's support for intra- or interstandard LDPC code flexibility at run-time. In this brief, we present a generalised algorithmic method of constructing NPUs that support run-time flexibility while maintaining a low hardware resource requirement and high maximum operating frequency. FPGA-based synthesis results demonstrate that the proposed architecture offers a significantly improved hardware efficiency, when compared to two commonly employed alternatives.
+
+## Protograph LDPC Codes With Block Thresholds: Extension to Degree-One and Generalized Nodes
+
+- **Status**: ✅
+- **Reason**: Protograph/DGLDPC 바이너리 LDPC 코드 설계, degree-1/일반화노드 임계값 조건으로 신규 코드 구성 (E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8435939
+- **Type**: journal
+- **Published**: Dec. 2018
+- **Authors**: Asit Kumar Pradhan, Andrew Thangaraj
+- **PDF**: https://ieeexplore.ieee.org/document/8435939
+- **Abstract**: Protograph low-density-parity-check (LDPC) codes are considered to design near-capacity low-rate codes over the binary erasure channel and the binary additive white Gaussian noise channel. For protographs with degree-one variable nodes and doubly-generalized LDPC (DGLDPC) codes, conditions are derived to ensure the equality of bit-error threshold and block-error threshold. Using this condition, low-rate codes with block-error threshold close to capacity are designed and shown to have better error rate performance than other existing codes.
+
+## Progressive Matrix Growth Algorithm for Constructing Rate-Compatible Length-Scalable Raptor-Like Quasi-Cyclic LDPC Codes
+
+- **Status**: ✅
+- **Reason**: E: Raptor-like QC-LDPC rate-compatible/length-scalable 구성법(PMG) 신규 제안 — 바이너리 QC-LDPC 코드 설계 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8267025
+- **Type**: journal
+- **Published**: Dec. 2018
+- **Authors**: Yushu Zhang, Kewu Peng, Zhangmei Chen +1
+- **PDF**: https://ieeexplore.ieee.org/document/8267025
+- **Abstract**: With the worldwide deployment and rapid development of digital television terrestrial broadcasting (DTTB) systems, the demands of diversified multimedia services from the fixed/mobile receptions increase significantly. To satisfy the various requirements of quality of service, the forward error correction codes with multiple code rates and lengths become a trend for DTTB standards. In this paper, rate-compatible length-scalable raptor-like quasi-cyclic low density parity check (RL-QC-LDPC) codes are proposed for future DTTB systems, where a wide range of code rates and information/parity block lengths can be obtained with low implementation complexity. A low-complexity construction method, called progressive matrix growth (PMG), is also proposed for such kind of RL-QC-LDPC codes. Unlike conventional construction methods, PMG performs 2-D progressive extension of both information variable nodes and check nodes with limited computational complexity and memory resources. Based on the performance prediction provided by the tool of multi-edge type density evolution, several code families are constructed with PMG as examples, and careful discussions on design parameters are given. The numerical results show that the average gaps of SNR threshold to Shannon limit of binary-input additive white Gaussian noise channel are only 0.41~0.44 dB for the code families with information-bit puncturing.
+
+## Density Evolution Based on Two-Type Degree Distribution Framework of Raptor-Like LDPC
+
+- **Status**: ✅
+- **Reason**: Raptor-like LDPC용 two-type density evolution/Gaussian approx 분석 프레임워크, 바이너리 LDPC 코드설계 임계값 분석 기법(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8501569
+- **Type**: journal
+- **Published**: Dec. 2018
+- **Authors**: Genning Zhang, Yin Xu, Dazhi He +2
+- **PDF**: https://ieeexplore.ieee.org/document/8501569
+- **Abstract**: The traditional degree distribution framework is a useful tool to analyze irregular low density parity check (LDPC) code. However, it cannot be used to analyze raptor-like LDPC code as it cannot describe the most important structural feature of raptor-like LDPC code, which is that any check node is connected to at most one degree-one variable node. In this paper, we propose a two-type degree distribution framework for raptor-like LDPC code. The proposed framework can describe the special structural feature of raptor-like LDPC code by dividing the check nodes into two different sets. One is the set of check nodes connected to those degree-one variable nodes, the other is the set of check nodes unconnected to those degree-one variable nodes. Furthermore, we propose a two-type discrete density evolution algorithm and a two-type Gaussian approximation density evolution algorithm based on the proposed two-type degree distribution framework to estimate the threshold of raptor-like LDPC code. During the decoding analysis, the proposed algorithms treat the check nodes belonging the two separate sets differently. Compared with the traditional multi-edge type (MET) algorithm, the proposed algorithms allow us to calculate the threshold more quickly without much sacrifice in accuracy. For some raptor-like LDPC codes adopted by the Advanced Television Systems Committee 3.0 (ATSC3.0) standard, the thresholds estimated by the proposed algorithms can be very close to the thresholds estimated by the traditional MET algorithm. The deviations are less than 0.07 dB. Meanwhile, the proposed algorithms can tremendously reduce the computation complexity because of the two-type degree distribution framework and the Gaussian approximation.
+
+## A Modified Two-Bit Finite-Alphabet Iterative Decoder for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 수정된 2비트 finite-alphabet iterative decoder(FAID) for LDPC, VNU 복잡도 감소 신규 디코더 — 카테고리 C
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8647129
+- **Type**: conference
+- **Published**: 9-13 Dec. 
+- **Authors**: Keke Liu, Yang Han, Shaohua Yang +3
+- **PDF**: https://ieeexplore.ieee.org/document/8647129
+- **Abstract**: A modified two-bit finite-alphabet iterative decoder (FAID) is proposed in this paper. As distinct from similar existing two-bit FAIDs, this proposed decoder is probabilistic and incorporates the idea of using single a-posteriori message to replace the conventional variable-to-check (v2c) messages. This brings significant variable-node unit (VNU) complexity reduction. For high-rate regular LDPC codes, it is demonstrated that the proposed decoder, in waterfall region, substantially outperforms other simplified decoders reported in the literature.
+
+## Information-Optimum LDPC Decoders with Message Alignment for Irregular Codes
+
+- **Status**: ✅
+- **Reason**: 불규칙 LDPC용 information bottleneck 유한정밀 디코더+message alignment, 4-bit 양자화 디코더 구성은 NAND LDPC에 직접 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8648053
+- **Type**: conference
+- **Published**: 9-13 Dec. 
+- **Authors**: Maximilian Stark, Jan Lewandowsky, Gerhard Bauch
+- **PDF**: https://ieeexplore.ieee.org/document/8648053
+- **Abstract**: In practical implementations, message passing decoding of LDPC codes has to be implemented with finite precision, i.e., the messages are quantized with a small number of bits. This results in a significant performance degradation with respect to decoding with high-precision messages. Recently, we have proposed so-called information bottleneck decoders to design finite-precision decoders with error-correction performance close to high-precision belief-propagation decoding. Earlier works solely focus on the design of information bottleneck decoders for regular LDPC codes or specifically optimized irregular LDPC codes. In this paper, we extend the concept of information bottleneck decoders to irregular LDPC with arbitrary degree distribution. We show that this extension is not straightforward and requires an additional information-optimum step. Therefore, we devise a novel intermediate construction step which we call message alignment. Exemplary numerical simulations using an irregular LDPC code taken from the IEEE 802.11 standard show that incorporating message alignment in the construction yields a 4-bit information bottleneck decoder which performs only 0.15 dB worse than a double-precision belief propagation decoder and outperforms a min-sum decoder.
+
+## Quantizer Optimization Based on Neural Quantizerfor Sum-Product Decoder
+
+- **Status**: ✅
+- **Reason**: 신경망 기반 sum-product 디코더용 저정밀 양자화기 최적화(soft staircase+backprop) — LLR 양자화 기법은 NAND LDPC에 직접 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8647503
+- **Type**: conference
+- **Published**: 9-13 Dec. 
+- **Authors**: Tadashi Wadayama, Satoshi Takabe
+- **PDF**: https://ieeexplore.ieee.org/document/8647503
+- **Abstract**: A low-precision analog-to-digital converter (ADC) is required to implement a frontend device of wideband digital communication systems in order to reduce its power consumption. The goal of this paper is to present a novel quantizer optimization method for minimizing lower-precision quantizers matched to the sum-product algorithms. The principal idea is to introduce a quantizer that includes a feed-forward neural network and the soft staircase function. Since the soft staircase function is differentiable and has non-zero gradient values everywhere, we can exploit backpropagation and a stochastic gradient descent method to train the feed-forward neural network in the quantizer. The expected loss regarding the channel input and the decoder output is minimized in a supervised training phase. The experimental results indicate that the quantizer optimization method successfully provides an 8-level quantizer for a low-density parity-check (LDPC) code that achieves only a 0.1-dB performance loss compared to the unquantized system.
+
+## Antipodal Detection and Decoding for Large Multi-User MIMO with Reduced Base-Station Antennas
+
+- **Status**: ✅
+- **Reason**: MIMO 검출에 BP 기반 디코더로 erasure 복원하는 신규 메시지패싱 기법 제시; 부호 비의존적 BP 개선으로 카테고리 C 이식 여지(애매→살림)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8644235
+- **Type**: conference
+- **Published**: 9-13 Dec. 
+- **Authors**: Christopher Husmann, Rahim Tafazolli, Konstantinos Nikitopoulos
+- **PDF**: https://ieeexplore.ieee.org/document/8644235
+- **Abstract**: To avoid unnecessarily using a massive number of base station antennas for supporting a large number of users in spatially multiplexed multi-user MIMO systems, optimal detection methods are required to demultiplex the mutually interfering information streams. Sphere decoding (SD) can achieve this, but its complexity and latency becomes impractical for large MIMO systems. Low complexity detection solutions such as linear detectors (e.g., MMSE) or likelihood ascendant search (LAS) approaches, have significantly lower latency requirements than SD but their achievable throughput is far from optimal. This work presents the concept of Antipodal detection and decoding, that can deliver very high throughput with practical latency requirements, even in systems where the number of user antennas reaches the number of base station antennas. The Antipodal detector either results in a highly reliable vector solution, or it does not find a vector solution at all (i.e., it results in an erasure), skipping the heavy processing load related to finding vector solutions that have a very high likelihood to be erroneous. Then, a belief-propagation-based decoder is proposed, that restores these erasures and further corrects remaining erroneous vector solutions. We show that for 32×32, 64-QAM modulated systems, and for packet error rates below 10%, Antipodal detection and decoding requires 9 dB less transmitted power than systems employing soft MMSE or LAS detection and LDPC decoding with similar complexity requirements. For the same scenario, our Antipodal method achieves practical throughput gains of more than 50% compared to soft MMSE and soft LAS-based methods.
+
+## From multicore LDPC decoder implementations to FPGA decoder architectures: a case study
+
+- **Status**: ✅
+- **Reason**: 멀티코어 SW에서 FPGA LDPC 디코더 아키텍처 HLS 생성 케이스스터디 - 이식 가능 HW 아키텍처(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8617957
+- **Type**: conference
+- **Published**: 9-12 Dec. 
+- **Authors**: Yann Delomier, Bertrand Le Gal, Jeremie Crenne +1
+- **PDF**: https://ieeexplore.ieee.org/document/8617957
+- **Abstract**: Last generation high-level synthesis (HLS) tools enables hardware generation of software descriptions speeding up hardware development times. LDPC codes are involved in many digital standards even 5G, generating high quality architecture from software description is needed for Software Defined Radio (SDR) or Cloud-RAN (C-RAN) systems. Previous works in the field focused on reusing many-core software description of LDPC decoding algorithm for hardware generation purpose. In this article we demonstrate that multicore oriented ones once transformed for HLS are more suitable for hardware decoder generation. Indeed, throughputs and hardware complexities observed are closer to handmade LDPC decoders in comparison with related works. Presented results open new perspective for fast integration or prototyping of ECC architectures.
+
+## Hardware design of Euclidean Projection modules for ADMM LDPC decoding
+
+- **Status**: ✅
+- **Reason**: ADMM LDPC 디코딩의 Euclidean Projection 모듈 HW 설계 최적화 - 이식 가능 디코더 알고리즘+HW(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8617981
+- **Type**: conference
+- **Published**: 9-12 Dec. 
+- **Authors**: Hayfa Ben Thameur, Bertr Le Gal, Nadia Khouja +2
+- **PDF**: https://ieeexplore.ieee.org/document/8617981
+- **Abstract**: The ADMM decoding is a novel LP-based algorithm that can improve the decoding performances of the conventional BP decoding algorithms for LDPC codes. However, it was shown that the Euclidean projection (EP) computation involved in the ADMM algorithm limits the throughput performances of the ADMM hardware decoders and drastically increases their silicon cost. Recently, different techniques have been proposed in the literature at the algorithmic level to improve the hardware characteristics of the EP module without penalizing the error correction performances of the ADMM decoder. In this article, we present the implementation results of optimized hardware design of these theoretical approaches. Then, an evaluation of their real interest for high throughput and low complexity ADMM LDPC decoder design is provided.
+
+## An Improved Belief Propagation Iterative Algorithm Based on Dynamic Scheduling
+
+- **Status**: ✅
+- **Reason**: 동적 스케줄링 기반 BP 개선 디코더(DS-RMP), 바이너리 LDPC BP에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8695536
+- **Type**: conference
+- **Published**: 8-9 Dec. 2
+- **Authors**: Hang Yin, Yuhuan Wang, Qiuyuan Huang +2
+- **PDF**: https://ieeexplore.ieee.org/document/8695536
+- **Abstract**: In this paper, on the basis of analysing existing schedule message passing mechanism of Belief Propagation (BP) iterative algorithm, we propose a Belief Propagation iterative algorithm based on Dynamic Schedule Row Message Passing (DS-RMP). This algorithm optimizes the update mode of the check node message in the iteration, reduce the imbalance of check nodes' confidence degree in the original algorithm, and promote the efficiency of message passing. The simulation results indicate that, compared with the existing Belief Propagation algorithm, the Belief Propagation iterative algorithm not only reduces the average number of iterations, but also improves the bit error rate performance effectively.
+
+## Model-based Design of Efficient LDPC Decoder Architectures
+
+- **Status**: ✅
+- **Reason**: HLS 기반 LDPC 디코더 아키텍처 생성, layered 디코딩 HW 효율 기법(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8625288
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Yann Delomier, Bertrand Le Gal, Jeremie Crenne +1
+- **PDF**: https://ieeexplore.ieee.org/document/8625288
+- **Abstract**: LDPC codes are finding increasing use in digital communication. The fast-paced evolution of new communication standards and ad-hoc applications requires rapid design iteration. Hand-coded RTL architectures generally provides high performance levels but slower the path to IP creation. In this paper we present a hardware LDPC decoder architecture generated with Vivado HLS from a generic SystemC behavioral model. We evaluate the performance of our approach and assess efficiency versus competing approaches. Throughput speedups between 1.1× and 16.7× are shown with an area improvements of 1.6× to 23.8×. A single LDPC decoder reaches up to 150 Mbps on a Xilinx Virtex-7 device for ten layered decoding iterations.
+
+## Scalable Globally-Coupled Low-Density Parity Check Codes
+
+- **Status**: ✅
+- **Reason**: 짧은 LDPC를 임의 블록길이로 스케일업하는 globally-coupled LDPC 구성법, NAND 플래시 타깃 설계예 명시 — 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625302
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Yen-Chin Liao, Hsie-Chia Chang, Shu Lin
+- **PDF**: https://ieeexplore.ieee.org/document/8625302
+- **Abstract**: This paper presents a technique to scale up an LDPC code to any desired block length. Under certain constraints, the scaled LDPC code results in a special case of globally-coupled-LDPC code. The proposed scheme can construct globally-coupled-LDPC codes from any short LDPC codes. A design example targeting for NAND flash memory applications is addressed and simulated. The results show the feasibility of constructing a structural long LDPC code by scaling from a short code.
+
+## Optimization of Bit Mapping and Quantized Decoding for Off-the-Shelf Protograph LDPC Codes with Application to IEEE 802.3ca
+
+- **Status**: ✅
+- **Reason**: protograph LDPC의 quantized sum-product 디코더 clipping 최적화 + bit mapping, density evolution — LLR 양자화 디코더(C) NAND 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625335
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Fabian Steiner, Gerhard Kramer
+- **PDF**: https://ieeexplore.ieee.org/document/8625335
+- **Abstract**: Protograph-based, off-the-shelf low-density parity-check (LDPC) codes are optimized for higher-order modulation and quantized sum-product decoders. As an example, for the recently proposed LDPC code from the upcoming IEEE 802.3ca standard for passive optical networks (PONs), an optimized mapping of the bit channels originating from bit-metric decoding to the protograph variable nodes gains 0.4 dB and 0.3 dB at a bit-error rate of 10-6 for shaped and uniform signaling, respectively. Furthermore, the clipping value for a quantized sum-product LDPC decoder is optimized via discretized density evolution.
+
+## Spatially Coupled Generalized LDPC Codes: Introduction and Overview
+
+- **Status**: ✅
+- **Reason**: SC-GLDPC 코드 설계, error floor/최소거리/trapping set 개선 — 바이너리 LDPC 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625327
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Daniel J. Costello, David G. M. Mitchell, Pablo M. Olmos +1
+- **PDF**: https://ieeexplore.ieee.org/document/8625327
+- **Abstract**: Generalized low-density parity-check (GLDPC) codes are a class of LDPC codes in which the standard single parity check (SPC) constraints are replaced by more general constraints, viz., constraints defined by a linear block code. These stronger constraints typically result in improved error floor performance, due to better minimum distance and trapping set properties, at a cost of some increased decoding complexity. In this paper, we summarize some recent results on spatially coupled generalized low-density parity-check (SC-GLDPC) codes. Results are compared to GLDPC block codes and the advantages and disadvantages of SC-GLDPC codes are discussed.
+
+## A New Algebraic-Based Method for Constructing Protograph LDPC Codes
+
+- **Status**: ✅
+- **Reason**: protograph LDPC 대수적 구성, 4-cycle 회피, 낮은 error floor — 바이너리 LDPC 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625339
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Xijin Mu, Huaan Li, Chao Chen +2
+- **PDF**: https://ieeexplore.ieee.org/document/8625339
+- **Abstract**: This paper focuses on the construction of protograph low-density parity-check (PTG-LDPC) codes. We first give a necessary condition for a PTG-LDPC code to avoid 4-cycles. Then, we propose a new method for constructing PTG-LDPC codes based on the decomposition of a base matrix and the algebraic construction of an exponent matrix. The proposed method owns a lower design complexity compared with the conventional graph-based methods. Numerical results show that the proposed codes perform well, and have no error floor down to a block error rate of 10-4.
+
+## Girth-Eight Reed-Solomon Based QC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: RS 기반 girth-8 QC-LDPC 구성, masking으로 short cycle 제거 — 바이너리 QC-LDPC 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625328
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Xin Xiao, Bane Vasić, Shu Lin +2
+- **PDF**: https://ieeexplore.ieee.org/document/8625328
+- **Abstract**: This paper presents a class of regular quasi-cyclic (QC) LDPC codes whose Tanner graphs have girth at least eight. These codes are constructed based on the conventional parity-check matrices of Reed-Solomon (RS) codes with minimum distance 5. Masking their parity-check matrices significantly reduces the numbers of short cycles in their Tanner graphs and results in codes which perform well over the AWGN channel in both waterfall and low error-rate regions.
+
+## Computing the Asymptotic Expected Multiplicity of Elementary Trapping Sets (ETSs) in Random LDPC Code Ensembles
+
+- **Status**: ✅
+- **Reason**: LDPC error floor 핵심인 ETS(elementary trapping sets) 다중도 계산 - 코드설계/error floor 분석(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625374
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Ali Dehghan, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8625374
+- **Abstract**: The performance of low-density parity-check (LDPC) codes in the error floor region is closely related to some substructures of the code's Tanner graple (simple) cycle have a nonzero finite average multiplicity. In this paper, we compute the asymptotic expected multiplicity of such ETS structures in random LDPC code ensembles. The computation, in general, involves two subproblems: (i) counting the number of cycles of a certain length with different combinations of variable node degrees, and (ii) counting the number of ways trees of different sizes can be appended to such a cycle to form an ETS. The first subproblem, which counts the number of leafless ETSs (LETSs), is solved by the authors in other papers. The second subproblem is formulated as a recursive counting problem and is solved in this paper, with the solution being a generalization of Catalan numbers. We also demonstrate through numerical results that the asymptotic expected values computed in this paper match the multiplicity of ETSs in randomly selected finite-length LDPC codes, even at relatively short block lengths.
+
+## A 100 Gbps LDPC Decoder for the IEEE 802.11ay Standard
+
+- **Status**: ✅
+- **Reason**: 802.11ay layered LDPC 디코더, 다층 결합·프레임 인터리빙 HW 처리량 기법(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8625286
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Meng Li, Veerle Derudder, Claude Desset +3
+- **PDF**: https://ieeexplore.ieee.org/document/8625286
+- **Abstract**: IEEE 802.11ay is the amendment to the 802.11 standard that enables Wi-Fi devices to achieve 100 Gbps using the unlicensed mm-Wave (60 GHz) band at comparable ranges to today's commercial 60 GHz devices based on the 802.11ad standard. In this paper, we propose a full row-based layered LDPC decoder supporting all the coding rates for 802.11ay. Taking the property of the parity check matrix of 802.11ay, combining multiple layers into single layer improves the hardware utilization hence increases the throughput. The throughput is further increases by interleaving multiple frames to improve the utilization of each pipeline stage. The decoder is synthesized at both 28 nm and 16 nm CMOS technology and power estimated with stimuli at 7db and 3.5db. The 28 nm implementation running at 600 MHz and achieves a throughput of 67 Gbps for coding rate 13/16 at 4 iterations with area efficiency of 160 Gbps/sqmm and consumes an average power consumption of 408 mW and 141 mW, yielding energy efficiency of 6.05 pJ/bit and 2.1 pJ/bit at 3.5db and 7db. The 16 nm implementation running at 1 GHz and achieves a throughput of 112 Gbps at 4 iterations with area efficiency of 589 Gbps/sqmm and consumes an average power of 408mW and 163mW, yielding energy efficiency of 3.64 pJ/bit and 1.45 pJ/bit at 3.5db and 7db.
+
+## On Counting Short Cycles of LDPC Codes Using the Tanner Graph Spectrum
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC 짧은 사이클 카운팅 기법(Tanner 그래프 스펙트럼 기반) - 코드설계/error floor(E)에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625355
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Ali Dehghan, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8625355
+- **Abstract**: Counting short cycles in bipartite graphs is a fundamental problem of interest in the analysis and design of low-density parity-check (LDPC) codes. The vast majority of research in this area is focused on algorithmic techniques. Most recently, Blake and Lin proposed a computational technique to count the number of cycles of length g in a bi-regular bipartite graph, where g is the girth of the graph. The information required for the computation is the node degree and the multiplicity of the nodes on both sides of the partition, as well as the eigenvalues of the adjacency matrix of the graph (graph spectrum). In this work, we extend this result. First, we derive a similar result to compute the number of cycles of length g + 2, ..., 2g - 2, for bi-regular bipartite graphs. Second, using a counter-example, we demonstrate that the information of the degree distribution and the spectrum of a bi-regular bipartite graph is, in general, insufficient to count the cycles of length i ≥ 2g.
+
+## Information Forwarding in LDPC Decoding for Markov Sources
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC BP의 a-priori 추정에 Markov 소스 메모리를 Tanner 그래프에 임베딩, Jensen 부등식으로 저복잡도화 — BP 개선 기법(C), 애매하나 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625307
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Nazia Sarwat Islam, Werner Henkel
+- **PDF**: https://ieeexplore.ieee.org/document/8625307
+- **Abstract**: Belief propagation decoding of binary LDPC codes combines three independent probability estimates, a-priori, intrinsic, and extrinsic information, iterations along the Tanner graph are estimating the value of the received bits, the likelihood of the values increasing with each iteration. The a-priori estimate of the information bits is a measure of the source statistics for generating bit values 0 and 1 (mapped to ±1), reflecting bias and redundancy in the information sequence itself. In this paper, we have modified the a-priori estimate to incorporate memory properties present in the transmitted information sequence resulting from a Markov source. We consider two principle alternatives for decoding. The first option is to use the Markov dependencies directly as further links between variable nodes in the Tanner graph of the LDPC code. The second alternative is to see the Markov source and the LDPC code as a serial concatenation asking for a Turbo iterative decoding between the two corresponding decoders. The latter comes with significant complexity compared to the direct embedding into the LDPC Tanner graph. Especially, one modification applying Jensen's inequality leads to a very low decoding complexity at no performance loss. The Turbo scheme's performance depends on the scheduling. Superior performance can be achieved with sufficient iterations in the LDPC decoder itself.
+
+## Computing the Asymptotic Expected Multiplicity of Leafless Elementary Trapping Sets (LETSs) in Random Irregular LDPC Code Ensembles
+
+- **Status**: ✅
+- **Reason**: 불규칙 LDPC LETS(트래핑셋) 점근 multiplicity 분석, error floor·사이클 카운팅 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625273
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Ali Dehghan, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8625273
+- **Abstract**: Leafless elementary trapping sets (LETSs) are known to be among the most harmful substructures of Tanner graphs of low-density parity-check (LDPC) codes in the error floor region. It is well-known that in the asymptotic regime of infinite block length, the only LETS structures that have finite non-zero average multiplicity are those that contain a single (simple) cycle. The average multiplicity of all the other LETSs, whose structures contain more than one cycle, tends to zero asymptotically. The asymptotic average multiplicity of LETS structures with a single cycle for variable-regular LDPC codes has already been derived by the authors in a previous work. In this paper, we compute the asymptotic average multiplicity of such structures for irregular LDPC code ensembles. The derivation involves counting the average number of cycles of a specific length with a specific combination of variable node degrees. We demonstrate that the asymptotic results, derived in this paper, match well with the LETS multiplicities of finite-length LDPC codes chosen randomly from the ensemble, even for rather short block lengths.
+
+## High data rate and flexible hardware QC-LDPC decoder for satellite optical communications
+
+- **Status**: ✅
+- **Reason**: QC-LDPC Offset Min-Sum FPGA 디코더 코드·아키텍처 공동설계, 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8625274
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Vincent Pignoly, Bertrand Le Gal, Christophe Jego +1
+- **PDF**: https://ieeexplore.ieee.org/document/8625274
+- **Abstract**: Satellite optical communications are trendy for future satellite wireless communications and introduce new challenges concerning throughput and error correction for the channel decoder. This paper details a custom solution based on LDPC code and architecture co-design. This solution was designed to deliver an efficient trade-off in terms of decoder throughput and error correction performance. A flexible architecture that implements an Offset Min-Sum algorithm on Field-Programmable Gate Array (FPGA) is proposed. A resulting system composed of 5 elementary LDPC decoders that fit in a single Zynq Ultrascale+ FPGA device reaches more than 10 Gbps with error correction performance similar or better than present current satellite communication standards.
+
+## Low-Latency LDPC Decoding Achieved by Code and Architecture Co-Design
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 저지연 디코더 아키텍처+protograph 코드설계 공동최적화, 이식 가능 HW/E(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8625276
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Elsa Dupraz, François Leduc-Primeau, François Gagnon
+- **PDF**: https://ieeexplore.ieee.org/document/8625276
+- **Abstract**: A novel low-density parity-check decoder architecture is presented that can achieve a high data throughput while retaining the flexibility to decode a wide range of quasi-cyclic codes. The proposed architecture allows to combine multiple message-update schedules, providing an additional degree of freedom to jointly optimize the code and decoder architecture. Protograph-based code constructions are introduced that exploit this added degree of freedom in order to maximize data throughput, and that are also optimized to reduce the complexity of the required parallel data accesses. For some examples and under an ideal pipeline speedup assumption, the proposed architecture and code designs reduce decoding latency by a factor of 3.2× compared to a decoder using a strict sequential schedule.
+
+## Decoding LDPC Codes on Binary Erasure Channels using Deep Recurrent Neural-Logic Layers
+
+- **Status**: ✅
+- **Reason**: deep recurrent neural-logic 기반 신경망 LDPC 디코더 — BP 능가, 신경망 디코더(C) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625326
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Ali Payani, Faramarz Fekri
+- **PDF**: https://ieeexplore.ieee.org/document/8625326
+- **Abstract**: Iterative algorithms based on belief propagation can perform very close to optimal ML decoding for long LDPC codes. However, for short LDPC codes over Binary Erasure Channels (BEC) their performance drops significantly. In this paper, we introduce an iterative LDPC decoder over BEC by using our novel deep recurrent neural logic networks that learns Boolean logic algebra. It turned out that the neural logic network is capable of learning discrete algorithmic tasks and suitable for decoding LDPC codes. We show that the proposed decoding method can outperform the belief propagation algorithm for short LDPC code while using significantly fewer number of iterations. We further demonstrate that the proposed model is able to generalize very well. In other words, the model that was trained for specific settings such as channel erasure, parity check matrix, and code length, when tested under various other settings, still performed almost as if it was trained for those new settings.
+
+## Fast convergence stochastic LDPC decoder based on edge memory structure
+
+- **Status**: ✅
+- **Reason**: edge memory 기반 stochastic LDPC 디코더의 dual memory parallel update 구조로 latching 완화 — HW 아키텍처(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8625320
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Guiwu Yang, Kai Kang, Jianhao Hu +2
+- **PDF**: https://ieeexplore.ieee.org/document/8625320
+- **Abstract**: In recent years, the LDPC decoder based on stochastic calculation has been becoming a hot topic, and the re-randomization structure based on edge memory for the stochastic LDPC decoder shows great advantages over performance and complexity compared with the traditional decoders. However, latching issue is also the main challenge for the stochastic LDPC decoders with edge memory structure, similar to stochastic LDPC decoders with other structures. Frequent latching state results in a low information updating efficiency, which reduces decoding performance and convergence speed. In order to speed up the information updating efficiency of the stochastic decoder, in this paper, we propose a dual memory parallel update structure for edge memory. Based on the proposed structure, the efficiency of information convergence is greatly accelerated with acceptable hardware cost. And the decoding performance and latency are also improved.
+
+## When Channel Coding Hits the Implementation Wall
+
+- **Status**: ✅
+- **Reason**: Turbo/LDPC/Polar 고속 디코더 아키텍처 제시 — LDPC 고처리량 디코더 HW 구현(D) 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8625324
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Claus Kestel, Matthias Herrmann, Norbert When
+- **PDF**: https://ieeexplore.ieee.org/document/8625324
+- **Abstract**: The continuous demands for higher throughput, higher spectral efficiency, lower latencies, lower power and large scalability in communication systems impose large challenges on the baseband signal processing. In the future, throughput requirements far beyond 100 Gbit/s are expected, which is much higher than the tens of Gbit/s targeted in the 5G standardization. At the same time, advances in silicon technology due to shrinking feature sizes and increased performance parameters alone will not provide the necessary gain, especially in energy efficiency for wireless transceivers, which have tightly constrained power and energy budgets. The focus of this paper lies on channel coding, which is a major source of complexity in digital baseband processing. We will highlight implementation challenges for the most advanced channel coding techniques, i.e. Turbo codes, Low Density Parity Check (LDPC) codes and Polar codes and present decoder architectures for all three code classes that are designed for highest throughput.
+
+## Avoiding Burst-like Error Patterns in Windowed Decoding of Spatially Coupled LDPC Codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 윈도우 디코딩의 burst-like 에러/stall 회피 적응적 윈도우 시프트 — 디코더 스케줄링/복잡도 개선(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625312
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Kevin Klaiber, Sebastian Cammerer, Laurent Schmalen +1
+- **PDF**: https://ieeexplore.ieee.org/document/8625312
+- **Abstract**: In this work, we analyze efficient window shift schemes for windowed decoding of spatially coupled low-density parity-check (SC-LDPC) codes, which is known to yield close-to-optimal decoding results when compared to full belief propagation (BP) decoding. However, a drawback of windowed decoding is that either a significant amount of window updates are required leading to unnecessary high decoding complexity or the decoder suffers from sporadic burst-like error patterns, causing a decoder stall. To tackle this effect and, thus, to reduce the average decoding complexity, the basic idea is to enable adaptive window shifts based on a bit error rate (BER) prediction, which reduces the amount of unnecessary updates. As the decoder stall does not occur in analytical investigations such as the density evolution (DE), we examine different schemes on a fixed test-set and exhaustive monte-carlo simulations based on our graphic processing unit (GPU) simulation framework. As a result, we can reduce the average decoding complexity of the naive windowed decoder while improving the BER performance when compared to a non-adaptive windowed decoding scheme. Furthermore, we show that a foresightful stall prediction does not significantly outperform a retrospective stall detection which is much easier to implement in practice.
+
+## Spatially Coupled LDPC Codes with Random Access
+
+- **Status**: ✅
+- **Reason**: 스토리지용 SC-LDPC 로컬/글로벌 디코딩 random access 코드설계(B/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625294
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Eshed Ram, Yuval Cassuto
+- **PDF**: https://ieeexplore.ieee.org/document/8625294
+- **Abstract**: A new type of spatially-coupled (SC) LDPC codes motivated by practical storage applications is presented. SC-LDPCL codes (suffix 'L' stands for locality) can be decoded locally at the level of sub-blocks that are much smaller than the full code block, thus providing random access to the coded information. The same code can also be decoded globally using the entire code block (as usual), for increased data reliability. The main contribution of the paper is a construction of SC-LDPCL codes that allows controlling the trade-off between local and global correction performance.
+
+## Optimization of Sign-Preserving Noise-Aided Min-Sum Decoders with Density Evolution
+
+- **Status**: ✅
+- **Reason**: 3-4비트 양자화 환경에서 OMS 대비 향상되는 Sign-Preserving Noise-Aided Min-Sum 디코더 — min-sum 변형 디코더(C), NAND 양자화 직결
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625309
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: F. Cochachin, E. Boutillon, D. Declercq
+- **PDF**: https://ieeexplore.ieee.org/document/8625309
+- **Abstract**: The novelty of this paper is to propose a new LDPC decoder called Sign-Preserving Noise-Aided Min-Sum (SP-NA-MS) decoder that improves the decoding performance compared to classical Offset Min-Sum (OMS) decoder when messages are quantized, with only 3 or 4 bits. The particularity of the SP-NA-MS decoder is that the variable-to-check messages are never set to 0, and always carry the sign information. Moreover, the decoder incorporates random perturbation due to deliberate noise injection. The parameters of the SP-NA-MS decoders are optimized in the asymptotic limit of the code length thanks to the Density Evolution (DE) method. The finite-length simulations confirm the conclusions of the DE analysis and gain of up to 0.3 dB in SNR can be obtained compared to regular OMS with same quantization level.
+
+## A Discrete Information Bottleneck Receiver with Iterative Decision Feedback Channel Estimation
+
+- **Status**: ✅
+- **Reason**: Information Bottleneck 기반 양자화 lookup-table 디코더 — 양자화 디코딩 기법(C) NAND LLR 양자화에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8625342
+- **Type**: conference
+- **Published**: 3-7 Dec. 2
+- **Authors**: Jan Lewandowsky, Maximilian Stark, Gerhard Bauch
+- **PDF**: https://ieeexplore.ieee.org/document/8625342
+- **Abstract**: The application of the Information Bottleneck method allows for an innovative approach to quantized, but information-optimum signal processing. This method originates from machine learning, but also offers an unconventional and efficient design approach for communication receivers. In the resulting receivers all signal processing degenerates to simple lookup operations in tables. These lookup tables are designed to maximize the relevant information. This paper presents a novel iterative Information Bottleneck receiver for block fading channels which uses iterative decision feedback for information-optimum channel estimation. Detection, channel decoding and channel estimation only use lookup tables constructed with the Information Bottleneck method. We compare the proposed receiver to conventional iterative receivers. Our findings show that the proposed Information Bottleneck receiver offers performance extremely close to that of a conventional double precision receiver. Moreover, it outperforms a fixed point receiver, even with entirely mismatched lookup tables.
+
+## Performance analysis of a reduced complexity decoding algorithm based on an improved offset min-sum approximation
+
+- **Status**: ✅
+- **Reason**: improved offset min-sum 근사 LDPC 디코더(복잡도↓·수렴↑), 이식 가능 디코더 알고리즘 C
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8903988
+- **Type**: conference
+- **Published**: 27-28 Dec.
+- **Authors**: Michaelraj Kingston ROBERTS, Parthibaraj ANGURAJ
+- **PDF**: https://ieeexplore.ieee.org/document/8903988
+- **Abstract**: The phenomenal growth in the field of wireless communication has increased the need for secure data transmission and reception over noisy channel conditions. In this context, many soft decision based LDPC decoding algorithms are considered as a prime front runner for meeting the requirements of good error rate performance with minimal decoding complexity. This paper presents a reduced complexity decoding algorithm based on an improved offset approximation. The results of this work is analyzed through numerical simulations in terms of error rate performance and convergence speed. The experimental results demonstrate that the proposed scheme attains enhanced decoding stability with a faster rate of convergence without enhancing the computational complexity.
+
+## Design and Evaluation of Information Bottleneck LDPC Decoders for Software Defined Radios
+
+- **Status**: ✅
+- **Reason**: Information Bottleneck LUT 기반 메시지패싱 디코더(양자화 인덱스만, BP 근접) — NAND LLR 양자화/저복잡 디코더(C/D)로 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8631719
+- **Type**: conference
+- **Published**: 17-19 Dec.
+- **Authors**: Jan Lewandowsky, Gerhard Bauch, Matthias Tschauner +1
+- **PDF**: https://ieeexplore.ieee.org/document/8631719
+- **Abstract**: The Information Bottleneck method allows to construct information-optimum message passing decoders for low-density parity-check codes. In such decoders lookup tables replace the classical node operations of the variable and the check nodes. These lookup tables are designed using the Information Bottleneck principle of maximizing the relevant information. Unlike state-of-the-art decoders which use real valued log-likelihood ratios for decoding, the considered decoders do not process any real values, but only quantization indices. Nevertheless, they have performance extremely close to belief propagation decoding. Since hardware representation of unsigned integers is efficient and lookup table implementations have low complexity, it is reasonable to assume that the designed decoders offer advantages over their conventional counterparts in practice. In this paper, we evaluate, quantify and discuss these advantages in a practical experiment. Our focus lies on a software defined radio application, where the channel decoder is implemented on a digital signal processor. We present several implementations of the considered decoders and compare them with state-of-the-art decoders. Our results show considerable gains of the Information Bottleneck decoders in terms of bit error rate performance and net decoding throughput.
+
+## Construction of Adaptive Short LDPC Codes for Distributed Transmit Beamforming
+
+- **Status**: ✅
+- **Reason**: 가변 부호율·블록길이 적응형 short LDPC 코드 구성 — 바이너리 유한길이 코드설계(E) 이식 가능, 애매하나 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8631749
+- **Type**: conference
+- **Published**: 17-19 Dec.
+- **Authors**: Ismail Shakeel, Ishtiaq Ahmad, Hajime Suzuki
+- **PDF**: https://ieeexplore.ieee.org/document/8631749
+- **Abstract**: One of the challenges often faced with wireless communication systems is its limited range and data-rate. Distributed Transmit Beamforming (DTB) techniques are being developed to address these two issues to provide reliable connectivity from power-limited distributed users. This paper proposes an adaptive Low Density Parity Check (LDPC) coding scheme for the DTB system. The proposed scheme constructs powerful LDPC codes with varying code-rates and block-lengths. This feature of the proposed scheme allows the DTB system to optimise its system resources, improve throughput and communicate reliably under large variation of different channel environments. The performance of some of the codes constructed using the proposed scheme is evaluated and compared with the uncoded and other coded-DTB systems. The results obtained show large gains over the compared systems. The results also show that coding applied to the DTB system drastically reduces the minimum number of distributed transmit nodes required to achieve a target error-rate with the same energy per information bit to noise power spectral density (Eb/N0).
+
+## Modified Scaled Min Sum LDPC Decoder for DVB-S2/S2X/T2
+
+- **Status**: ✅
+- **Reason**: NMSA+OMSA 결합 modified scaled min-sum 디코더+layered FPGA 아키텍처 — 카테고리 C/D 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8704096
+- **Type**: conference
+- **Published**: 16-19 Dec.
+- **Authors**: Fady Tadros, Saleh Eisa, Hanady H. Issa +1
+- **PDF**: https://ieeexplore.ieee.org/document/8704096
+- **Abstract**: Min sum algorithm (MSA) is widely used for decoding Low Density Parity Check (LDPC) codes in many modern Digital Video Broadcasting (DVB) as a simplification for Sum Product Algorithm (SPA) which greatly reduce the implementation complexity. This paper presents a design of modified variable scaling min sum LDPC decoding algorithm for DVB-S2/S2X/T2. The proposed design is a combination between the variable Normalized Min Sum Algorithm (NMSA) and the Offset Min Sum Algorithm (OMSA) which provides a trade-off between decoding complexity and error correcting performance. It improves the use of the Min Sum Algorithm (MSA) by 39%. A proposal for how to implement the proposed algorithm using FPGA is also introduced. The structure used is partially parallel layered decoder architecture.
+
+## Access Characteristic Guided Read and Write Regulation on Flash Based Storage Systems
+
+- **Status**: ✅
+- **Reason**: NAND 플래시 직접(카테고리 A 인접): 프로그램 임계전압 조절로 read/write 비용·수명 제어; ECC 직접 아니나 NAND 컨트롤러·임계전압 관련이라 Phase 3 재검토 위해 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8362696
+- **Type**: journal
+- **Published**: 1 Dec. 201
+- **Authors**: Qiao Li, Liang Shi, Congming Gao +2
+- **PDF**: https://ieeexplore.ieee.org/document/8362696
+- **Abstract**: NAND flash memory is now used in various storage systems, such as embedded systems, personal computers, and web servers. The developments in bit density and technology scaling have reduced its price, but worsen the reliability, leading to shortened lifetime and degraded access performance. This paper proposes to exploit access characteristics of workloads to improve flash performance and lifetime. The basic idea is to regulate the read and write operations based on the identified access characteristics. First, an access cost model is presented, which indicates a tradeoff between read and write time cost on NAND flash memory. Based on the access characteristics of workloads, read-only pages will be written with high cost so that they can be read with low cost, and write-only pages will be written with low cost. Second, the tradeoff between read cost and flash wearing is exploited for lifetime improvement. The write requests on write-only data are processed with reduced wearing by regulating the program threshold voltage. Finally, as these approaches apply different write operations on write-only data for performance and lifetime improvement respectively, a combined approach is proposed to satisfy both goals. Simulation results show that the proposed approaches can improve performance and lifetime significantly with negligible overhead.

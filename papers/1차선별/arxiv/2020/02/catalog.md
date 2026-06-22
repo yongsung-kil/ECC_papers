@@ -1,0 +1,14 @@
+# arXiv — 2020-02 (1차선별 통과)
+
+
+## Protograph-Based Decoding of LDPC Codes with Hamming Weight Amplifiers
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 기반 MP 디코딩 + 터보형 메시지교환 디코더, ternary message passing/DE 분석 — 바이너리 LDPC BP에 이식 가능한 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2002.02696v1
+- **Type**: preprint
+- **Published**: 2020-02-07
+- **Authors**: Hannes Bartz, Emna Ben Yacoub, Lorenza Bertarelli +1
+- **PDF**: https://arxiv.org/pdf/2002.02696v1
+- **Abstract**: A new protograph-based framework for message passing (MP) decoding of low density parity-check (LDPC) codes with Hamming weight amplifiers (HWAs), which are used e.g. in the NIST post-quantum crypto candidate LEDAcrypt, is proposed. The scheme exploits the correlations in the error patterns introduced by the HWA using a turbo-like decoding approach where messages between the decoders for the outer code given by the HWA and the inner LDPC code are exchanged. Decoding thresholds for the proposed scheme are computed using density evolution (DE) analysis for belief propagation (BP) and ternary message passing (TMP) decoding and compared to existing decoding approaches. The proposed scheme improves upon the basic approach of decoding LDPC code from the amplified error and has a similar performance as decoding the corresponding moderate-density parity-check (MDPC) code but with a significantly lower computational complexity.

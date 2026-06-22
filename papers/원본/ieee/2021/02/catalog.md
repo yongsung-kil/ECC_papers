@@ -1,0 +1,189 @@
+# IEEE Xplore — 2021-02
+
+
+## Design of High-Performance and Area-Efficient Decoder for 5G LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 5G LDPC용 저복잡도 check-node update + column degree adaptation + 디코더 아키텍처(layer merging 등) — C/D 이식 가능한 신규 디코더·HW 기법
+- **ID**: ieee:9275343
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Hangxuan Cui, Fakhreddine Ghaffari, Khoa Le +3
+- **PDF**: https://ieeexplore.ieee.org/document/9275343
+- **Abstract**: Low-density parity-check (LDPC) code as a very promising error-correction code has been adopted as the channel coding scheme in the fifth-generation (5G) new radio. However, it is very challenging to design a high-performance decoder for 5G LDPC codes because their inherent numerous degree-1 variable-nodes are very prone to be erroneous. In this article, the problem is solved gracefully by developing a low-complexity check-node update function, greatly improving the reliability of check-to-variable messages. By further incorporating the proposed column degree adaptation strategy, our decoder could offer a 0.4dB performance gain over the existing ones. In addition, this article presents an efficient 5G LDPC decoder architecture. Benefiting the specific structure of 5G LDPC codes, layer merging, split storage method, and selective-shift structure are introduced to facilitate a significant reduction of decoding delay and area consumption. Implementation result on 90-nm CMOS technology demonstrates that the proposed decoder architecture yields an impressive improvement in throughput-to-area ratio, achieving up to 173.3% compared to conventional design.
+
+## Decoding of NB-LDPC Codes Over Subfields
+
+- **Status**: ❌
+- **Reason**: 비이진(NB-LDPC) GF(q) 부호 디코딩 — 판단절차 0에 따라 즉시 제외(바이너리 LDPC만 포함)
+- **ID**: ieee:9249036
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Viduranga Bandara Wijekoon, Emanuele Viterbo, Yi Hong
+- **PDF**: https://ieeexplore.ieee.org/document/9249036
+- **Abstract**: Non-binary low-density parity-check (NB-LDPC) codes can offer promising performance advantages but suffer from high decoding complexity. To tackle this challenge, in this paper, we consider NB-LDPC codes over finite fields as codes over subfields as a means of reducing decoding complexity. In particular, our approach is based on a novel method of expanding a non-binary Tanner graph over a finite field into a graph over a subfield. This approach offers several decoding strategies for a single NB-LDPC code, with varying levels of performance-complexity trade-offs. Simulation results demonstrate that in a majority of cases, performance loss is minimal when compared with the complexity gains.
+
+## Machine Learning for LLR Estimation in Flash Memory With LDPC Codes
+
+- **Status**: ✅
+- **Reason**: NAND 플래시 LDPC LLR 추정에 신경망(ML) 적용 — A(NAND 직접)+C(이식 가능 디코더 보조 기법), 소수 read에서 LLR 정확도 향상 신규 기법
+- **ID**: ieee:9169701
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Magnus Sandell, Amr Ismail
+- **PDF**: https://ieeexplore.ieee.org/document/9169701
+- **Abstract**: As the density of flash memory is increasing to improve storage capacity, it also becomes more vulnerable to reading errors. Hence it is common practice to employ error-correcting codes, such as low-density parity check (LDPC) codes. To exploit the error-correcting capability of these codes, soft input must be provided to the decoder. This means that the flash memory controller needs to be able to provide reliability values, which is usually obtained through multiple `soft' reads of the cells in the form of log-likelihood ratios (LLR). However finding these reliabilities with high accuracy is not easy with very few reads. In this brief we present a novel approach to estimate the LLRs based on a previous idea by Sharon et al. for regular LDPC codes. We present a low-complexity solution using machine learning and also an extension to irregular LDPC codes. A neural network is trained with offline data (simulated or measured) for a wide range of operating conditions and can then be applied to flash memory readings. By simulations we show that this provides good performance with only a small loss compared with genie-aided LLRs.
+
+## A Study on AM–FM Combined Detection for Magnetic Recording Using STO Reading
+
+- **Status**: ❌
+- **Reason**: MAMR/STO 자기기록 AM-FM 검출 특이 응용; LDPC는 부수, NAND로 떼어낼 디코더/HW/코드설계 기여 없음
+- **ID**: ieee:9149895
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Y. Nakamura, K. Masuda, M. Nishikawa +1
+- **PDF**: https://ieeexplore.ieee.org/document/9149895
+- **Abstract**: A 3-D magnetic recording using microwave-assisted magnetic recording (MAMR) and a spin-torque oscillator (STO) as a reading sensor has been proposed as a candidate for the prospective recording technologies. In the STO reading system, the temporal magnetization dynamics of the STO vary not only in amplitude but also in frequency, depending on the recorded pattern. Therefore, we have constructed the STO signal model which considers both amplitude and frequency fluctuations to develop a combined signal processing using the detection of amplitude and frequency fluctuations. Furthermore, we have applied the STO signal model to the low-density parity-check (LDPC) coding and iterative decoding system with the detectors for amplitude modulation (AM) and frequency modulation (FM) and have proposed the AM-FM combined detection. Then, we have evaluated the bit error rate (BER) performances by computer simulation. The results show that the system with AM-FM combined detection improves the performance of the LDPC coding and iterative decoding system, which achieves “no errors” at the carrier-to-noise ratio for system noise CNRS = 15.9$ dB, whereas the AM and FM detections require CNRS = 21.2 and 17.2 dB.
+
+## Flexible Multilevel Coding With Concatenated Polar-Staircase Codes for M-QAM
+
+- **Status**: ❌
+- **Reason**: Polar-Staircase concatenated MLC/coded modulation(M-QAM)로 LDPC 부호·디코더 기여 없음
+- **ID**: ieee:9260206
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Tayyab Mehmood, Metodi Plamenov Yankov, Shajeel Iqbal +1
+- **PDF**: https://ieeexplore.ieee.org/document/9260206
+- **Abstract**: In this work, a multilevel coding (MLC) based coded modulation scheme with two degrees of freedom in rate flexibility is proposed and compared with a bit-interleaved coded modulation (BICM) scheme from a performance versus complexity perspective. The proposed MLC scheme is based on a rate flexible inner soft-decision polar code and utilizes an outer hard-decision staircase code structure as in the 400ZR concatenated forward error-correcting code. The performance of the MLC scheme is investigated for a range of inner code lengths, inner decoder list sizes, and signaling with 16 and 64 quadrature amplitude modulation, respectively. The MLC is designed such that a portion of the staircase encoded bits can bypass the inner code. The number of required inner soft-decision decoders can thus be reduced, thereby saving computational complexity. The proposed MLC scheme simultaneously offers up to a 53.7% reduction in the number of inner decoders and up to 0.55 dB of performance improvement when compared with the similar BICM approach.
+
+## Improvement of Iterative Decoding With LLR Modulator by Neural Network Using Magnetic Transition Information in SMR System
+
+- **Status**: ✅
+- **Reason**: LDPC 반복디코딩에서 신경망 LLR 모듈레이터 — C(이식 가능 디코더/NN 디코더). 자기기록이지만 LLR/NN 기법 이식 가능
+- **ID**: ieee:9146935
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: M. Nishikawa, Y. Nakamura, Y. Kanai +2
+- **PDF**: https://ieeexplore.ieee.org/document/9146935
+- **Abstract**: We have previously focused on a log-likelihood ratio (LLR) computed as the decoding reliability by a posteriori probability (APP) decoder on the low-density parity-check (LDPC) coding and iterative decoding system for the shingled magnetic recording (SMR). Then, we clarified that the LLR modulator applying a neural network realizes an effective iterative decoding. In this article, we propose a new neural network LLR modulator considering magnetic transition information obtained from LLRs to reduce the influence of intersymbol interferences (ISIs).
+
+## A Configurable Successive-Cancellation List Polar Decoder Using Split-Tree Architecture
+
+- **Status**: ❌
+- **Reason**: Polar 코드 SCL 디코더 HW; LDPC 아님, NAND LDPC에 이식할 기법 아님
+- **ID**: ieee:9144240
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Yaoyu Tao, Sung-Gun Cho, Zhengya Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/9144240
+- **Abstract**: Polar codes are capacity-achieving channel codes and they have recently been adopted for fifth-generation (5G) enhanced mobile broadband (eMBB) control channels. Using successive cancellation list (SCL) decoding, the error-correction performance of polar codes can surpass state-of-the-art codes of a comparable length. However, the sequential SC decoding incurs a long latency, and list decoding requires complex tracking of candidates. We present a split-tree SCL decoder that works by dividing a polar code's decoding tree to sub-trees following a split-tree decoding algorithm. The sub-trees are decoded in parallel by smaller sub-decoders that reconcile their decisions in every decoding stage. The split-tree list decoder architecture improves the throughput and latency proportionally to the split factor. By exploiting under-utilized hardware resources, we apply frame interleaving to further increase throughput and employ dynamic clock gating to reduce energy. The results are demonstrated in a 0.64-mm2 40-nm test chip that implements a split-4, list-2, eight-frame-interleaved decoding architecture. The chip supports configurable code lengths up to 1024 bit and variable code rates. At 0.9 V and room temperature, the chip achieves 3.25 Gb/s with 42.8-mW power, or 13.2 pJ/b, and demonstrates competitive error-correction performance.
+
+## PHY Abstraction Techniques for V2X Enabling Technologies: Modeling and Analysis
+
+- **Status**: ❌
+- **Reason**: V2X PHY abstraction 무선 링크 품질 모델링, LDPC 무관하며 떼어낼 ECC 기법 없음
+- **ID**: ieee:9332271
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Waqar Anwar, Sourav Dev, Atul Kumar +2
+- **PDF**: https://ieeexplore.ieee.org/document/9332271
+- **Abstract**: IEEE 802.11p and LTE-V2X are the current wireless standards of interest to enable connected and autonomous driving. The specification for their follow up generations, i.e., IEEE 802.11bd and NR-V2X are being developed and expected to be completed soon. To evaluate and compare the performance of these technologies, system-level studies are required to be carried out for various channel conditions and reliability requirements. However, these studies are time-intensive and require highly complex computations, if they are performed using link-level simulators. Therefore, the physical layer performance is usually abstracted using a link quality model, also known as Physical layer abstraction (PLA). For this purpose, we present novel PLA techniques to model different fading and interference effects for considered technologies. Further, we compare the performance of PLA techniques in terms of estimation accuracy against physical layer simulations. The results show that the estimated packet error rate (PER) by proposed PLA methods are close to the results obtained through physical layer simulations. Besides, we compare the performance of all considered technologies (i.e., IEEE 802.11p, LTE-V2X, IEEE 802.11bd, and NR-V2X) in terms of data rates, latency, and reliability. The results indicate that NR-V2X is superior in terms of average data rates compared to other technologies. In contrast, IEEE 802.11bd has lower transmission latency and higher reliability compared to other technologies.
+
+## SCMA System Design With Index Modulation via Codebook Assignment
+
+- **Status**: ❌
+- **Reason**: SCMA+index modulation NOMA 무선 통신 설계, MPA/LLR은 부수 언급으로 LDPC ECC 기여 없음
+- **ID**: ieee:9343752
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Ferdi Tekçe, Umut Engin Ayten, Lütfiye Durak-Ata
+- **PDF**: https://ieeexplore.ieee.org/document/9343752
+- **Abstract**: Sparse code multiple access (SCMA) is a promising non-orthogonal multiple access (NOMA) scheme for massive machine-type communications for 5G-and-beyond communication systems. Innovative use of orthogonal frequency division multiplexing with index modulation (OFDM-IM) takes advantage of using tone indices in data transmission. In this study, we propose a novel multiplexing and multiple access scheme, namely SCMA based on OFDM-IM (SCMA-IM). SCMA-IM method can be implemented in uplink NOMA systems in an efficient way with similar computational complexity as SCMA. In this method constellation differences and diversity are obtained via SCMA codebooks (CBs) and the employment of CBs is transferred to index modulation (IM). Performance improvement is achieved via CBs so that the number of data bits carried by indices increases more than one bit with different constellations, and also with the number of CBs assigned. In order to determine the indices used in IM, the receiver structure is simplified by the message passing algorithm and log-likelihood ratio detection process used in SCMA receivers without indexing the receiver. Thus, a new NOMA scheme is obtained by coding with IM. Bit error rate performance of the system is studied for 150% and 200% overloading factors.
+
+## Optimizing Lifetime Capacity and Read Performance of Bit-Alterable 3-D NAND Flash
+
+- **Status**: ✅
+- **Reason**: 3D NAND 플래시 비트레벨 rewrite 오류제거(BER) 기법 — A(NAND 직접). LDPC ECC 아니지만 NAND 직접 관련으로 살림(Phase3 재검토)
+- **ID**: ieee:9104673
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Shuo-Han Chen, Ming-Chang Yang, Yuan-Hao Chang
+- **PDF**: https://ieeexplore.ieee.org/document/9104673
+- **Abstract**: With the technology advance of bit-alterable 3-D NAND flash, bit-level program and erase operations have been realized and provide the possibility of “bit-level rewrite.” Bit-level rewrite is predicted to be highly beneficial to the performance of the densely packed, bit-error-prone 3-D NAND flash because bit-level rewrites can remove error bits at bit-level granularity, shorten the error correction latency, and boost the read performance. Distinctly, bit-level rewrite can curtail the lifetime expense of refresh operations via correcting the error bit stored in the individual flash cell directly without a full-page rewrite, which is employed by previous refresh techniques. However, because bit-level rewrite is predicted to have similar latency and wearing as conventional full-page rewrites, the throughput of bit-level rewrites needs to be examined to avoid low rewrite efficiency. This observation inspires us to investigate and propose the bit-level error removal (BER) scheme to utilize the bit-level rewrites for optimizing both the read performance and lifetime capacity in a most-efficient way. The experimental results are encouraging and showed that the read performance can be improved by an average of 25.22% with 40.39% reduction of lifetime expense.
+
+## On Polar Coding for Side Information Channels
+
+- **Status**: ❌
+- **Reason**: Polar 코드 + Gelfand-Pinsker/소스코딩(WOM) 기반 SCL 인코딩, LDPC 기법 아님이며 떼어낼 LDPC ECC 기여 없음
+- **ID**: ieee:9247135
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Barak Beilin, David Burshtein
+- **PDF**: https://ieeexplore.ieee.org/document/9247135
+- **Abstract**: We propose a successive cancellation list (SCL) encoding and decoding scheme for the Gelfand Pinsker (GP) problem based on the known nested polar coding scheme. It applies SCL encoding for the source coding part, and SCL decoding with a properly defined CRC for the channel coding part. The scheme shows improved performance compared to the existing method. A known issue with nested polar codes for binary dirty paper is the existence of frozen channel code bits that are not frozen in the source code. These bits need to be retransmitted in a second phase of the scheme, thus reducing the rate and increasing the required blocklength. We provide an improved bound on the size of this set, and on its scaling with respect to the blocklength, when the Bhattacharyya parameter of the test channel used for source coding is sufficiently large, or the Bhattacharyya parameter of the channel seen at the decoder is sufficiently small. The result is formulated for an arbitrary binary-input memoryless GP problem, since unlike the previous results, it does not require degradedness of the two channels mentioned above. Finally, we present simulation results for binary dirty paper and noisy write once memory codes.
+
+## Demonstration of 108 Gb/s Duo-Binary PAM-8 Transmission and the Probabilistic Modeling of DB-PAM-M BER
+
+- **Status**: ❌
+- **Reason**: 광 PAM-8 전송 실험 + BER 확률모델, LDPC-FEC는 단순 threshold 언급(부수)으로 떼어낼 기법 없음
+- **ID**: ieee:9335038
+- **Type**: journal
+- **Published**: Feb. 2021
+- **Authors**: Md Ghulam Saber, Ramón Gutiérrez-Castrejón, Zhenping Xing +7
+- **PDF**: https://ieeexplore.ieee.org/document/9335038
+- **Abstract**: We report 108 Gb/s Duo-Binary PAM-8 (DB-PAM-8) transmission using direct-detection aided by Volterra equalizer. The bit-error-rate (BER) performance of the DB-PAM-8 signal has been evaluated through error counting by varying the bit rate, received optical power, and reach. The experimental results suggest that up to 108, 102, and 84 Gb/s signals can be propagated in back-to-back (B2B), and over 10, and 20 km of standard single-mode fiber (SMF), respectively, below the low-density parity-check forward error correction (LDPC-FEC) threshold. Furthermore, we derive a probabilistic model of the BER for multilevel DB-PAM-M signaling that is verified using our measurements. The model of this important performance metric turned out to be accurate enough, especially at low BER values, where its use is more convenient.
+
+## Performance Analysis of Mixed MIMO RF/FSO DF Relaying Based on Globally Coupled Low Density Parity Check (GC-LDPC) Codes
+
+- **Status**: ❌
+- **Reason**: MIMO RF/FSO 릴레이에 GC-LDPC를 베이스라인으로 적용한 성능분석 — LDPC가 부수 사용, 떼어낼 새 디코더·구성 기법 없음.
+- **ID**: ieee:9370871
+- **Type**: conference
+- **Published**: 7-10 Feb. 
+- **Authors**: Ibrahima Gueye, Idy Diop, Ibra Dioum +4
+- **PDF**: https://ieeexplore.ieee.org/document/9370871
+- **Abstract**: In this work, we analyze the performance of the use of error correcting codes in particular the LDPC codes with global coupling (GC-LDPC) in a double-hop relay system composed of links with multiple inputs and multiple outputs at radio frequency / free space optics (MIMO-RF/FSO). A multiantenna listener listens to the information by decoding the signals received from the source node. In addition, to decode the signals we use two-phase local-global decoding. To eliminate interference in the first hop we use the interference alignment technique (IA) we also assume that the source-relay link undergoes Rayleigh fading, and that the relay-destination link is affected by the degradations of the channel optics, including path loss, atmospheric turbulence, and pointing errors. Using DF relay technology, mixed MIMO-RF/FSO systems combine the advantages of RF and FSO communication technologies. The use of mixed MIMO-RF/FSO cooperative transmission systems can improve network reliability and transmission. Results demonstrate improved performance of MIMO-RF/FSO DF cooperative relay system based on GC-LDPC codes with multiple antennas compared to MIMO-RF/FSO systems without the use of GC-LDPC codes, but also to systems SISO (Single-Input Single-Output) RF-FSO DF proposed in the existing literature.
+
+## A High Throughput and Flexible Rate 5G NR LDPC Encoder on a Single GPU
+
+- **Status**: ❌
+- **Reason**: 5G NR LDPC 인코더 GPU 병렬 구현 — 표준 5G 인코딩의 GPU 가속(시뮬레이션 플랫폼용), NAND 디코더에 이식할 새 ECC 기여 없음.
+- **ID**: ieee:9370366
+- **Type**: conference
+- **Published**: 7-10 Feb. 
+- **Authors**: Shixin Liao, Yueying Zhan, Ziyuan Shi +1
+- **PDF**: https://ieeexplore.ieee.org/document/9370366
+- **Abstract**: In order to build a high performance low-density parity-check (LDPC) communication link simulation platform, high speed LDPC encoding for information sequence is required. In this paper, a high and flexible throughput LDPC encoding implementation based on a single GPU is proposed. We discuss the parallelism of the LDPC encoding algorithm employs the core parity check bits and single diagonal parity check bits for the fifth generation new ratio. We implement the parallel LDPC encoder on CUDA platform. The experimental results show that our LDPC encoding module achieves a 38-62Gbps throughput for the rate from 1/2 to 8/9 on a single GPU. The results also demonstrate that parallel simulation tasks based on GPUs can achieve a good trade-off between performance and cost.
+
+## Performance Analysis of Iterative minsum Message Passing Decoding Algorithm for 5G NR LDPC codes
+
+- **Status**: ❌
+- **Reason**: 5G NR LDPC에 표준 min-sum message passing 그대로 적용한 성능분석 — 새 기여 없는 표준 기법 재사용
+- **ID**: ieee:9388463
+- **Type**: conference
+- **Published**: 4-6 Feb. 2
+- **Authors**: P. Vigneswari, S. Sivakumari
+- **PDF**: https://ieeexplore.ieee.org/document/9388463
+- **Abstract**: Day by day the internet traffic is increasing rapidly. Challenges to improve these internet traffic requirements leads to evolution of 5G NR LDPC (New Radio Low Density Parity Check) codes which provides high coding gain and energy efficiency. BER Vs Eb/No dB curve defines the energy efficiency and coding gain of the any error correcting codes. LDPC codes which are adopted by 5G Standard are called 5G NR LDPC codes.In the design of the decoder,Message Passing Approach reduces the decoding complexity due to the sparsity of the parity check matrix. An efficient decoding algorithm is the key to the successful code. In this paper an iterative minsum approximation message passing decoding algorithm has been implemented for both BG1 and BG2. Results show that the coding gain can be improved up to 9dB.
+
+## VLSI Implementation of Error Detection and Correction Codes for Space Engineering
+
+- **Status**: ❌
+- **Reason**: 우주용 2D divide-symbol XOR 기반 ECC — LDPC 아님, 이식 가능한 LDPC 기법 없음
+- **ID**: ieee:9388477
+- **Type**: conference
+- **Published**: 4-6 Feb. 2
+- **Authors**: R. Jenila, C. Supraja, C. Kanmani Pappa +1
+- **PDF**: https://ieeexplore.ieee.org/document/9388477
+- **Abstract**: On behalf of technology scaling, on-chip memories in a die undergoes bit errors because of single events or multiple cell upsets by the ecological factors such as cosmic radiation, alpha, neutron particles or due to maximum temperature in space, leads to data corruption. Error detection and correction techniques (ECC) recognize and rectify the corrupted data over communication channel. In this paper, an advanced error correction 2-dimensional code based on divide-symbol is proposed to weaken radiation-induced MCUs in memory for space applications. For encoding data bits, diagonal bits, parity bits and check bits were analyzed by XOR operation. To recover the data, again XOR operation was performed between the encoded bits and the recalculated encoded bits. After analyzing, verification, selection and correction process takes place. The proposed scheme was simulated and synthesized using Xilinx Vivado implemented in Verilog HDL. Compared with the well known existing methods, this encoding-decoding process consumes low power and occupies minimum area and delay.
+
+## Secret key extraction in direct reconciliation CV-QKD systems
+
+- **Status**: ❌
+- **Reason**: CV-QKD 정보조정(reconciliation), 표준 LDPC+SPA 그대로 사용, 채널 ECC 아님·신규 기법 없음
+- **ID**: ieee:9435567
+- **Type**: conference
+- **Published**: 11-12 Feb.
+- **Authors**: Margarida Almeida, Margarida Facão, Nelson J. Muga +2
+- **PDF**: https://ieeexplore.ieee.org/document/9435567
+- **Abstract**: Quantum Key Distribution (QKD) is, nowadays, the dominant practical application in the quantum technologies field. Nevertheless, extracting secure keys from a physical implementation of a QKD system remains a complicated procedure. In this paper, post-processing algorithms were implemented to extract secret keys from a Continuous-Variable QKD (CV-QKD) system. The Discrete Modulated Four State CV-QKD protocol was considered due to lower complexity in the reconciliation procedure. The secret keys were extracted considering Maximum-Likelihood Estimators (MLEs) for parameter estimation, Iterative Low-Density Parity Check (LDPC) codes complemented with the Sum-Product Algorithm and error groups iterative reconciliation for information reconciliation, and the Toeplitz matrix as the universal hash function for privacy amplification. The post-processing algorithms were applied to extract secret keys from a simulated implementation of the Discrete Modulated Four State CV-QKD protocol, with double homodyne detection.

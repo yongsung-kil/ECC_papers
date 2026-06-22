@@ -1,0 +1,266 @@
+# IEEE Xplore — 2019-06 (1차선별 통과)
+
+
+## Constructions of Type-II QC-LDPC Codes With Girth Eight from Sidon Sequence
+
+- **Status**: ✅
+- **Reason**: Type-II QC-LDPC girth-8 신규 대수적 구성(Sidon sequence) — 바이너리 QC-LDPC 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8651338
+- **Type**: journal
+- **Published**: June 2019
+- **Authors**: Guohua Zhang, Yulin Hu, Yi Fang +1
+- **PDF**: https://ieeexplore.ieee.org/document/8651338
+- **Abstract**: In this paper, we consider the constructions of type-II quasi-cyclic (QC) low-density parity-check (LDPC) codes with girth eight from a Sidon sequence. We first derive the necessary and sufficient conditions guaranteeing a girth-eight type-II QC-LDPC code. By combining these conditions with the concept of the Sidon sequence, three classes of type-II QC-LDPC codes are subsequently proposed with girth eight. To the best of our knowledge, the second and the third classes we proposed are the first series of systematic and algebraic constructions for the girth-eight type-II QC-LDPC codes that have rates being greater than a half and, at the same time, have distance upper bounds being not limited to 12. Via simulations, we show the promising performance of the proposed type-II QC-LDPC codes with girth eight. In addition, a set of general bounds and explicit/random constructions without using a Sidon sequence are also presented for the type-II QC-LDPC codes with girth six or eight. We observe that the proposed codes perform better than or equally well as the random QC-LDPC codes from PEG and quadr.-congr. methods, while the novel codes possess both highly structured parity-check matrices and very flexible choices in circulant size.
+
+## Quasi-Cyclic Protograph-Based Raptor-Like LDPC Codes for Short Block-Lengths
+
+- **Status**: ✅
+- **Reason**: QC PBRL LDPC 단블록 신규 설계법(최소거리 상한 최대화, 복잡도 선형화) — 바이너리 QC-LDPC 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8626506
+- **Type**: journal
+- **Published**: June 2019
+- **Authors**: Sudarsan V. S. Ranganathan, Dariush Divsalar, Richard D. Wesel
+- **PDF**: https://ieeexplore.ieee.org/document/8626506
+- **Abstract**: Protograph-based Raptor-like low-density parity-check codes (PBRL codes) are a family of easily encodable rate-compatible low-density parity-check (LDPC) codes. PBRL codes have an excellent performance across all design rates. Quasi-cyclic (QC) PBRL code families permit high-speed decoder implementations. PBRL codes designed thus far, for both long and short block-lengths, have been based on optimizing the iterative decoding threshold of the protograph of the PBRL family at various design rates. This paper introduces a design method to obtain better QC PBRL code families at short block-lengths (of a few hundred bits) for low frame error rate (FER) requirements. We first select a protomatrix for the highest design rate. To add a new row to lower the rate, we keep all the previously obtained rows of the PBRL protomatrix fixed and select the new row that maximizes an upper bound on the minimum distance of any QC-LDPC code that can be obtained from the protomatrix. The new QC PBRL code families outperform the original PBRL codes at short block-lengths by providing a significantly better low-FER performance. The standard approach to computing the aforementioned upper bounds requires complexity that grows exponentially with the size of the protomatrix. However, we show that the structure of the PBRL protomatrix lets us obtain the upper bounds with complexity that grows only linearly with the size of the PBRL protomatrix. Using the complexity reduction results, we also establish an equivalence between the exhaustive search to design a new row for the PBRL protomatrix according to the new design method and an integer linear program.
+
+## On Computing the Multiplicity of Cycles in Bipartite Graphs Using the Degree Distribution and the Spectrum of the Graph
+
+- **Status**: ✅
+- **Reason**: 이분그래프 단주기(4/6-cycle) 다중도 계산 기법 — QC-LDPC 사이클 제거·코드설계(E)에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8626151
+- **Type**: journal
+- **Published**: June 2019
+- **Authors**: Ali Dehghan, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8626151
+- **Abstract**: Counting short cycles in bipartite graphs is a fundamental problem of interest in the analysis and design of low-density parity-check codes. The vast majority of research in this area is focused on algorithmic techniques. Most recently, Blake and Lin proposed a computational technique to count the number of cycles of length g in a bi-regular bipartite graph, where g is the girth of the graph. The information required for the computation is the node degree and the multiplicity of the nodes on both sides of the partition, as well as the eigenvalues of the adjacency matrix of the graph (graph spectrum). In this paper, the result of Blake and Lin is extended to compute the number of cycles of length g+2, ... , 2g-2, for bi-regular bipartite graphs, as well as the number of 4-cycles and 6-cycles in irregular and half-regular bipartite graphs, with g ≥ 4 and g ≥ 6, respectively.
+
+## Stopping Redundancy Hierarchy Beyond the Minimum Distance
+
+- **Status**: ✅
+- **Reason**: E: stopping set/stopping redundancy 패리티검사행렬 설계 한계 분석 — 반복디코더 실패사건, 바이너리 LDPC 코드설계 이식 가능(애매하나 살림)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8478307
+- **Type**: journal
+- **Published**: June 2019
+- **Authors**: Yauhen Yakimenka, Vitaly Skachek, Irina E. Bocharova +1
+- **PDF**: https://ieeexplore.ieee.org/document/8478307
+- **Abstract**: Stopping sets play a crucial role in failure events of iterative decoders over a binary erasure channel (BEC). The ℓth stopping redundancy is the minimum number of rows in the parity-check matrix of a code, which contains no stopping sets of size up to ℓ. In this paper, a notion of coverable stopping sets is defined. In order to achieve maximum-likelihood performance under iterative decoding over the BEC, the parity-check matrix should contain no coverable stopping sets of size ℓ, for 1 ≤ ℓ ≤ n-k, where n is the code length, k is the code dimension. By estimating the number of coverable stopping sets, we obtain upper bounds on the ℓth stopping redundancy, 1 ≤ ℓ ≤ n-k. The bounds are derived for both specific codes and code ensembles. In the range 1 ≤ ℓ ≤ d-1, for specific codes, the new bounds improve on the results in the literature. Numerical calculations are also presented.
+
+## Error Crrection for Read-hot Data in 3D-TLC NAND Flash by Read-disturb Modeled Artificial Neural Network Coupled LDPC ECC
+
+- **Status**: ✅
+- **Reason**: 3D-TLC NAND read-hot data용 ANN 결합 LDPC ECC(RDNN-LDPC) — NAND 직접 (A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8782950
+- **Type**: conference
+- **Published**: 9-10 June 
+- **Authors**: Daiki Kojima, Toshiki Nakamura, Ken Takeuchi
+- **PDF**: https://ieeexplore.ieee.org/document/8782950
+- **Abstract**: Read-disturb Modeled Artificial Neural Network Coupled LDPC ECC (RDNN-LDPC) is proposed to correct errors of read-hot data for 3D-TLC NAND flash. Conventional ANN-LDPC is optimized to correct errors of read-cold data. However, ANN-LDPC does not correct errors of read-hot data. To correct errors of read-hot data, this paper analyzes how input parameter and model change. As a result, measured results of proposed RDNN-LDPC extend acceptable read cycle of 3D-TLC NAND flash by 10-times.
+
+## Improved Min-Sum Algorithm for Raptor-Like LDPC codes in ATSC 3.0
+
+- **Status**: ✅
+- **Reason**: ATSC 3.0 raptor-like 바이너리 LDPC용 개선 min-sum(IMS) 신규 알고리즘, NMS/OMS 대비 이득 — 이식 가능 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8971896
+- **Type**: conference
+- **Published**: 5-7 June 2
+- **Authors**: Hao Ju, Yin Xu, Genning Zhang +3
+- **PDF**: https://ieeexplore.ieee.org/document/8971896
+- **Abstract**: In order to improve the performance of low-rate LDPC codes, ATSC 3.0 adopted raptor-like structure. Min-sum (MS) algorithm and improved versions can be used directly, but their performance on raptor-like LDPC codes are disappointing. In this paper, we introduce an improved min-sum(IMS) algorithm for raptor-like LDPC codes in ATSC 3.0. Simulation results of frame error rate show that the IMS algorithm not only has a noticeable gain in waterfall region over normalized min-sum (NMS) algorithm and offset min-sun (OMS) algorithm, but also has almost the same time complexity. Different from OMS algorithm, the proposed algorithm is not sensitive to the imperfect channel estimation. Meanwhile, the IMS algorithm is easier to realize than those variable factors based algorithms.
+
+## Gradient Bit-Flipping LDPC Decoder for ATSC 3.0
+
+- **Status**: ✅
+- **Reason**: Gradient Bit-Flipping(LLR 입력) 새 BF 디코더 변형으로 카테고리 C 이식 가능 디코더
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8971839
+- **Type**: conference
+- **Published**: 5-7 June 2
+- **Authors**: Fadi Jerji, Cristiano Akamine
+- **PDF**: https://ieeexplore.ieee.org/document/8971839
+- **Abstract**: This paper presents the mathematical representation and the numerical results of the Gradient Bit-Flipping Algorithm (GBF) that is derived from the Bit-Flipping Algorithm (BFA).The experimental simulation results for the proposed decoder of the Low-Density Parity-Check (LDPC) codes of ATSC 3.0 demonstrate an enhancement of up to 3.55 dB in error correction performance without an increase in the decoding complexity. The proposed decoder has the ability to decode an erroneous LDPC message in fewer iterations than the traditional BFA due to the employment of the values of the Log-Likelihood Ratio (LLR) as an input, unlike the BFA that uses binary values ignoring the channel estimation output.
+
+## Abouth Multi-Threshold Decoding of Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: LDPC multi-threshold bit-flip 디코더(동적 임계값) 신규 hard-decision 디코더 — 이식 가능 디코더(C), NAND hard-read에 적합
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8840583
+- **Type**: conference
+- **Published**: 3-7 June 2
+- **Authors**: A. A. Ovchinnikov, D. V. Ilina
+- **PDF**: https://ieeexplore.ieee.org/document/8840583
+- **Abstract**: Low-density parity-check codes are one of the most common forward error-correction techniques used in many existing and perspective standards including 5G wireless transmission standards and ultra-high-rate (400 Gbit/s and more) fiber-optic transmission standards. These codes should combine scalability of codelength from dozens to dozens of thousands bits and of coderate from low to very high with outstanding error-correcting performance when operating under severe practical limitations both from the point of view of decoding error and complexity issues. In many practical cases most widely used decoders suffer either from complexity out of system restrictions or from error performance penalties. In this paper the performance-complexity trade-off approach is considered, based on improved hard-decision decoders. Decoding of low-density parity-check codes with bit-flip algorithm is considered. The multi-threshold decoder based on the bit inversion algorithm is described using dynamically changed threshold during the decoding iterations, as well as the simplest empirical method is proposed for thresholds calculation. Simulation results in Gaussian channel with hard decision demodulation are given.
+
+## About Burst-Correction Capability of Block-Permutation LDPC Codes Ensembles
+
+- **Status**: ✅
+- **Reason**: block-permutation LDPC 앙상블의 burst 정정능력 분석 — 바이너리 LDPC 코드설계(E) 이식 가능, 애매하지만 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8840134
+- **Type**: conference
+- **Published**: 3-7 June 2
+- **Authors**: K. A. Bakay, A. A. Ovchinnikov, D.V. Ilina
+- **PDF**: https://ieeexplore.ieee.org/document/8840134
+- **Abstract**: The problem of maximal correctable error burst length estimation is considered for the probabilistic ensemble of block-permutation low-density parity-check codes. It is noted that this task has polynomial running time. For the number of probabilistic ensembles the simulations are performed showing that the correctable burst length grows linearly with the block size of the block-permutation construction, and with high probability equals to the block size minus one.
+
+## About One Algorithm for Correcting Bursts Using Block-Permutation LDPC-Codes
+
+- **Status**: ✅
+- **Reason**: block-permutation LDPC용 windowed bit-flipping 디코더 변형(burst 정정) — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8840580
+- **Type**: conference
+- **Published**: 3-7 June 2
+- **Authors**: A. M. Veresova, A. A. Ovchinnikov
+- **PDF**: https://ieeexplore.ieee.org/document/8840580
+- **Abstract**: The approaches to decoding block-permutation low-density parity-check codes in channels with memory are considered. The modification of windowed bit-flipping algorithm for bursty channels is proposed, which is guaranteed to correct bursts within the correcting capabilities of the code. The method of determining the position of bursts is proposed. The simulation results in a memory channel with a limit on the burst length are presented.
+
+## Interleaved Cyclic Group Decomposition Length Adaptive MET QC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 바이너리 QC-LDPC 코드 설계 — MET QC-LDPC 길이적응 확장기법(E), NAND ECC 구성에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8812861
+- **Type**: conference
+- **Published**: 3-6 June 2
+- **Authors**: German Svistunov, Usatyuk Vasiliy
+- **PDF**: https://ieeexplore.ieee.org/document/8812861
+- **Abstract**: We introduce quasi-cyclic extension method for performance improving of the length adaptive Multi-Edge Type (MET) Quasi-cyclic LDPC (QC-LDPC) codes below the Block Error Rate (BLER) 10-5. Proposed method allows to construct MET QC-LDPC Codes for variable code length with the modular lifting of 5G eMBB Base Graph 2. Simulation results under 50 iterations of sum-product decoding over an AWGN channel with QPSK modulation are provided. It shows near same performance for information length k <; 600 and from 0.1 - 0.3 dB gain on k > 600 compared with 5G eMBB codes.
+
+## Scheme for High-rate LDPC Codes Based on Dual–Diagonal Matrix with Girth-6
+
+- **Status**: ✅
+- **Reason**: E: dual-diagonal matrix 기반 고율 LDPC PCM 신규 구성, 4-cycle free·waterfall/error floor 개선 — 바이너리 코드 설계 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8766677
+- **Type**: conference
+- **Published**: 24-28 June
+- **Authors**: Yue Hu, Ling Zhao, Ji Li
+- **PDF**: https://ieeexplore.ieee.org/document/8766677
+- **Abstract**: This paper presents a novel scheme to construct a large class of high-rate low-density parity-check (LDPC) codes based on dual-diagonal matrix (DDM). After estimating the feasible sizes of the submatrices, we introduce two principles and two important parameters (interval and increment), based on which the parity-check matrices (PCMs) with 4-cycle free are constructed successfully. The designed PCMs can be used to generate high performance LDPC codes. Experiments confirm that the proposed scheme has better performance in waterfall and error floor region than the advanced LDPC coding methods. Our method can construct a large number of PCMs of similar decoding performance, which increases reliability and security during high speed communication.
+
+## The Probabilistic Finite Alphabet Iterative Decoder for Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: 확률적 FAID(PFAID) — 저양자화로 MS 능가하는 LDPC 디코더, HW 분석 포함 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8961256
+- **Type**: conference
+- **Published**: 23-26 June
+- **Authors**: Fakhreddine Ghaffari, Khoa Le, David Declercq
+- **PDF**: https://ieeexplore.ieee.org/document/8961256
+- **Abstract**: We propose in this paper a new approach of applying the Non-Surjective Finite Alphabet Iterative Decoder (NS-FAID) for the Low-Density Parity-Check (LDPC) decoding. Differently from the NS-FAID which applies a fixed nonlinear function by using a fixed Look-Up-Table (LUT) on the variable node messages, the proposed method, called Probabilistic FAID (PFAID), uses more than one LUT in a probabilistic way. By using the density evolution, we show that this method provides a significant improvement in performance compared to the NS-FAID and the traditional MS. The advantage of PFAID is shown by the fact that, a PFAID with low message quantization level can reach or even surpass the performance of the higher level quantization MS decoder. Furthermore, we show that PFAID can be efficiently implemented with no hardware overhead compared to Min-Sum (MS) or NS-FAID with the same message quantization level. The hardware complexity analysis and decoding simulation performance are provided as superiority evidences of PFAID over the referenced benchmarks.
+
+## EXIT Chart Analysis of Serial Window Decoding of SC-LDPC codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 윈도우 디코딩 EXIT 분석 + 직렬 스케줄로 반복수 감소 — 바이너리 이식 가능 (E/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8793416
+- **Type**: conference
+- **Published**: 23-26 June
+- **Authors**: Sirawit Khittiwitchayakul, Watid Phakphisut, Pornchai Supnithi
+- **PDF**: https://ieeexplore.ieee.org/document/8793416
+- **Abstract**: Spatially coupled low-density parity-check (SC-LDPC) codes can be decoded by a sliding window which can provide the lower complexity and latency than that of underlying LDPC block code (LDPC-BC) decoding. In this work, we propose to use an Extrinsic Information Transfer (EXIT) chart as an analysis tool for the window decoding of SC-LDPC code. Herein, the EXIT chart analysis is applied for both window decoding strategies like flooding and serial strategies. The analysis results show that the window decoding with serial strategy can converge faster than that of flooding strategy. The required numbers of decoding iteration can be reduced greatly without the performance degradations.
+
+## Capacity Enhancement of Asymmetric Multi-Level Cell (MLC) NAND Flash Memory using Write Voltage Optimization
+
+- **Status**: ✅
+- **Reason**: MLC NAND 플래시 write voltage 최적화로 채널 용량 향상 — NAND 직접 (A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8793445
+- **Type**: conference
+- **Published**: 23-26 June
+- **Authors**: Chatuporn Duangthong, Watid Phakphisut, Pornchai Supnithi
+- **PDF**: https://ieeexplore.ieee.org/document/8793445
+- **Abstract**: In NAND flash memory, the number of bits per cell is increased to enhance the storage density, however, the reliability of NAND flash memory will be degraded. The current research only focuses on the read voltage optimization and advanced error-correction codes. The investigation of the write voltages optimization is limited. Since the write voltages significantly affect the channel capacity, we propose the write voltage optimization to enhance the channel capacity of MLC NAND flash memory. The differential evolution algorithm is applied to find the optimal write voltage that provide the maximum channel capacity.
+
+## Adapting Layer RBERs Variations of 3D Flash Memories via Multi-granularity Progressive LDPC Reading
+
+- **Status**: ✅
+- **Reason**: 3D 플래시 레이어별 RBER 변동에 맞춘 multi-granularity progressive LDPC read 방법 — NAND/플래시 직접(A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8806830
+- **Type**: conference
+- **Published**: 2-6 June 2
+- **Authors**: Yajuan Du, Yao Zhou, Meng Zhang +2
+- **PDF**: https://ieeexplore.ieee.org/document/8806830
+- **Abstract**: Existing studies have uncovered that there exist significant Raw Bit Error Rates (RBERs) variations among different layers of 3D flash memories due to manufacture process variation. These RBER variations would cause significantly diversed read latencies when reading data with traditional Low-Density Parity-Check (LDPC) codes designed for planar flash memories, which induces sub-optimal read performance of flash-based Solid-State Drives (SSDs). To investigate the latency diversity, this paper first performs a preliminary experiment and observes that LDPC read levels proportional to latencies increase in diverse speeds along with data retention. Then, by exploiting the observation results, a Multi-Granularity LDPC (MG-LDPC) read method is proposed to adapt level increase speed for each layer. Five LDPC engines with varied increase granularity are designed to adapt RBER speed requirements. Finally, two implementations for MG-LDPC are applied to assign LDPC engines for each flash layer in a fixed way or dynamically according to prior read levels. Experimental results show that the proposed two implementations can reduce SSD read response time by 21% and 47% on average, respectively.
+
+## Leveraging Approximate Data for Robust FIash Storage
+
+- **Status**: ✅
+- **Reason**: 3D NAND LDPC read latency 완화 위한 approximate data 활용 데이터 조직/할당 — NAND/플래시 직접(A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8806962
+- **Type**: conference
+- **Published**: 2-6 June 2
+- **Authors**: Qiao Li, Liang Shi, Jun Yang +2
+- **PDF**: https://ieeexplore.ieee.org/document/8806962
+- **Abstract**: With the increasing bit density and adoption of 3D NAND, flash memory suffers from increased errors. To address the issue, flash devices adopt error correction codes (ECC) with strong error correction capability, like low-density parity-check (LDPC) code, to correct errors. The drawback of LDPC is that, to correct data with a high raw bit error rate (RBER), read latency will be amplified. This work proposes to address this issue with the assistance of approximate data. First, studies have been conducted and show there are ample amount of approximate data available in flash storage. Second, a novel data organization is proposed to fortify the reliability of regular data by leaving approximate data unprotected. Finally, a new data allocation strategy and modified garbage collection scheme are presented to complete the design. The experimental results show that the proposed approach can improve read performance by 30% on average comparing to current techniques.
+
+## The Best of BothWorlds: On Exploiting Bit-Alterable NAND Flash for Lifetime and Read Performance Optimization
+
+- **Status**: ✅
+- **Reason**: 비트단위 재기록 기반 NAND 에러 제거(BER) 기법, NAND/SSD 직접(A) — LDPC ECC와 결합 여지로 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8807050
+- **Type**: conference
+- **Published**: 2-6 June 2
+- **Authors**: Shuo-Han Chen, Ming-Chang Yang, Yuan-Hao Chang
+- **PDF**: https://ieeexplore.ieee.org/document/8807050
+- **Abstract**: With the emergence of bit-alterable 3D NAND flash, programming and erasing a flash cell at bit-level granularity have become a reality. Bit-level operations can benefit the high density, high bit-error-rate 3D NAND flash via realizing the “bit-level rewrite operation,” which can refresh error bits at bit-level granularity for reducing the error correction latency and improving the read performance with minimal lifetime expense. Different from existing refresh techniques, bit-level operations can lower the lifetime expense via removing error bits directly without page-based rewrites. However, since bit-level rewrites may induce a similar amount of latency as conventional page-based rewrites and thus lead to low rewrite throughput, the efficiency of bit-level rewrites should be carefully considered. Such observation motivates us to propose a bit-level error removal (BER) scheme to derive the most-efficient way of utilizing the bit-level operations for both lifetime and read performance optimization. A series of experiments was conducted to demonstrate the capability of the BER scheme with encouraging results.
+
+## An Unnoticed Property in QC-LDPC Codes to Find the Message from the Codeword in Non-Systematic Codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 생성행렬 구조로 비조직 코드워드에서 메시지 복원 XOR 회로화 - HW/코드구조 기법(D/E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8801957
+- **Type**: conference
+- **Published**: 18-21 June
+- **Authors**: Alireza Hasani, Lukasz Lopacinski, Steffen Büchner +2
+- **PDF**: https://ieeexplore.ieee.org/document/8801957
+- **Abstract**: The generator matrix of quasi-cyclic low-density parity-check (QC-LDPC) codes is not, in general, in systematic form. Therefore, finding the message corresponding to a detected codeword at the receiver is not as straightforward as it is in the case of systematic codes. In this paper, we propose two methods for finding the message from the codeword in a QC-LDPC code. The first method is a general scheme which views the problem as a set of linear equations. This method is not realizable with pure digital circuits and may be implemented by having a processor core in the design. The second method is rather an alternative scheme which makes use of a particular structure in generator matrices of QC-LDPC codes in order to find the message from a non-systematic codeword. We examine a large class of non-systematic Latin squares QC-LDPC codes and one of the IEEE 802.16e standard QC-LDPC codes, and show that they have the required structure to be usable by the algorithm. The latter method is realizable in hardware and can be implemented with a digital circuit consisting of XOR gates.
+
+## High-Throughput Dynamic Scheduling for Belief-Propagation Decoding of LDPC Codes
+
+- **Status**: ✅
+- **Reason**: C: 새 동적 스케줄링 BP 디코딩 알고리즘(RSPUR, IDS 개선) — 부호 비의존적이고 바이너리 LDPC BP에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8905289
+- **Type**: conference
+- **Published**: 12-15 June
+- **Authors**: Suipeng Xie, Xingcheng Liu
+- **PDF**: https://ieeexplore.ieee.org/document/8905289
+- **Abstract**: Low-density parity-check (LDPC) codes, usually decoded using the informed dynamic scheduling (IDS) algorithms, are well applicable to the 5th-generation communication systems (5G). However, the IDS algorithm is greedy because of the update-relayed trend. The update-relayed trend leads to the unreasonable allocation of decoding resources, which exerts a huge impact on the decoding performance. To solve this greedy problem, we proposed the decoding algorithm based on random select of check nodes with a predefined update range (RSPUR). By decoding with a narrow update range, the RSPUR algorithm effectively suppresses the update-relayed trend and allocates the decoding resources in a more rational way. Simulation results indicate that the proposed algorithm achieves excellent error-correction performance and high throughput compared to the previous IDS algorithms.
+
+## A Low Latency Decoding Algorithm for Grouping Variable Nodes on TLC NAND Flash Devices
+
+- **Status**: ✅
+- **Reason**: A: TLC NAND Flash LDPC 소프트 디코딩, VN 그룹화 저지연 디코더 알고리즘 직접 적용
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8753911
+- **Type**: conference
+- **Published**: 12-14 June
+- **Authors**: Ting Guo, Xingcheng Liu
+- **PDF**: https://ieeexplore.ieee.org/document/8753911
+- **Abstract**: The intra-cell characteristics of TLC NAND Flash memory are analyzed based on the channel model employed in this paper. In order to solve the read latency and the reliability degradation, caused by LDPC soft decision decoding and by the increase of flash storage density, respectively, a dynamic block grouping approach is proposed to divide all variable nodes (VNs) into three sub-blocks. To exploit the reliability of the VNs within the three sub-blocks, different update operations are performed in order. Moreover, the decoding latency is reduced with fewer iterations for the VNs in the most reliable sub-block, at the same time, the priority for updating of the reliable sub-block and the timely processing of the VNs with low-information have more useful information transmitted in the iterative decoding process, resulting in the improved convergency speed. In quantity, our simulation results show that the proposed algorithm improves the convergency rate by about 28.6% and reduces the average number of iterations by around 27.7%, compared with the VNBP-MP algorithm without compromising the error correction performance on the TLC NAND Flash devices.
+
+## Importance Sampling Based Software Kit for LLR BP Decoding Simulation
+
+- **Status**: ✅
+- **Reason**: LDPC error floor 추정 importance sampling 기법, QC-LDPC 대상. 유한길이/error floor 평가 도구로 이식 가능(E)—애매하여 in
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8760172
+- **Type**: conference
+- **Published**: 10-14 June
+- **Authors**: Evgeny Likhobabin, Igor Volkov, Konstantin Zavertkin +2
+- **PDF**: https://ieeexplore.ieee.org/document/8760172
+- **Abstract**: This paper outlines a method for estimation of an error floor parameters for different LDPC codes based on importance sampling technique. The traditional approach to such estimations is based on Monte Carlo technique and has high computational complexity, especially for near-optimal decoding algorithms such as logarithmic-likelihood ratio belief propagation algorithm. It was shown that the proposed method allows to significantly reduce the computational cost required for an estimation of frame error probability in the high SNR region. Results of error floor estimation are presented for three LDPC codes: Margulis (2640, 1320), two quasi cyclic codes QC (22200, 5550) and QC (22200, 7400).

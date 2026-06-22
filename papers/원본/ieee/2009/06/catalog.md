@@ -1,0 +1,739 @@
+# IEEE Xplore — 2009-06
+
+
+## Pseudocodeword Performance Analysis for LDPC Convolutional Codes
+
+- **Status**: ✅
+- **Reason**: LDPC convolutional code의 의사부호어 성능분석은 error floor/구성 분석 기법으로 SC-LDPC 설계(E)에 이식 가능
+- **ID**: ieee:4957655
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Roxana Smarandache, Ali E. Pusane, Pascal O. Vontobel +1
+- **PDF**: https://ieeexplore.ieee.org/document/4957655
+- **Abstract**: Message-passing iterative decoders for low-density parity-check (LDPC) block codes are known to be subject to decoding failures due to so-called pseudocodewords. These failures can cause the large signal-to-noise ratio (SNR) performance of message-passing iterative decoding to be worse than that predicted by the maximum-likelihood (ML) decoding union bound.
+
+## High-Throughput QC-LDPC Decoders
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 고처리량 디코더, min-sum 변형+세미병렬 FPGA 아키텍처 이식 가능(C/D)
+- **ID**: ieee:4806112
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Nan Jiang, Kewu Peng, Jian Song +2
+- **PDF**: https://ieeexplore.ieee.org/document/4806112
+- **Abstract**: High-throughput design approaches for quasi-cyclic (QC) low-density parity-check (LDPC) decoders are presented in this paper. Three novel schemes for the horizontal process in min-sum algorithm and its revisions are derived to reduce design and implementation complexity. The schemes can be directly applied for variant QC codes and easily pipelined to increase the operating frequency of the decoder. Some improvements of the semi-parallel architecture are proposed to enhance throughput performance and hardware efficiency. Employing the proposed approaches, QC-LDPC decoders for Chinese Digital Television Terrestrial Broadcasting (DTTB) standard are implemented using field programmable gate array (FPGA). As shown in the results, the proposed approaches can substantially improve the throughput performance, as well as the throughput-and-hardware tradeoff, of decoders with semi-parallel architecture.
+
+## Large Girth Non-Binary LDPC Codes Based on Finite Fields and Euclidean Geometries
+
+- **Status**: ❌
+- **Reason**: 비이진(GF(q)) LDPC 구성으로 제외 대상
+- **ID**: ieee:4840630
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Xueqin Jiang, Moon Ho Lee
+- **PDF**: https://ieeexplore.ieee.org/document/4840630
+- **Abstract**: This letter presents an approach to the construction of non-binary low-density parity-check (LDPC) codes based on alpha-multiplied circulant permutation matrices and hyperplanes of two different dimensions in Euclidean geometries. Codes constructed by this method have large girth and high binary column weight when the order of Galois field is high. Simulation results show that these codes perform very well with fast Fourier transform (FFT) based sum-product algorithm (SPA).
+
+## Upper Bound on Error Exponent of Regular LDPC Codes Transmitted Over the BEC
+
+- **Status**: ❌
+- **Reason**: BEC상 정규 LDPC 오류지수 상계=순수 이론 bound, 디코더/HW/구성으로 안 이어짐
+- **ID**: ieee:4957643
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Idan Goldenberg, David Burshtein
+- **PDF**: https://ieeexplore.ieee.org/document/4957643
+- **Abstract**: The error performance of the ensemble of typical low-definition parity-check (LDPC ) codes transmitted over the binary erasure channel (BEC) is analyzed. In the past, lower bounds on the error exponents were derived. In this paper, a probabilistic upper bound on this error exponent is derived. This bound holds with some confidence level.
+
+## A Probabilistic LDPC-Coded Fault Compensation Technique for Reliable Nanoscale Computing
+
+- **Status**: ❌
+- **Reason**: 나노스케일 연산 결함보상용 확률회로, 채널 ECC 코드/디코더/HW 이식 기법 없음
+- **ID**: ieee:4957096
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Chris Winstead, Sheryl Howard
+- **PDF**: https://ieeexplore.ieee.org/document/4957096
+- **Abstract**: A method is proposed for computing with unreliable nanoscale devices that have a high rate of transient errors. Errors are corrected using a probabilistic circuit in which device noise is leveraged as a computational asset. Example designs that achieve a low output bit error probability are presented. The effect of permanent defects is also evaluated, and transient device noise is found to be beneficial for correcting hard defects for defect rates of as high as 0.1% and transient fault rates above 1%. When compared with existing fault-tolerant methods, the sample design requires considerably fewer redundant gates to achieve reliable operation. These results predict that some degree of engineered randomness may prove to be a useful signal-processing feature in future nanoelectronic systems.
+
+## Eliminating small stopping sets in irregular low-density parity-check codes
+
+- **Status**: ✅
+- **Reason**: irregular LDPC의 small stopping set 제거 - check node 추가로 error floor 개선, 코드설계 기법 이식 가능(E)
+- **ID**: ieee:5090428
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Xiaopeng Jiao, Jianjun Mu, Jing Song +1
+- **PDF**: https://ieeexplore.ieee.org/document/5090428
+- **Abstract**: We present a novel scheme to eliminate small stopping sets in irregular low-density parity-check (LDPC) codes. By adding several new check nodes and having their edges connected to small stopping sets in the original code, the improved code decreases the number of small stopping sets efficiently. Simulation results show that the proposed scheme decreases the frame error rate (FER) significantly in the error floor region, whereas having almost the same rate as the original code.
+
+## Blind frame synchronization for error correcting codes having a sparse parity check matrix
+
+- **Status**: ❌
+- **Reason**: 블라인드 프레임 동기화 기법, 채널 ECC 디코더/코드설계가 아닌 통신 동기화 응용
+- **ID**: ieee:5089488
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Rodrigue Imad, Guillaume Sicot, Sebastien Houcke
+- **PDF**: https://ieeexplore.ieee.org/document/5089488
+- **Abstract**: We present in this letter a blind frame synchronization method based on a maximum a posteriori probability (MAP) approach. Applied to coded communication systems, this method is based on the calculation of the log-likelihood ratios (LLR) of the syndrome obtained according to the parity check matrix of the code. After presenting the proposed method, we compare it to an existing blind synchronization method previously introduced. Simulation results show that the proposed method outperforms the existing one and presents good performance when applied to codes having a sparse parity check matrix such as low density parity check (LDPC) codes and convolutional codes.
+
+## Error rate estimation of low-density parity-check codes on binary symmetric channels using cycle enumeration
+
+- **Status**: ✅
+- **Reason**: Tanner 그래프 짧은 사이클 열거로 BSC 하 LDPC error floor/FER 추정, 코드설계·사이클제거 기법(E)으로 이식 가능
+- **ID**: ieee:5089484
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Hua Xiao, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/5089484
+- **Abstract**: The performance of low-density parity-check (LDPC) codes decoded by hard-decision iterative decoding algorithms can be accurately estimated if the weight J and the number |EJ| of the smallest error patterns that cannot be corrected by the decoder are known. To obtain J and |EJ|, one would need to perform the direct enumeration of error patterns with weight i les J. The complexity of enumeration increases exponentially with J, essentially as nJ, where n is the code block length. This limits the application of direct enumeration to codes with small n and J. In this letter, we approximate J and |EJ | by enumerating and testing the error patterns that are subsets of short cycles in the code's Tanner graph. This reduces the computational complexity by several orders of magnitude compared to direct enumeration, making it possible to estimate the error rates for almost any practical LDPC code. To obtain the error rate estimates, we propose an algorithm that progressively improves the estimates as larger cycles are enumerated. Through a number of examples, we demonstrate that the proposed method can accurately estimate both the bit error rate (BER) and the frame error rate (FER) of regular and irregular LDPC codes decoded by a variety of hard-decision iterative decoding algorithms.
+
+## Low-floor decoders for LDPC codes
+
+- **Status**: ✅
+- **Reason**: trapping set 식별 기반 low-floor SPA 디코더 3종(bi-mode/bit-pinning/generalized-LDPC), NAND LDPC 디코더에 이식 가능(C)
+- **ID**: ieee:5089505
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Yang Han, William E. Ryan
+- **PDF**: https://ieeexplore.ieee.org/document/5089505
+- **Abstract**: One of the most significant impediments to the use of LDPC codes in many communication and storage systems is the error-rate floor phenomenon associated with their iterative decoders. The error floor has been attributed to certain subgraphs of an LDPC code's Tanner graph induced by so-called trapping sets. We show in this paper that once we identify the trapping sets of an LDPC code of interest, a sum-product algorithm (SPA) decoder can be custom-designed to yield floors that are orders of magnitude lower than floors of the the conventional SPA decoder. We present three classes of such decoders: (1) a bi-mode decoder, (2) a bit-pinning decoder which utilizes one or more outer algebraic codes, and (3) three generalized-LDPC decoders. We demonstrate the effectiveness of these decoders for two codes, the rate-1/2 (2640,1320) Margulis code which is notorious for its floors and a rate-0.3 (640,192) quasi-cyclic code which has been devised for this study. Although the paper focuses on these two codes, the decoder design techniques presented are fully generalizable to any LDPC code.
+
+## Construction of non-binary quasi-cyclic LDPC codes by arrays and array dispersions - [transactions papers]
+
+- **Status**: ❌
+- **Reason**: 비이진(non-binary GF(q)) QC-LDPC 구성 - 비이진 LDPC는 제외
+- **ID**: ieee:5089504
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: B. Zhou, J. Kang, S.W. Song +3
+- **PDF**: https://ieeexplore.ieee.org/document/5089504
+- **Abstract**: This paper presents two algebraic methods for constructing high performance and efficiently encodable nonbinary quasi-cyclic LDPC codes based on arrays of special circulant permutation matrices and multi-fold array dispersions. Codes constructed based on these methods perform well over the AWGN and other types of channels with iterative decoding based on belief-propagation. Experimental results show that over the AWGN channel, these non-binary quasi-cyclic LDPC codes significantly outperform Reed-Solomon codes of the same lengths and rates decoded with either algebraic hard-decision Berlekamp-Massey algorithm or algebraic soft-decision Kötter- Vardy algorithm. Also presented in this paper is a class of asymptotically optimal LDPC codes for correcting bursts of erasures. Codes constructed also perform well over flat fading channels. Non-binary quasi-cyclic LDPC codes have a great potential to replace Reed-Solomon codes in some applications in communication environments and storage systems for combating mixed types of noises and interferences.
+
+## Toward low LDPC-code floors: a case study
+
+- **Status**: ✅
+- **Reason**: LDPC error floor 저감 - 코드/디코더 수정 및 outer code 적용 기법, FPGA 시뮬, NAND ECC error floor에 이식 가능(C/E)
+- **ID**: ieee:5089487
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Yifei Zhang, William E. Ryan
+- **PDF**: https://ieeexplore.ieee.org/document/5089487
+- **Abstract**: While LDPC codes have been widely acclaimed in recent years for their near-capacity performance, they have not found their way into many important applications. For some cases, this is due to their increased decoding complexity relative to the classical coding techniques. For other cases, this is due to their inability to reach very low bit error rates (e.g., 10-12) at low signal-to-noise ratios (SNRs), a consequence of the error rate floor phenomenon associated with iterative LDPC decoders. In the present paper, we make strides in the low-floor problem by identifying the weaknesses of the code under study and applying compensatory counter-measures. These counter-measures include: modifying the code itself, modifying the decoder, or adding a properly designed outer algebraic code. Our results demonstrate that each of these techniques can successfully lower an LDPC code's floor, and that, for the code under study, an outer BCH code appears to be particularly effective. All of our results are based on FPGA decoder simulations and so they are reliable and repeatable.
+
+## Distributed Arithmetic Coding for the Slepian–Wolf Problem
+
+- **Status**: ❌
+- **Reason**: Slepian-Wolf 분산 산술부호화=소스코딩, 채널 ECC 아님
+- **ID**: ieee:4770165
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Marco Grangetto, Enrico Magli, Gabriella Olmo
+- **PDF**: https://ieeexplore.ieee.org/document/4770165
+- **Abstract**: Distributed source coding schemes are typically based on the use of channels codes as source codes. In this paper we propose a new paradigm, named ldquodistributed arithmetic coding,rdquo which extends arithmetic codes to the distributed case employing sequential decoding aided by the side information. In particular, we introduce a distributed binary arithmetic coder for the Slepian-Wolf coding problem, along with a joint decoder. The proposed scheme can be applied to two sources in both the asymmetric mode, wherein one source acts as side information, and the symmetric mode, wherein both sources are coded with ambiguity, at any combination of achievable rates. Distributed arithmetic coding provides several advantages over existing Slepian-Wolf coders, especially good performance at small block lengths, and the ability to incorporate arbitrary source models in the encoding process, e.g., context-based statistical models, in much the same way as a classical arithmetic coder. We have compared the performance of distributed arithmetic coding with turbo codes and low-density parity-check codes, and found that the proposed approach is very competitive.
+
+## LDPC codes and convolutional codes with equal structural delay: a comparison
+
+- **Status**: ❌
+- **Reason**: LDPC vs convolutional code 지연/성능 비교, 떼어낼 신규 디코더·구성 기법 없음
+- **ID**: ieee:5089507
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Thorsten Hehn, Johannes B. Huber
+- **PDF**: https://ieeexplore.ieee.org/document/5089507
+- **Abstract**: We compare convolutional codes and LDPC codes with respect to their decoding performance and their structural delay, which is the inevitable delay solely depending on the structural properties of the coding scheme. Besides the decoding performance, the data delay caused by the channel code is of great importance as this is a crucial factor for many applications. Convolutional codes are known to show a good performance while imposing only a very low latency on the data. LDPC codes yield superior decoding performance but impose a larger delay due to the block structure. The results obtained by comparison will also be related to theoretical limits obtained from random coding and the sphere packing bound. It will be shown that convolutional codes are still the first choice for applications for which a very low data delay is required and the bit error rate is the considered performance criterion. However, if one focuses on a low signal-to-noise ratio or if the obtained frame error rate is the base for comparison, LDPC codes compare favorably.
+
+## Finite-Precision Analysis of Demappers and Decoders for LDPC-Coded M-QAM Systems
+
+- **Status**: ✅
+- **Reason**: LDPC 디코더/수신샘플 유한정밀도 양자화 설계, NAND LLR 양자화에 직접 이식 가능(C)
+- **ID**: ieee:4895676
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Marco Baldi, Franco Chiaraluce, Giovanni Cancellieri
+- **PDF**: https://ieeexplore.ieee.org/document/4895676
+- **Abstract**: LDPC codes are state-of-art error correcting codes, included in several standards for broadcast transmissions. Iterative soft-decision decoding algorithms for LDPC codes reach excellent error correction capability; their performance, however, is strongly affected by finite-precision issues in the representation of inner variables. Great attention has been paid, in recent literature, to the topic of quantization for LDPC decoders, but mostly focusing on binary modulations and analysing finite precision effects in a disaggregrated manner, i.e., considering separately each block of the receiver. Modern telecommunication standards, instead, often adopt high order modulation schemes, e.g. M-QAM, with the aim to achieve large spectral efficiency. This puts additional quantization problems, that have been poorly debated in previous literature. This paper discusses the choice of suitable quantization characteristics for both the decoder messages and the received samples in LDPC-coded systems using M-QAM schemes. The analysis involves also the demapper block, that provides initial likelihood values for the decoder, by relating its quantization strategy with that of the decoder. A new demapper version, based on approximate expressions, is also presented, that introduces a slight deviation from the ideal case but yields a low complexity hardware implementation.
+
+## Radiation Tolerance Techniques for a 1.6 Gb/s, 8 K and 4 K Low-Density Parity-Check Encoder
+
+- **Status**: ✅
+- **Reason**: 고처리율 LDPC 인코더 CMOS 구현 HW 아키텍처(D), 방사선 내성 부분은 NAND 무관하나 인코더 HW 자체는 이식성 있음
+- **ID**: ieee:4982883
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Sterling R. Whitaker, Lowell H. Miles, Jody W. Gambles +4
+- **PDF**: https://ieeexplore.ieee.org/document/4982883
+- **Abstract**: A multiple node upset tolerant, 1.6 Gb/s (8158, 7136) and (4088, 3360) low-density parity-check encoder was implemented in a five-metal, 0.25 mum CMOS process. Temporal separation coupled with single-event radiation tolerant flip-flops was used to harden the data path. A reduced sensitive cross-section combinational logic structure was used to harden the custom multiply accumulate blocks. This circuit structure is composed of a dual-rail NMOS-only pass-transistor network driving a cross coupled output buffer. By adding the output buffer section, only a small region of the buffer itself is vulnerable for propagation of a single-event transient. Single-event upset immunity with a linear energy transfer threshold of greater than 33 MeVldrcm2/mg and a saturation cross-section of just 0.075 mum2/bit was achieved for the 4 K encoder. A linear energy transfer threshold of greater than 17 MeVldrcm2/mg with a saturation cross-section of just 0.3 mu m2/bit was achieved for the 8 K encoder. This results in a CREME96 expected mean time between failure of 1700 years for a geosynchronous orbit. Multiple node upsets as a problem increases as smaller geometry processes are used for space electronics. A mathematical basis for this reduced cross-section, multiple upset combinational logic design method is presented.
+
+## Bounds on the Number of Iterations for Turbo-Like Ensembles Over the Binary Erasure Channel
+
+- **Status**: ❌
+- **Reason**: BEC 상 반복횟수 점근 하한이라는 순수 이론 bound, 디코더/HW/구성으로 이어지지 않음
+- **ID**: ieee:4957644
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Igal Sason, Gil Wiechman
+- **PDF**: https://ieeexplore.ieee.org/document/4957644
+- **Abstract**: This paper provides simple lower bounds on the number of iterations which is required for successful message-passing decoding of some important families of graph-based code ensembles (including low-density parity-check (LDPC) codes and variations of repeat-accumulate codes). The transmission of the code ensembles is assumed to take place over a binary erasure channel, and the bounds refer to the asymptotic case where we let the block length tend to infinity. The simplicity of the bounds derived in this paper stems from the fact that they are easily evaluated and are expressed in terms of some basic parameters of the ensemble which include the fraction of degree-2 variable nodes, the target bit erasure probability, and the gap between the channel capacity and the design rate of the ensemble. This paper demonstrates that the number of iterations which is required for successful message-passing decoding scales at least like the inverse of the gap (in rate) to capacity, provided that the fraction of degree-2 variable nodes of these turbo-like ensembles does not vanish (hence, the number of iterations becomes unbounded as the gap to capacity vanishes).
+
+## Group-theoretic analysis of cayley-graph-based cycle gf(2p) codes
+
+- **Status**: ❌
+- **Reason**: GF(2^p) 비이진 cycle LDPC 부호 구성, 비이진 LDPC는 제외 대상
+- **ID**: ieee:5089486
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Jie Huang, Shengli Zhou, Jinkang Zhu +1
+- **PDF**: https://ieeexplore.ieee.org/document/5089486
+- **Abstract**: Using group theory, we analyze cycle GF(2p) codes that use Cayley graphs as their associated graphs. First, we show that through row and column permutations the parity check matrix H can be put in a concatenation form of row-permuted block-diagonal matrices. Encoding utilizing this form can be performed in linear time and in parallel. Second, we derive a rule to determine the nonzero entries of H and present determinate and semi-determinate codes. Our simulations show that the determinate and semi-determinate codes have better performance than codes with randomly generated nonzero entries for GF(16) and GF(64), and have similar performance for GF(256). The constructed determinate and semi-determinate codes over GF(64) and GF(256) can outperform the binary irregular counterparts of the same block lengths. One distinct advantage for determinate and semi-determinate codes is that they greatly reduce the storage cost of H for decoding. The results in this correspondence are appealing for the implementation of efficient encoders and decoders for this class of promising LDPC codes, especially when the block length is large.
+
+## Quantum Serial Turbo Codes
+
+- **Status**: ❌
+- **Reason**: 양자 시리얼 터보부호, 양자 축퇴(degeneracy) 의존+비-LDPC로 제외
+- **ID**: ieee:4957637
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: David Poulin, Jean-Pierre Tillich, Harold Ollivier
+- **PDF**: https://ieeexplore.ieee.org/document/4957637
+- **Abstract**: In this paper, we present a theory of quantum serial turbo codes, describe their iterative decoding algorithm, and study their performances numerically on a depolarization channel. Our construction offers several advantages over quantum low-density parity-check (LDPC) codes. First, the Tanner graph used for decoding is free of 4-cycles that deteriorate the performances of iterative decoding. Second, the iterative decoder makes explicit use of the code's degeneracy. Finally, there is complete freedom in the code design in terms of length, rate, memory size, and interleaver choice. We define a quantum analogue of a state diagram that provides an efficient way to verify the properties of a quantum convolutional code, and in particular, its recursiveness and the presence of catastrophic error propagation. We prove that all recursive quantum convolutional encoders have catastrophic error propagation. In our constructions, the convolutional codes have thus been chosen to be noncatastrophic and nonrecursive. While the resulting families of turbo codes have bounded minimum distance, from a pragmatic point of view, the effective minimum distances of the codes that we have simulated are large enough not to degrade the iterative decoding performance up to reasonable word error rates and block sizes. With well-chosen constituent convolutional codes, we observe an important reduction of the word error rate as the code length increases.
+
+## Low-complexity coded-modulation for ISI-constrained channels
+
+- **Status**: ❌
+- **Reason**: ISI 채널용 LDPC+RS 코셋부호 coded-modulation, 무선/이더넷 응용 특이적이고 떼어낼 바이너리 LDPC ECC 신규 기법 없음
+- **ID**: ieee:5089522
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Raju Hormis, Xiaodong Wang
+- **PDF**: https://ieeexplore.ieee.org/document/5089522
+- **Abstract**: We propose a low-complexity PAM-based transmission scheme that is well suited for channels constrained by inter-symbol interference (ISI) and colored Gaussian noise. The scheme consists of coset-codes constructed on multi-dimensional lattices with a combination of low-density parity-check (LDPC) codes and classical Reed-Solomon (RS) codes. To approach the capacity of an ISI-constrained channel, the code is easy to employ in conjunction with spectral shaping, Tomlinson- Harashima precoding and decision-feedback equalization (DFE). The scheme performs within 2-2.5 dB of un-shaped channel capacity (the sphere-bound) at very low BER's, even with regular LDPC codes of modest block lengths. We investigate dense multidimensional lattices such as the Schlafli, Gosset, Barnes-Wall, and Leech lattices, besides simple one-dimensional lattices. Via the density evolution technique, we show that the lattices reduce the noise threshold of belief-propagation decoders. We investigate the practical application of the proposed schemes to 10G-Base-T, an emerging Ethernet standard over twisted-pairs at 10 Gbit/sec. A simple 1-dimensional scheme improves upon recent proposals by 0.5-1 dB at BER's approaching 10-11, with half the LDPC coding complexity. Multi-dimensional schemes are seen to reduce the complexity further.
+
+## Channel coding and decoding in a relay system operated with physical-layer network coding
+
+- **Status**: ❌
+- **Reason**: RA 부호 PNC용 BP 디코더 재설계, RA(비-LDPC)+릴레이 멀티액세스 특이적이라 NAND 바이너리 LDPC BP로 직접 이식 어려움
+- **ID**: ieee:5072363
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Shengli Zhang, Soung-Chang Liew
+- **PDF**: https://ieeexplore.ieee.org/document/5072363
+- **Abstract**: This paper investigates link-by-link channel-coded PNC (physical layer network coding), in which a critical process at the relay is to transform the superimposed channel-coded packets received from the two end nodes (plus noise), Y3 = X1+ X2+W3, to the network-coded combination of the source packets, S1 oplus S2. This is in contrast to the traditional multiple-access problem, in which the goal is to obtain both S1 and S2 explicitly at the relay node. Trying to obtain S1 and S2 explicitly is an overkill if we are only interested in S1oplusS2. In this paper, we refer to the transformation Y3 rarr S1 oplus S2 as the channel-decoding- network-coding process (CNC) in that it involves both channel decoding and network coding operations. This paper shows that if we adopt the repeat accumulate (RA) channel code at the two end nodes, then there is a compatible decoder at the relay that can perform the transformation Y3 rarr S1oplusS2 efficiently. Specifically, we redesign the belief propagation decoding algorithm of the RA code for traditional point-to-point channel to suit the need of the PNC multiple-access channel. Simulation results show that our new scheme outperforms the previously proposed schemes significantly in terms of BER without added complexity.
+
+## Binary linear multicast network coding on acyclic networks: principles and applications in wireless communication networks
+
+- **Status**: ❌
+- **Reason**: 무선 네트워크 코딩(이진 선형 멀티캐스트), LDPC ECC 디코더/구성 기여 없음
+- **ID**: ieee:5072359
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Xiangming Li, Tao Jiang, Qian Zhang +1
+- **PDF**: https://ieeexplore.ieee.org/document/5072359
+- **Abstract**: Conventional linear multicast can be constructed on any acyclic network by increasing the order of the finite field to a sufficiently large amount over which the multicast is defined. In this paper, we first discuss the reciprocal theorem of the conventional linear multicast and design a linear multicast on any give acyclic network with constant finite field by extending the multicast dimension and relaxing the constraint on the information storage. In particular, we propose the binary linear multicast network coding and the linear multicast with binary coefficients. With the proposed method, the computation complexity for network coding at the intermediate nodes can be significantly reduced; therefore cheap network nodes can be deployed in a large scale due to their low cost for wireless communications. In addition, some applications of the proposed binary linear multicast network coding in wireless communication networks are illustrated and validated.
+
+## Simplification of Packet-Symbol Decoding With Errors, Deletions, Misordering of Packets, and No Sequence Numbers
+
+- **Status**: ❌
+- **Reason**: 패킷심볼 소거채널 디코딩 단순화, erasure 기반이고 NAND 채널 ECC로 떼어낼 기법 없음
+- **ID**: ieee:4957647
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: John J. Metzner
+- **PDF**: https://ieeexplore.ieee.org/document/4957647
+- **Abstract**: In this paper, a new method is described which builds on Mitzenmacher's idea of adding a different pseudorandom number to each packet to help decode packet-symbol low-density codes, with deletions, errors, and out-of-order reception, without sequence numbers. The new method has lower decoding complexity than the original method. The most basic form of the new method applies to any parity-check code structure, but is limited to a rather small number of packets in the code. Decoding success is slightly inferior to an ideal erasure channel, which would require sequence numbering and error detection in each packet. Error detection is needed only for the whole code, amounting to usually less than one bit per packet symbol. Moreover, if error detection can resolve one of a small number of alternatives, the ordered case performs almost as well as the ideal erasure channel. Ways are shown to modify the basic algorithm for use with long codes, possibly approaching the erasure channel capacity limit.
+
+## An Efficient Spectrum Sensing Scheme for Cognitive Radio
+
+- **Status**: ❌
+- **Reason**: 스펙트럼 센싱+분산 소스코딩(turbo SW), 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:4801657
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Samuel Cheng, Vladimir Stankovic, Lina Stankovic
+- **PDF**: https://ieeexplore.ieee.org/document/4801657
+- **Abstract**: The paper combines distributed source coding and compressive sampling for efficient spectrum estimation. Two or more cognitive radios sample the spectrum compressively and independently compress their observations using multiterminal source coding. A central hub collects compressed streams from these radios before performing joint multiterminal source decoding followed by iterative signal reconstruction. Simulation results are provided for two radios performing practical multiterminal source coding with uniform scalar quantization and systematic turbo codes for Slepian-Wolf coding and error protection.
+
+## Linear diversity-embedding STBC: design issues and applications
+
+- **Status**: ❌
+- **Reason**: 공간시간블록부호(STBC) 무선통신 다이버시티 설계, LDPC 아님
+- **ID**: ieee:5089489
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: K. M. Z. Islam, P. Rabiei, N. Al-Dhahir +2
+- **PDF**: https://ieeexplore.ieee.org/document/5089489
+- **Abstract**: We design a novel class of space-time codes, called linear diversity-embedding space-time block codes (LDE-STBC) where a high-rate STBC is linearly superimposed on a highdiversity STBC without requiring channel knowledge at the transmitter. In applying this scheme to multimedia wireless communications, each traffic type constitutes a transmission layer that operates at a suitable rate-diversity tradeoff point according to its quality-of-service requirements. This, in turn, provides an unequal-error-protection (UEP) capability to the different information traffic types and allows a form of wireless communications where the high-rate STBC opportunistically takes advantage of good channel realizations while the embedded high-diversity STBC ensures that at least part of the information is decoded reliably. We investigate transceiver design issues specific to LDE-STBC including reduced-complexity coherent decoding and effective schemes to vary the coding gain to further enhance UEP capabilities of the code. Furthermore, we investigate the application of LDE-STBC to wireless multicasting and demonstrate its performance advantage over conventional equal-error-protection STBC.
+
+## Variable power and rate allocation using simple CQI for multiuser OFDMA-CDM systems
+
+- **Status**: ❌
+- **Reason**: OFDMA-CDM 전력/레이트 할당 무선통신, LDPC 무관
+- **ID**: ieee:5089951
+- **Type**: journal
+- **Published**: June 2009
+- **Authors**: Kwang Soon Kim, Yun Hee Kim
+- **PDF**: https://ieeexplore.ieee.org/document/5089951
+- **Abstract**: This paper presents variable power and rate allocation (PRA) for a multiuser orthogonal frequency division multiple access code division multiplexing (OFDMA-CDM) system which exploits both orthogonality among users and symbol-level diversity. To predict the link performance, we analyze the postprocessing SNR as the transmit power (TP) varies when the minimum mean square error combiner (MMSEC) is employed. It is shown from analysis that the MMSEC SNR is nonlinear in TP, but is bounded by the harmonic and the arithmetic means of the subcarrier SNRs. From the observation, we propose two variable PRA methods using a simple channel quality indication and a required TP estimation method. Simulation results show that the proposed methods not only guarantee the target performance but also increase the throughput at the same or slightly increased feedback overhead compared with the fixed TP allocation case.
+
+## Channel Code-Division Multiple Access and Its Multilevel-Structured LDPC-Based Instantiation
+
+- **Status**: ❌
+- **Reason**: 채널 CDMA 다중접속 응용용 MLS-LDPC 인스턴스, 무선 다중사용자 응용 특이적이고 떼어낼 신규 LDPC ECC 기법 없음
+- **ID**: ieee:4682680
+- **Type**: journal
+- **Published**: Jun 2009
+- **Authors**: Nicholas Bonello, Rong Zhang, Sheng Chen +1
+- **PDF**: https://ieeexplore.ieee.org/document/4682680
+- **Abstract**: In this paper, we introduce and outline the concept of channel code-division multiple access using a design example based on the recently proposed multilevel-structured (MLS) low-density parity-check (LDPC) codes. We succeeded in making the memory requirements of the multiuser transceiver to become practically independent of the total number of users supported by the system, as well as ascertain that each user benefits from the same level of protection. Finally, we will demonstrate that despite their beneficial compact structure, the proposed MLS LDPC codes do not suffer from any bit-error-ratio or block-error-ratio performance degradation, when compared to an otherwise identical benchmarker scheme using significantly more complex LDPC codes having pseudorandom parity-check matrices.
+
+## Peer-to-peer scalable video streaming using Raptor code
+
+- **Status**: ❌
+- **Reason**: Raptor/fountain 부호 P2P 비디오—fountain/erasure, 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:5174300
+- **Type**: conference
+- **Published**: 7-9 June 2
+- **Authors**: Beom Seok Choi, Doug Young Suh, Gwang-Hoon Park +2
+- **PDF**: https://ieeexplore.ieee.org/document/5174300
+- **Abstract**: This paper proposes a method for saving resources of the video distribution server by using peer-to-peer communications. In order to adapt to a time-varying channel, scalable video coding and a fountain code, a Raptor code is used. The Raptor code protects video quality asymmetrically according to the significance of scalable video layers; varying in peer-to-peer networks, as a forward error correction (FEC) method. It is also a more efficient peer-to-peer distribution tool (because of its rate-less feature) than conventional erasure recovery FEC such as the Reed Solomon code. The simulation shows that peer-to-peer data exchange between the clients can save the resources of the server.
+
+## Iterative decoding algorithms of LDPC codes using TAP approach
+
+- **Status**: ✅
+- **Reason**: 통계물리 TAP 접근으로 LLR-BP/BP-based 디코딩 알고리즘 유도 - 이식 가능 디코더 기법(C)
+- **ID**: ieee:5307067
+- **Type**: conference
+- **Published**: 23-26 June
+- **Authors**: Manel Abdelhedi, Omessaad Hamdi, Ammar Bouallegue
+- **PDF**: https://ieeexplore.ieee.org/document/5307067
+- **Abstract**: Low-density parity-check (LDPC) codes are based on random construction. Because of this randomness, it is not easy to analyze them with the traditional methods of communication theory. N.Sourlas [6] was the first to point out that LDPC codes have a similarity to Ising spin systems in statistical physics. Besides, it has been shown that the Belief-Propagation algorithm, the decoding algorithm of LDPC codes, is equivalent to the Thouless-Anderson-Palmer(TAP) [9] approach. In this paper, we develop the log-likelihood ratios-Belief Propagation (LLR-BP) and the BP-Based decoding algorithms with the TAP approach.
+
+## Efficient parity bit estimation for turbo codes
+
+- **Status**: ❌
+- **Reason**: 터보부호 패리티비트 추정 - 비-LDPC(turbo) 부호 특화, LDPC BP 이식 불가
+- **ID**: ieee:5161868
+- **Type**: conference
+- **Published**: 21-24 June
+- **Authors**: Toni Levanen, Markku Renfors
+- **PDF**: https://ieeexplore.ieee.org/document/5161868
+- **Abstract**: In this paper a novel and efficient method for estimating parity bits in a turbo decoder is presented. The main idea is as follows. First we estimate only information bits in a traditional iterative manner. After the information bits are assumed to be detected correctly or the maximum number of information bit decoding iterations is achieved, we forward all soft information to soft parity estimation blocks. In this way we can improve the parity bit estimation performance and decrease the decoding complexity, compared to the traditional scheme where information and parity bits are jointly estimated in the same iterative loop.
+
+## Effective techniques for blind phase offset estimation in LDPC coded systems
+
+- **Status**: ❌
+- **Reason**: LDPC 부호화 시스템의 캐리어 위상오프셋 추정 기법 - 채널 동기화 문제이며 떼어낼 LDPC 디코더/HW/코드설계 기여 없음
+- **ID**: ieee:5161863
+- **Type**: conference
+- **Published**: 21-24 June
+- **Authors**: Rodrigue Imad, Sebastien Houcke, Mounir Ghogho
+- **PDF**: https://ieeexplore.ieee.org/document/5161863
+- **Abstract**: We consider the problem of carrier phase offset estimation and propose two blind estimation techniques for low-density parity-check (LDPC) coded systems. The first technique is applied to a binary phase shift keying (BPSK) modulation while the second is applied to higher order modulations. These techniques are based on the calculation and minimization of functions of the log-likelihood ratios (LLR) of the syndrome elements obtained according to the parity check matrix of the error correcting code. In the case of a BPSK modulation, the global minimum of the cost function is obtained using the gradient descent method while for higher order modulations, we use the simulated annealing algorithm. Simulation results show that the proposed techniques significantly outperform many phase estimation methods and are very powerful even at low signal-to-noise ratios.
+
+## Sparse channel estimation for OFDM: Over-complete dictionaries and super-resolution
+
+- **Status**: ❌
+- **Reason**: OFDM sparse channel estimation(OMP/MUSIC/ESPRIT) — LDPC 무관, 채널 추정 문제
+- **ID**: ieee:5161774
+- **Type**: conference
+- **Published**: 21-24 June
+- **Authors**: Christian R. Berger, Shengli Zhou, Weian Chen +1
+- **PDF**: https://ieeexplore.ieee.org/document/5161774
+- **Abstract**: Wireless multipath channels can often be characterized as sparse, i.e., the number of significant paths is small even when the channel delay spread is large. This can be taken advantage of when estimating the unknown channel frequency response using pilot assisted modulation. Other work has largely focused on the greedy orthogonal matching pursuit (OMP) algorithm, using a dictionary based on an equivalent finite impulse response filter to model the channel. This is not necessarily realistic, as the physical nature of the channel is continuous in time, while the equivalent filter taps are based on baseband sampling. In this paper, we consider sparse channel estimation using a continuous time path-based channel model. This can be linked to the direction finding problem from the array processing literature and solved using the well-known root-MUSIC and ESPRIT algorithms, which have no formal time resolution. In addition, we show that a dictionary with finer time resolution considerably improves the performance of OMP and the related Basis Pursuit (BP) algorithm.
+
+## On distributed serially concatenated codes
+
+- **Status**: ❌
+- **Reason**: 릴레이 채널용 분산 직렬연접부호(DSCC) - 비-LDPC 연접부호 설계, 바이너리 LDPC BP 이식 기법 아님
+- **ID**: ieee:5161866
+- **Type**: conference
+- **Published**: 21-24 June
+- **Authors**: Zhongwei Si, Ragnar Thobaben, Mikael Skoglund
+- **PDF**: https://ieeexplore.ieee.org/document/5161866
+- **Abstract**: In this paper, we investigate the performance of a new class of distributed codes for the 3-node relay channel, distributed serially concatenated codes (DSCCs). We provide a snap-shot analysis of the iterative DSCC decoder based on extrinsic information transfer characteristics and discuss new design aspects resulting from the extended code structure. Our simulation results show that DSCCs lead to an improved error-floor performance and an increased robustness against decoding errors at the relay compared to conventional distributed parallel concatenated coding schemes.
+
+## MMSE decoding for analog joint source channel coding using monte carlo importance sampling
+
+- **Status**: ❌
+- **Reason**: 아날로그 JSCC MMSE 디코딩(Monte Carlo importance sampling) - 소스-채널 결합, 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:5161872
+- **Type**: conference
+- **Published**: 21-24 June
+- **Authors**: Yichuan Hu, Javier Garcia-Frias, Meritxell Lamarca
+- **PDF**: https://ieeexplore.ieee.org/document/5161872
+- **Abstract**: We investigate the performance of a discrete-time all-analog-processing joint source-channel coding system for the transmission of i.i.d. Gaussian sources over additive white Gaussian noise (AWGN) channels. At the encoder, samples of an i.i.d. source are grouped and mapped into a channel symbol using a space-filling curve. Different from previous work in the literature, MMSE instead of ML decoding is considered, and we focus on both high and low channel SNR regions. In order to reduce complexity, Monte Carlo importance sampling is applied in the decoding process. The main contribution of this paper is to show that for a wide range of rates the proposed system presents a performance very close to the theoretical limits, even at low SNR, as long as the curve parameters are properly optimized.
+
+## Low complexity soft detection for spatially multiplexed BICM MIMO OFDM system
+
+- **Status**: ❌
+- **Reason**: MIMO OFDM soft detection(MMSE/ZF/V-BLAST) — 검출기 영역, LDPC 디코더와 무관
+- **ID**: ieee:5161794
+- **Type**: conference
+- **Published**: 21-24 June
+- **Authors**: Rizwan Ghaffar, Raymond Knopp
+- **PDF**: https://ieeexplore.ieee.org/document/5161794
+- **Abstract**: This paper presents a new approach to soft detection of spatial data streams in multiple input multiple output (MIMO) channels in slow fading channels. We focus on high spectral efficiency bit interleaved coded modulation (BICM) MIMO OFDM system where, after serial to parallel conversion and per antenna coding, spatial data streams are simultaneously transmitted by using an antenna array. We propose a detection algorithm based on a combination of linear and non linear detection techniques. The proposed algorithm orders spatial streams as per V-BLAST ordering and then uses linear detectors like MMSE or zero forcing (ZF) to detect the streams which have seen good channel realizations and therefore enjoy higher signal-to-noise-ratios (SNRs). These streams, after being detected, are subsequently stripped off leading to max log MAP detection of the streams which have seen comparatively poor realizations of the channel and consequently have lower SNRs. Unlike maximum likelihood (ML) detection, whose complexity is huge due to the need for enumerating all possible combinations of the transmitted constellation points, the proposed method has low complexity and moreover has a fully parallel structure suitable for the implementation in parallel hardware. Numerical examples illustrate the performance of proposed algorithm for slow fading 3times3 and 4times4 complex MIMO channels in comparison to linear and max log MAP detection.
+
+## Forward error correction in next generation optical communication systems
+
+- **Status**: ❌
+- **Reason**: 차세대 광통신 FEC 서베이/리뷰, 구체적 신규 디코더/구성/HW 기여 없음
+- **ID**: ieee:5225756
+- **Type**: conference
+- **Published**: 2-4 June 2
+- **Authors**: Takashi Mizuochi
+- **PDF**: https://ieeexplore.ieee.org/document/5225756
+- **Abstract**: Recent progress in advanced FECs for optical communications is reviewed. A low-density parity-check code (LDPC) is a promising candidate for 100 Gb/s class systems, potentially yielding a net coding gain of 9 dB or more.
+
+## A 47 Gb/s LDPC decoder with improved low error rate performance
+
+- **Status**: ✅
+- **Reason**: (2048,1723) RS-LDPC 병렬 디코더 칩, 2단 디코딩으로 error floor 10^-14까지 저감 — 이식 가능 HW/디코더(D/C)
+- **ID**: ieee:5205323
+- **Type**: conference
+- **Published**: 16-18 June
+- **Authors**: Zhengya Zhang, Venkat Anantharam, Martin J. Wainwright +1
+- **PDF**: https://ieeexplore.ieee.org/document/5205323
+- **Abstract**: A parallel low-density parity-check (LDPC) decoder is designed for the (2048,1723) Reed-Solomon-based LDPC (RS-LDPC) code suitable for 10GBASE-T Ethernet. A two-step decoding scheme lowers the error floor to a 10−14 BER. The decoder architecture is optimized for area, power, and high throughput. The resulting 5.35 mm2, 65nm CMOS chip achieves a decoding throughput of 47.7 Gb/s. With scaled frequency and voltage, the chip delivers a 6.67 Gb/s throughput while dissipating 144 mW of power.
+
+## Blind Frame Synchronization of Product Codes Based on the Adaptation of the Parity Check Matrix
+
+- **Status**: ❌
+- **Reason**: product code 블라인드 프레임 동기화 - 패리티검사 재배열은 동기화용, 채널 ECC 디코더 기여 아님
+- **ID**: ieee:5198792
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: R. Imad, S. Houcke, C. Jego
+- **PDF**: https://ieeexplore.ieee.org/document/5198792
+- **Abstract**: We present in this paper a blind frame synchronization method based on the adaptation of the parity check matrix of the code. The blind synchronizer is initially based on the calculation of the log-likelihood ratios (LLR) of the syndrome elements, obtained using the parity check matrix of the code. Before applying our synchronization procedure, we propose in this paper to rearrange the parity check matrix of the code according to the reliability of the received symbols as previously introduced for decoding linear block codes with high density parity check matrix. Simulation results show that the frame error rate (FER) curves obtained after applying the proposed synchronization method to product codes are very close to the ones with perfect synchronization. In addition to its powerful synchronization properties, the main advantage of the proposed synchronization algorithm is its capability of being introduced as a part of the decoder so that no additional material is required for the synchronization step.
+
+## Performance Gain of Space-Time-Frequency Concatenated LDPC Codes
+
+- **Status**: ❌
+- **Reason**: MIMO용 STFC-LDPC concatenated 코딩, LDPC는 외부부호 베이스라인이고 떼어낼 신규 디코더/구성 기법 없는 무선 응용 특이적
+- **ID**: ieee:5199327
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: K. P. Mare, B. P. Salmon, B. T. Maharaj
+- **PDF**: https://ieeexplore.ieee.org/document/5199327
+- **Abstract**: This paper introduces a STFC-LDPC (space-time- frequency code low density parity check) concatenated coding scheme for high performance MIMO (multiple input, multiple output) systems. The coding design and performance evaluation are illustrated for various frequency-selective block fading conditions and compared with a STC-LDPC (space-time code LDPC) concatenated scheme over quasi-static fading conditions. The codes were analyzed and compared in space-selective conditions using various PDPs (power-delay profiles) to illustrate the performance gain of this newly proposed coding technique. The proposed STFC-LDPC showed a performance increase compared to the STC-LDPC scheme due to the inherent higher diversity of the STFC and is a suitable coding technique for high performance MIMO systems.
+
+## Performance Analysis of Verification-Based Decoding for Packet-Based LDPC Codes over Binary Symmetric Channel
+
+- **Status**: ✅
+- **Reason**: 패킷기반 바이너리 LDPC의 verification-based 디코더 성능분석(false verification 고려), 이식 가능 디코더 알고리즘(C)
+- **ID**: ieee:5199318
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: B. Zhu, D. Huang, S. Nordholm
+- **PDF**: https://ieeexplore.ieee.org/document/5199318
+- **Abstract**: In this paper, we propose a statistical model to analyze the performance of verification-based algorithm (VA) for packet-based low-density parity-check (LDPC) codes over binary symmetric channel (BSC). In contrast to the analysis of VA in the literature, we propose to take the false verification into consideration. For a given ensemble of LDPC codes and channel parameters, the proposed analysis model gives an efficient way to find the average performance of packet-based LDPC codes with verification-based decoding. Through numerical results, we find that the proposed method can provide a close estimation of frame error rate (FER) for packet-based LDPC codes with verification- based decoding over BSC for all crossover probabilities of practical interests.
+
+## Low-Complexity List-Based Frame Synchronization for LDPC Coded Transmission
+
+- **Status**: ❌
+- **Reason**: LDPC 코딩 전송의 프레임 동기화 기법, ECC 디코더/구성/HW 아님 무선응용 특이적
+- **ID**: ieee:5199160
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: C. Stefanovic, D. Vukobratovic, D. Bajic
+- **PDF**: https://ieeexplore.ieee.org/document/5199160
+- **Abstract**: In this paper, we propose a simple and efficient two-stage list synchronizer for frame synchronization of low-density parity-check (LDPC) coded data transmitted over the additive white Gaussian noise (AWGN) channel. The proposed method uses both synchronization sequence and code constraints for frame synchronization. In the first stage, a list of the most likely frame starting positions is made using synchro-sequence, while in the second stage the code constraints are used to select the most likely position from the list. We analytically relate the synchro- sequence length, the frame length and the list length in order to keep the synchronization frame error rate (FER) lower than the error-correcting FER of the LDPC code, and we investigate the trade-off between the sequence length and the list length. We demonstrate that the proposed scheme outperforms both the frame synchronization methods based on synchro-sequence only and the recently proposed blind synchronization methods based on LDPC code constraints, the former in terms of the synchronization FER for the same sequence lengths and the latter in terms of complexity.
+
+## On Low-Density MIMO Codes
+
+- **Status**: ❌
+- **Reason**: MIMO 무선 응용 특이적 신규 선형블록코드(LDMC), MIMO 복조 복잡도 절감 코드설계로 NAND LDPC에 떼어낼 BP 디코더/구성 기법 없음
+- **ID**: ieee:5199242
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: F. Kienle
+- **PDF**: https://ieeexplore.ieee.org/document/5199242
+- **Abstract**: Multiple antenna systems are promising approaches to increase the data rate of wireless communication systems. There, modulated symbols are multiplexed on multiple transmission antennas. Typically an outer error correcting code is used additionally to ensure a desired quality of service for a given data rate. An appropriate communications performance can be achieved by iterative decoding, where probabilistic information are exchanged between outer decoder and the MIMO demodulator. However, in this case the MIMO demodulator has to calculate probabilistic soft-output values for each bit which can be very complex. In this paper we present a new class of linear block codes named low-density MIMO codes which reduces the complexity of the MIMO soft-demodulator and the outer channel decoder inherently by code design without decreasing the data rate of the overall system. These LDMC codes can have a better communications performance then state of the art solutions with a order of magnitude smaller decoding complexity.
+
+## Design and Analysis of E² RC Codes Using EXIT Chart
+
+- **Status**: ✅
+- **Reason**: E2RC rate-compatible irregular LDPC 코드 설계+EXIT/LP 최적화, 바이너리 LDPC 코드설계(E) 이식 가능
+- **ID**: ieee:5198897
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: C. Shi, A. Ramamoorthy
+- **PDF**: https://ieeexplore.ieee.org/document/5198897
+- **Abstract**: We present the design and analysis of a family of codes based on the efflciently-encodable rate-compatible irregular LDPC codes (E2RC codes) introduced by Kim, Ramamoorthy and Mclaughlin '06. The basic idea is to utilize the structured parity part (of the parity check matrix) of E2RC codes and design optimal degree distributions for the systematic part based on EXIT chart analysis. In this work, we propose a new technique for computing EXIT functions of the structured parity part without resorting to Monte Carlo simulations. Our method provides smoother EXIT functions in substantially lesser time. Furthermore, we pose and solve the problem of designing good codes using linear programming. Next, we consider the performance of rate-compatible codes under puncturing using EXIT charts. Finally, we propose joint optimization of our codes at any specified code rate(s) which has not been explored in previous design of rate-compatible punctured codes.
+
+## Stochastic Decoding of LDPC Codes over GF(q)
+
+- **Status**: ❌
+- **Reason**: GF(q) 비이진 LDPC 확률적 디코딩, 비이진 LDPC는 제외 대상
+- **ID**: ieee:5199493
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: G. Sarkis, S. Mannor, W. J. Gross
+- **PDF**: https://ieeexplore.ieee.org/document/5199493
+- **Abstract**: Non-binary LDPC codes have been shown to outperform currently used codes for magnetic recording and several other channels. Currently proposed nonbinary decoder architectures have very high complexity for high-throughput implementations and sacrifice error-correction performance to maintain realizable complexity. In this paper, we present an alternative decoding algorithm based on stochastic computation that has a very simple implementation and minimal performance loss when compared to the sum-product algorithm. We demonstrate the performance of the algorithm when applied to a GF(16) code and provide details of the hardware resources required for an implementation.
+
+## Evaluation of the Extremely Low Block Error Rate of Irregular LDPC Codes
+
+- **Status**: ✅
+- **Reason**: irregular LDPC의 trapping-set 기반 importance sampling으로 error floor/BLER 평가, error floor 분석기법(E) 이식 가능
+- **ID**: ieee:5199011
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: X. Zheng, F. C. M. Lau, C. K. Tse +2
+- **PDF**: https://ieeexplore.ieee.org/document/5199011
+- **Abstract**: In this paper, we attempt to evaluate irregular LDPC code performance at the high SNR region using the importance sampling (IS) approach in conjunction with primary- trapping-set identification. Results have indicated that our proposed IS scheme can produce speed-up gains up to 3.9 x 109 times compared with Monte Carlo simulations.
+
+## Joint Message-Passing Symbol-Decoding of LDPC Coded Signals over Partial-Response Channels
+
+- **Status**: ✅
+- **Reason**: LDPC+PR 채널 joint detection/decoding SPA, 스토리지(자기기록) 인접 채널이며 부호/채널 그래프 SPA 기법 이식 검토 가치, 애매하여 in
+- **ID**: ieee:5199115
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: R. Radhakrishnan, B. Vasic
+- **PDF**: https://ieeexplore.ieee.org/document/5199115
+- **Abstract**: We consider the problem of joint detection and decoding of low-density parity-check (LDPC) coded signals over partial response (PR) channels. A method to graphically represent the constraints imposed by the channel and the code on the channel output sequence is introduced. This enables the design of a detector and decoder that estimates a posteriori probabilities of noiseless channel output symbols rather than binary channel inputs. By running the sum-product algorithm (SPA) on this graph, a joint decoder is obtained that is shown to perform significantly better than the turbo-equalizer, at the cost of increased computational complexity.
+
+## On Construction of Moderate-Length LDPC Codes over Correlated Erasure Channels
+
+- **Status**: ✅
+- **Reason**: correlated erasure 채널용 유한길이 LDPC 코드 구성(MTBL 개선), 바이너리 LDPC 유한길이 코드설계(E) 이식 가능
+- **ID**: ieee:5199238
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: G. Liva, B. Matuz, Z. Katona +2
+- **PDF**: https://ieeexplore.ieee.org/document/5199238
+- **Abstract**: The design of moderate-length erasure correcting low-density parity-check (LDPC) codes over correlated erasure channels is considered. Although the asymptotic LDPC code design remains the same as for a memoryless erasure channel, robustness to the channel correlation shall be guaranteed for the finite length LDPC code. This further requirement is of great importance in several wireless communication scenarios where packet erasure correcting codes represent a simple countermeasure for correlated fade events (e.g., in mobile wireless broadcasting services) and where the channel coherence time is often comparable with the code length. In this paper, the maximum tolerable erasure burst length (MTBL) is adopted as a simple metric for measuring the code robustness to the channel correlation. Correspondingly, a further step in the code construction is suggested, consisting of improving the LDPC code MTBL. Numerical results conducted over a Gilbert erasure channel, under both iterative and maximum likelihood decoding, highlight both the importance of the MTBL improvement in the finite-length code construction and the possibility to tightly approach the performance of maximum distance separable codes.
+
+## A Low Complexity Iterative Technique for Soft Decision Decoding of Reed-Solomon Codes
+
+- **Status**: ✅
+- **Reason**: RS 부호지만 bit-level BP+확장 이진 패리티검사(저밀도화, 4-cycle 감소) - 부호 비의존적 BP 개선 기법, 바이너리 LDPC BP에 이식 가능(C 예외)
+- **ID**: ieee:5198625
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: F. Shayegh, M. R. Soleymani
+- **PDF**: https://ieeexplore.ieee.org/document/5198625
+- **Abstract**: A new iterative soft decision decoding method for Reed-Solomon (RS) codes is proposed. This method is based on bit level belief propagation (BP) decoding. In order to make BP decoding effective for RS codes, we use an extended binary parity check matrix with a lower density and reduced number of 4-cycles compared to the original binary parity check matrix of the code. In our proposed method, we take advantage of the cyclic structure of RS codes. Based on this property, we can apply the belief propagation algorithm on any cyclically shifted version of the received symbols with the same binary parity check matrix. For each shifted version of received symbols, the geometry of the factor graph will change and deterministic errors can be avoided. Our method results in considerable performance improvement of RS codes compared to hard decision decoding. The performance is also superior to some popular soft decision decoding methods.
+
+## Improving the Performance of LP Decoders for Cyclic Codes
+
+- **Status**: ✅
+- **Reason**: LP(선형계획) 디코더 성능 개선 기법 - 부호 비의존적 디코더 알고리즘으로 바이너리 LDPC BP에 이식 가능성 있어 애매하면 in (C)
+- **ID**: ieee:5305944
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: M. R. Heidarpour, M. Modarres-Hashemi, M. Khosravifard +1
+- **PDF**: https://ieeexplore.ieee.org/document/5305944
+- **Abstract**: N/A
+
+## Low Complexity Encoder for Generalized Quasi-Cyclic Codes Coming from Finite Geometries
+
+- **Status**: ❌
+- **Reason**: FG-LDPC(GQC)용 저복잡도 인코더 HW지만 finite geometry 표준구성 인코더로 떼어낼 새 디코더/구성 기여 약함; 단 인코더 HW 측면 애매→그러나 인코더는 디코더HW 아님, out
+- **ID**: ieee:5199152
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: V. T. Van, H. Matsui, S. Mita
+- **PDF**: https://ieeexplore.ieee.org/document/5199152
+- **Abstract**: We define generalized quasi-cyclic (GQC) codes as linear codes with nontrivial automorphism groups. Therefore, GQC codes, unlike quasi-cyclic codes, can include many important codes such as Hermitian and projective geometry (PG) codes; this capability is important in practical applications. Further, we propose the echelon canonical form algorithm for computing Grobner bases from their parity check matrices. Consequently, by applying Grobner base theory, GQC codes can be systematically encoded and implemented with simple feedback shift registers. Our algorithm is based on Gaussian elimination and requires a sufficiently small number of finite-field operations, which is related to the third power of code-length. In order to demonstrate our encoder's efficiency, we prove that the number of circuit elements in the encoder architecture is proportional to the code-length for finite geometry (FG) LDPC codes (a class of GQC codes). We show that the hardware complexity of a serial-in-serial-out encoder architecture for FG-LDPC codes is related to the linear order of the code-length; less than 2n adder and 2n memory elements are required to encode a binary codeword of length n.
+
+## A Simple Near-Capacity Bandwidth-Efficient Coded Modulation Scheme in Rayleigh Fading
+
+- **Status**: ❌
+- **Reason**: BICM-ID 코드변조 기법, LDPC는 부수 언급, 떼어낼 LDPC ECC 기법 없음(무선 응용 특이적)
+- **ID**: ieee:5198671
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: N. H. Tran, T. Le-Ngoc, T. Matsumoto
+- **PDF**: https://ieeexplore.ieee.org/document/5198671
+- **Abstract**: This paper proposes a near-capacity yet simple bit-interleaved coded modulation with iterative decoding (BICM-ID) scheme by employing a multi-dimensional (multi-D) mapping technique in a multi-D constellation carved from a rotated lattice. Using extrinsic information transfer (EXIT) charts, it is shown that the proposed technique fits well with simple convolutional codes in terms of the area property, for which turbo pinch-off can happen at a low Eb/N0 value. In particular, both EXIT chart analysis and simulation results indicate that by using just a simple convolutional code together with a 4-D mapping, a turbo pinch-off and a bit error rate (BER) close to 10-6 happen at a signal-to-noise ratio (SNR) that is even lower than the BICM constraint capacity limit with a uniform input. The proposed BICM-ID scheme can be considered as an attractive alternative to other bandwidth-efficient coded modulation techniques using powerful turbo-like codes such as turbo or low-density parity-check (LDPC) codes over a Rayleigh fading channel.
+
+## Analysis of Delay Statistics for the Queued-Code
+
+- **Status**: ❌
+- **Reason**: queued-code QoS/지연통계 - LDPC convolutional은 구현 예시일 뿐, 떼어낼 ECC 기법 없음(무선 응용)
+- **ID**: ieee:5198743
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: S. Goel, R. Negi
+- **PDF**: https://ieeexplore.ieee.org/document/5198743
+- **Abstract**: Quality of Service (QoS) guarantees in mobile wireless networks are typically provided through queuing analysis, which uses an idealized model for the physical layer, leading to optimistic guarantees. A queued-code combines ideas from queuing theory and information/coding theory, to allow rate adaptation, while enabling accurate modeling of the physical layer. Previous work showed the benefit of using a queued-code, in achieving lower error probabilities while satisfying a fixed delay bound. This paper analyzes the queued-code when some function of delay statistics must be optimized while guaranteeing a fixed error probability. A practical implementation of queued-codes based on low density parity check (LDPC) convolutional codes is also presented. Numerical and simulation results demonstrate the benefit of using the queued-code in obtaining a better QoS.
+
+## Theoretical Performance of Multi-Weight Spreading Codes for Multimedia Optical Access Network
+
+- **Status**: ❌
+- **Reason**: 광 OCDMA spreading 코드 설계, LDPC는 FEC 부수 언급일 뿐 떼어낼 기법 없음
+- **ID**: ieee:5199521
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: M. Morelle, S. Sahuguede, A. Julien-Vergonjanne +1
+- **PDF**: https://ieeexplore.ieee.org/document/5199521
+- **Abstract**: The Optical Code Division Multiple Access (OCDMA) technique is a potential solution to provide access on the optical channel to different users but also to different services applying performance differentiation. For this purpose, we focus here on an OCDMA system using 2 Dimensional (2D) multi-weight spreading codes. At the reception, a Hard Limiter (HL) device in front of the Conventional Correlation Receiver (CCR) is used to reduce the multiple access interference. To evaluate the performance of this scheme in a noisy optical channel, we develop an approximated calculation which provides a theoretical upper bound of the multi-weight code performances. In addition, for any noise amount, the optimal CCR threshold can be exactly determined. We use the theoretical results to design the multi-weight codes adapted to the transmission of three services with respectively low, medium and high Bit Error Rates (BER). Thanks to our theoretical approach, the noise impact is analyzed and shown being very significant for each service. It is possible to take the noise power into account in the code design, but at the cost of the increase of the spreading code length. To overcome these drawbacks, we investigate the BER gain provided by Low Density Parity Check (LDPC) codes. The results obtained show that Forward Error Correction (FEC) is a good way to improve the multimedia access network potentialities.
+
+## Error Resilient Non-Asymmetric Slepian-Wolf Coding
+
+- **Status**: ❌
+- **Reason**: turbo 코드 기반 Slepian-Wolf 분산소스코딩, 채널 ECC 아니고 LDPC 비의존
+- **ID**: ieee:5199002
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: C. Herzet, V. Toto-Zarasoa, A. Roumy
+- **PDF**: https://ieeexplore.ieee.org/document/5199002
+- **Abstract**: We consider non-asymmetric distributed source coding (DSC) that achieves any point in the Slepian-Wolf (SW) region. We study the error propagation phenomena and propose a decoding algorithm which limits this phenomena. For the case of turbo-codes, design rules are derived in order for the decoder to recover the sources.
+
+## Probabilistic Data Detection for Probe-Based Storage Channels in the Presence of Jitter
+
+- **Status**: ✅
+- **Reason**: probe 스토리지 채널 LDPC soft 정보 생성(jitter/noise LLR 분석식), 스토리지 ECC+이식 가능 soft정보/LLR 기법(B/C)
+- **ID**: ieee:5199366
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: H. Pozidis, G. Cherubini
+- **PDF**: https://ieeexplore.ieee.org/document/5199366
+- **Abstract**: Probe-storage devices employ large arrays of probes to write/read data in parallel in some storage medium. Because of their inherent parallelism and the independence of data retrieved from different probes, these devices lend themselves naturally to low-density parity-check (LDPC) codes and associated soft/iterative decoding techniques. In this paper, a concatenated coding scheme for a particular probe-storage channel is presented that comprises an inner (d, k)-constrained code and an outer LDPC code, and the problem of probabilistic data retrieval for this channel is addressed. In particular, soft information is generated by explicitly accounting for the channel output statistics in the presence of jitter and additive noise, based on derived analytical expressions.
+
+## An Improved Split-Row Threshold Decoding Algorithm for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Split-Row Threshold LDPC 디코딩 알고리즘 개선 - min-sum 변형 디코더, HW 친화적 이식 가능(C/D)
+- **ID**: ieee:5198733
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: T. Mohsenin, D. Truong, B. Baas
+- **PDF**: https://ieeexplore.ieee.org/document/5198733
+- **Abstract**: We present an improved thresholding LDPC decoding algorithm which outperforms the split-row and original split-row threshold decoders with a small increase in hardware. Simulation results show that the algorithm provides 0.27- 0.50 dB coding gain over split-row, 0.10-0.20 dB over split-row threshold, and is within 0.08-0.13 dB of SPA. Compared with the original threshold algorithm the check node processor's gate count is increased by 3% while total chip area is kept the same.
+
+## Vertex Packing Decoding
+
+- **Status**: ✅
+- **Reason**: configuration graph 기반 ML 디코딩+BP 결합으로 LDPC 성능개선하는 부호 비의존 신규 디코더 프레임워크(C)
+- **ID**: ieee:5199565
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: M. Lunglmayr, J. Berkmann, M. Huemer
+- **PDF**: https://ieeexplore.ieee.org/document/5199565
+- **Abstract**: In this work, we present a new framework for developing decoding algorithms for linear block codes. We define a new graphical model, called configuration graph and show that maximum likelihood (ML) sequence decoding can be performed by finding a maximum vertex packing on a configuration graph. We present examples of low-cost decoding algorithms developed using this graphical model and show that remarkable performance improvements can be achieved especially by combining these algorithms with belief propagation (BP) decoding for Low Density Parity Check (LDPC) codes.
+
+## Correcting Suboptimal Metrics in Iterative Decoders
+
+- **Status**: ✅
+- **Reason**: 반복디코더 L-value 보정(scaling factor 이론적 일반화) - 부호 비의존적 메시지패싱 보정, LDPC BP에 이식 가능(C)
+- **ID**: ieee:5198866
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: A. Alvarado, V. Nunez, L. Szczecinski +1
+- **PDF**: https://ieeexplore.ieee.org/document/5198866
+- **Abstract**: In this paper the issue of improving the performance of iterative decoders based on sub-optimal calculation of the messages exchanged during iterations (L-values) is addressed. It is well known in the literature that a simple-yet very effective-way to improve the performance of suboptimal iterative decoders is based on applying a scaling factor to the L-values. In this paper, starting with a theoretical model based on the so-called consistency condition of a random variable, we propose a methodology for correcting the L-values that relies only on the distribution of the soft information exchanged in the iterative process. This methodology gives a clear explanation of why the well-known linear scaling factor provides a very good performance. Additionally, the proposed methodology allows us to avoid the exhaustive search required otherwise. Numerical simulations show that for turbo codes the scaling factors found closely follow the optimum values, which translates to a close-to-optimal BER performance. Moreover, for LDPC codes, the proposed methodology produces a better BER performance compared with the known method in the literature.
+
+## Coded Pulse-Position Modulation for Free-Space Optical Communications
+
+- **Status**: ❌
+- **Reason**: Q-PPM용 RL-MLC 코드변조 설계, off-the-shelf LDPC 사용 - 떼어낼 신규 LDPC 기법 없음(광통신 응용)
+- **ID**: ieee:5198829
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: T. T. Nguyen, L. Lampe
+- **PDF**: https://ieeexplore.ieee.org/document/5198829
+- **Abstract**: Multilevel (Q-ary, Q > 2) pulse-position modulation (Q-PPM) with direct detection is a very popular transmission method for power-efficient free-space optical communication systems. The combination of Q-PPM with error-control coding is an effective means to further improve power efficiency. In this paper, we study the application of the multilevel coding (MLC) paradigm to Q-PPM transmission. In particular, we devise a powerful coded Q-PPM scheme which is a simplified version of MLC and which we refer to as reduced-level MLC (RL-MLC). We show how to design and optimize RL-MLC for Q-PPM when using constellation-constrained capacity as the pertinent figure of merit. Furthermore, we provide simulative evidence that RL- MLC with off-the-shelf low-density parity-check codes (LDPC) closely approaches its corresponding capacity limit. For 64-PPM, RL-MLC with only two levels achieves practically the same performance as that of bit-interleaved coded modulation with iterative decoding (BICM-ID), which involves a more difficult design procedure.
+
+## Physical-Layer Security: Combining Error Control Coding and Cryptography
+
+- **Status**: ❌
+- **Reason**: 물리계층 보안(wiretap)+암호 결합, 보안 도메인이며 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:5199337
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: W. K. Harrison, S. W. McLaughlin
+- **PDF**: https://ieeexplore.ieee.org/document/5199337
+- **Abstract**: In this paper we consider tandem error control coding and cryptography in the setting of the wiretap channel due to Wyner. In a typical communications system a cryptographic application is run at a layer above the physical layer and assumes the channel is error free. However, in any real application the channels for friendly users and passive eavesdroppers are not error free and Wyner's wiretap model addresses this scenario. Using this model, we show the security of a common cryptographic primitive, i.e. a keystream generator based on linear feedback shift registers (LFSR), can be strengthened by exploiting properties of the physical layer. A passive eavesdropper can be made to experience greater difficulty in cracking an LFSR- based cryptographic system insomuch that the computational complexity of discovering the secret key increases by orders of magnitude, or is altogether infeasible. This result is shown for two fast correlation attacks originally presented by Meier and Staffelbach, in the context of channel errors due to the wiretap channel model.
+
+## Optimal Output Back-Off in OFDM Systems with Nonlinear Power Amplifiers
+
+- **Status**: ❌
+- **Reason**: OFDM 비선형 PA back-off 트레이드오프·Bussgang 잡음제거 변형, LDPC 무관 통신 응용 특이적
+- **ID**: ieee:5199282
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: M. Senst, G. Ascheid
+- **PDF**: https://ieeexplore.ieee.org/document/5199282
+- **Abstract**: A well-known problem of OFDM signals is their high peak-to-average power ratio, which can cause the clipping of peaks in the transmitted signal due to the limited linear range of high power amplifiers. Operating the amplifier solely in the linear region, i.e., with a large output back-off, results in an undistorted transmitted signal, but at the expense of a low SNR at the receiver. Driving the amplifier into saturation, on the other hand, maximizes the received SNR, but causes severe nonlinear signal distortions. In this paper we study the resulting tradeoff. We show both theoretically and by simulations that, despite the distortions, it is optimal to operate the amplifier close to saturation. Furthermore, we analytically derive a modification of the Bussgang noise cancellation algorithm which was recently shown in the literature to improve the EXIT characteristic of the algorithm.
+
+## Markov Chain Monte Carlo Detection Methods for High SNR Regimes
+
+- **Status**: ❌
+- **Reason**: MIMO/CDMA용 MCMC 검출기, LDPC 무관 통신 검출 기법
+- **ID**: ieee:5199166
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: S. Akoum, R. Peng, R.-R. Chen +1
+- **PDF**: https://ieeexplore.ieee.org/document/5199166
+- **Abstract**: Statistical detectors that are based on Markov chain Monte Carlo (MCMC) simulators have emerged as promising low-complexity solutions to both multiple-input multiple-output (MIMO) and code division multiple access (CDMA) communication systems. While these types of detectors achieve unprecedented near capacity performance, i.e., when operated in low signal-to-noise ratio (SNR) regime, they exhibit a serious problem at medium to high SNR regimes, referred to as the "stalling" problem. In this paper, we investigate the sources of this degradation and propose a new search strategy called constrained MCMC to remedy the issue of stalling.
+
+## Energy Efficient Error Correction in Mobile TV
+
+- **Status**: ❌
+- **Reason**: fountain 코드 기반 opportunistic EC + ADC 에너지 절감, LDPC ECC 떼어낼 기법 없음
+- **ID**: ieee:5198991
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: X. Shao, R. Schiphorst, C. H. Slump
+- **PDF**: https://ieeexplore.ieee.org/document/5198991
+- **Abstract**: The current error correction layer of digital mobile TV is designed for worst case scenarios, which often do not apply. In this paper, we propose a new opportunistic error correction layer based on fountain codes and a resolution adaptive ADC, which has been integrated into the OFDM-based physical layer. The key element in the new proposed system is that only packets are processed by the receiver which have encountered high-energy channels. Others are discarded. With this new approach, around 84% of the energy consumption in ADCs can be saved compared with the conventional mobile TV system under the same channel conditions.
+
+## Multi-Dimensional Nested Lattice Quantization for Wyner-Ziv Coding
+
+- **Status**: ❌
+- **Reason**: Wyner-Ziv 격자양자화 소스코딩, 채널 ECC 아님
+- **ID**: ieee:5199198
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: S. Gao, C. Ling
+- **PDF**: https://ieeexplore.ieee.org/document/5199198
+- **Abstract**: In this paper, we consider the coding of an independent and identically distributed (i.i.d.) Gaussian source with side information available only at the decoder in the form of a noisy version of the source to be encoded. This problem is known as Wyner-Ziv coding in literature. In this paper, we propose concrete implementation by using the strategy of multi-dimensional nested lattice quantization (NLQ). By investigating various lattices in the dimensions considered, we give some analysis on how lattice properties affect performance. We also propose a method on choosing good coarse lattices in multiple dimensions. By introducing scale factors, we examine the relationship between distortion and scale factor for various rates. As dimension increases to eight and twenty-four, we obtain distortion performance close to the Wyner-Ziv limit. Meanwhile, our scheme is simple without causing long delay and large storage, which is suitable for sensor networks.
+
+## Practical Dirty Paper Coding with Nested Binary LDGM-LDPC Codes
+
+- **Status**: ❌
+- **Reason**: Dirty paper coding(LDGM-LDPC nested), JSCC/DPC 응용 베이스라인이라 NAND 채널 ECC로 이식할 기법 없음
+- **ID**: ieee:5199355
+- **Type**: conference
+- **Published**: 14-18 June
+- **Authors**: Q. Wang, C. He
+- **PDF**: https://ieeexplore.ieee.org/document/5199355
+- **Abstract**: The superior shaping performance of low-density generation matrix (LDGM) codes makes them important in the design of capacity-approaching dirty paper coding (DPC) schemes. One possible LDGM-based DPC scheme is the nested LDGM-LDPC code proposed by Wainwright and Martinian, which has been shown to be capacity-achieving under optimal encoding and decoding. In this paper, considering the Gaussian DPC problem limited to a binary alphabet, we propose practical encoding and decoding algorithms for the nested LDGM-LDPC code utilizing ideas from the fast LDPC encoding algorithm to satisfy the parity constraints, and optimize the degree distributions of the code through density evolution. Simulation results show that the proposed scheme can indeed closely approach the alphabet-constrained DPC capacity.
+
+## On LDPC codes over symmetric channels
+
+- **Status**: ❌
+- **Reason**: BIOSM 채널 LDPC 용량달성 시퀀스 설계의 순수 이론(stability/flatness condition), 디코더/HW/구성 산출 없음
+- **ID**: ieee:5158547
+- **Type**: conference
+- **Published**: 12-10 June
+- **Authors**: Hamid Saeedi, Hossein Pishro-Nik
+- **PDF**: https://ieeexplore.ieee.org/document/5158547
+- **Abstract**: In the past decade, there has been tremendous amount of research on the analysis and design of the Low-Density Parity-Check (LDPC) codes with belief propagation decoding over different types of Binary-Input Output-Symmetric Memoryless (BIOSM) channels. However, with the exception of the Binary Erasure Channel (BEC), analytical results on LDPC codes over such channels are limited and most results are based on numerical methods and optimization. In particular, systematic design of provably capacity achieving sequences of LDPC code ensembles over general class of BIOSM channels has remained a fundamental open problem. Such sequences have been designed only for the binary erasure channel (BEC). In this paper, we first prove some novel analytical properties of the LDPC code ensembles over BIOSM channels. In particular, we prove a result that generalizes the previously known stability condition over symmetric channels. This suggests that a modified version of the flatness condition, a property which has been shown to be critical for capacity achieving sequences over the BEC, can be used to devise capacity achieving sequences for general class of BIOSM channels. Based on this assumption, we propose a method which could result in the systematic design of such sequences over BIOSM channels. Numerical evidence is promising and provides a consistent convergence behavior to capacity over the considered BIOSM channels as the average check node degree increases.
+
+## AND-OR tree analysis of distributed LT codes
+
+- **Status**: ❌
+- **Reason**: 분산 LT(rateless/fountain) 코드 설계, fountain·소스 코딩 성격으로 떼어낼 LDPC ECC 기법 없음
+- **ID**: ieee:5158583
+- **Type**: conference
+- **Published**: 12-10 June
+- **Authors**: Dino Sejdinovic, Robert J. Piechocki, Angela Doufexi
+- **PDF**: https://ieeexplore.ieee.org/document/5158583
+- **Abstract**: In this contribution, we consider design of distributed LT codes, i.e., independent rateless encodings of multiple sources which communicate to a common relay, where relay is able to combine incoming packets from the sources and forwards them to receivers. We provide density evolution formulae for distributed LT codes, which allow us to formulate distributed LT code design problem and prove the equivalence of performance of distributed LT codes and LT codes with related parameters in the asymptotic regime. Furthermore, we demonstrate that allowing LT coding apparatus at both the sources and the relay may prove advantageous to coding only at the sources and coding only at the relay.
+
+## Random number generation from multipath propagation: MIMO-based encryption key establishment
+
+- **Status**: ❌
+- **Reason**: MIMO 멀티패스 기반 암호키 생성, LDPC 무관 보안 주제
+- **ID**: ieee:5172006
+- **Type**: conference
+- **Published**: 1-5 June 2
+- **Authors**: Chan Chen, Michael A. Jensen
+- **PDF**: https://ieeexplore.ieee.org/document/5172006
+- **Abstract**: This paper discusses the concept of using the physics associated with multipath propagation and multiple antennas to establish secure encryption keys between two wireless nodes in a network. The presentation includes a proposed algorithm for generating uncorrelated keys despite the fact that the random numbers generated by the propagation channel exhibit spatial and temporal correlation. It further briefly discusses some of the measures that must be taken to make the algorithm implementation practical as well as the theoretically-achievable performance of the algorithm. Simulation results using a physical path-based time-variant MIMO model demonstrate that the length of the established key grows as antennas are added. Furthermore, for high SNR environments, the algorithm is able to achieve a key length versus SNR curve whose slope matches that of the theoretically achievable bound.

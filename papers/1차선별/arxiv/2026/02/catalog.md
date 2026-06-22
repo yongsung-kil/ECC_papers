@@ -1,0 +1,38 @@
+# arXiv — 2026-02 (1차선별 통과)
+
+
+## Quantum Approximate Optimization for Decoding of Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: QAOA 기반 LDPC 디코더 — 양자 하드웨어이나 패리티체크+soft LLR 비용함수로 BP 대체 디코딩, 단·고잡음 개선 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2602.21124v1
+- **Type**: preprint
+- **Published**: 2026-02-24
+- **Authors**: Krishnakanta Barik, Goutam Paul
+- **PDF**: https://arxiv.org/pdf/2602.21124v1
+- **Abstract**: Decoding Low-Density Parity-Check (LDPC) codes is a fundamental problem in coding theory, and Belief Propagation (BP) is one of the most popular methods for LDPC code decoding. However, BP may encounter convergence issues and suboptimal performance, especially for short-length codes and in high-noise channels. The Quantum Approximate Optimization Algorithm (QAOA) is a type of Variational Quantum Algorithm (VQA) designed to solve combinatorial optimization problems by minimizing a problem-specific cost function. In this paper, we present a QAOA-based decoding framework for LDPC codes by formulating a decoding cost function that incorporates both parity-check constraints and soft channel reliability information. The resulting optimization problem is solved using QAOA to search for low-energy configurations corresponding to valid codewords. We test the proposed method through extensive numerical experiments and compare its performance with BP decoding. The experimental results demonstrate that the QAOA-based decoder achieves a higher probability of correctly recovering the transmitted codeword than BP across multiple experimental settings.
+
+## Robust Composite DNA Storage under Sampling Randomness, Substitution, and Insertion-Deletion Errors
+
+- **Status**: ✅
+- **Reason**: Composite DNA 스토리지에서 LLR 유도 후 기존 LDPC로 오류정정 — 스토리지 ECC 일반(B), LLR/채널모델 기법 이식 여지
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2602.11951v1
+- **Type**: preprint
+- **Published**: 2026-02-12
+- **Authors**: Busra Tegin, Tolga M Duman
+- **PDF**: https://arxiv.org/pdf/2602.11951v1
+- **Abstract**: DNA data storage offers a high-density, long-term alternative to traditional storage systems, addressing the exponential growth of digital data. Composite DNA extends this paradigm by leveraging mixtures of nucleotides to increase storage capacity beyond the four standard bases. In this work, we model composite DNA storage as a multinomial channel and draw an analogy to digital modulation by representing composite letters on the three-dimensional probability simplex. To mitigate errors caused by sampling randomness, we derive transition probabilities and log-likelihood ratios (LLRs) for each constellation point and employ practical channel codes for error correction. We then extend this framework to substitution and insertion-deletion (ID) channels, proposing constellation update rules that account for these additional impairments. Numerical results demonstrate that our approach achieves reliable performance with existing LDPC codes, compared to the prior schemes designed for limited-magnitude probability errors, whose performance degrades significantly under sampling randomness.
+
+## Design of Root Protograph LDPC Codes Simultaneously Achieving Full Diversity and High Coding Gain
+
+- **Status**: ✅
+- **Reason**: Protograph LDPC 코드 설계(density evolution+유전알고리즘 최적화) — 이식 가능 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2602.01555v1
+- **Type**: preprint
+- **Published**: 2026-02-02
+- **Authors**: Inki Kim, Hyuntae Ahn, Yongjune Kim +3
+- **PDF**: https://arxiv.org/pdf/2602.01555v1
+- **Abstract**: This paper presents a novel design framework for protograph-based LDPC codes that simultaneously achieves full diversity in block-fading channels (BFCs) and nearcapacity performance in additive white Gaussian noise channels (AWGNCs). By leveraging a Boolean approximation-based analysis--Diversity Evolution (DivE)--we derive structural constraints for generalized rootchecks that guarantee full diversity. Based on these constraints, we propose a protograph template tailored for two-block BFCs. Furthermore, we employ a genetic algorithm guided by density evolution to optimize the protograph edges within this template for superior AWGNC performance. The resulting codes effectively bridge the gap between diversityoriented and capacity-oriented designs, exhibiting robust performance across both channel environments.

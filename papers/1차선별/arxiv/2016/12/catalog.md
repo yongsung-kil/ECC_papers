@@ -1,0 +1,26 @@
+# arXiv — 2016-12 (1차선별 통과)
+
+
+## Least reliable messages based early termination method for LT soft decoder
+
+- **Status**: ✅
+- **Reason**: LT/BP 디코더용 신규 조기종료(LRM) 기법, LDPC BP에 직접 적용 가능하다고 명시되어 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1612.05461v1
+- **Type**: preprint
+- **Published**: 2016-12-16
+- **Authors**: Cenk Albayrak, Cemaleddin Simsek, Kadir Turk
+- **PDF**: https://arxiv.org/pdf/1612.05461v1
+- **Abstract**: In this paper, we propose a new early termination method (ETM) for Luby transform (LT) belief propagation (BP) decoder. The proposed ETM, which we call least reliable messages (LRM), observes only sign alterations of a small cluster in log-likelihood ratio (LLR) messages passing between nodes in BP decoder. Simulation results and complexity analyzes show that LRM significantly lower computational complexity of early termination section in decoder without any performance degradation and decreases the average decoding iteration amounts compared to conventional ETMs in literature. The method can be easily applied to code families which can be decoded by BP such as low density parity check (LDPC) codes, polar codes and Raptor codes.
+
+## Graph based linear error correcting codes
+
+- **Status**: ✅
+- **Reason**: Ustimenko-Woldar 그래프(C4 없는 bipartite biregular) 기반 신규 바이너리 LDPC 구성으로 코드설계 기법 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1612.03279v1
+- **Type**: preprint
+- **Published**: 2016-12-10
+- **Authors**: Monika Polak, Eustrat Zhupa
+- **PDF**: https://arxiv.org/pdf/1612.03279v1
+- **Abstract**: In this article we present a construction of error correcting codes, that have representation as very sparse matrices and belong to the class of Low Density Parity Check Codes. LDPC codes are in the classical Hamming metric. They are very close to well known Shannon bound. The ability to use graphs for code construction was first discussed by Tanner in 1981 and has been used in a number of very effective implementations. We describe how to construct such codes by using special a family of graphs introduced by Ustimenko and Woldar. Graphs that we used are bipartite, bi-regular, very sparse and do not have short cycles C 4 . Due to the very low density of such graphs, the obtained codes are fast decodable. We describe how to choose parameters to obtain a desired code rate. We also show results of computer simulations of BER (bit error rate) of the obtained codes in order to compare them with other known LDPC codes.

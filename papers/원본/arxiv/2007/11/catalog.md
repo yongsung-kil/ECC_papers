@@ -1,0 +1,13 @@
+# arXiv — 2007-11
+
+
+## Bounds on the Number of Iterations for Turbo-Like Ensembles over the Binary Erasure Channe
+
+- **Status**: ❌
+- **Reason**: BEC turbo-like 앙상블 반복횟수 하한의 순수 점근 이론; 디코더/HW/구성으로 안 이어짐
+- **ID**: arxiv:0711.1056v1
+- **Type**: preprint
+- **Published**: 2007-11-07
+- **Authors**: Igal Sason, Gil Wiechman
+- **PDF**: https://arxiv.org/pdf/0711.1056v1
+- **Abstract**: This paper provides simple lower bounds on the number of iterations which is required for successful message-passing decoding of some important families of graph-based code ensembles (including low-density parity-check codes and variations of repeat-accumulate codes). The transmission of the code ensembles is assumed to take place over a binary erasure channel, and the bounds refer to the asymptotic case where we let the block length tend to infinity. The simplicity of the bounds derived in this paper stems from the fact that they are easily evaluated and are expressed in terms of some basic parameters of the ensemble which include the fraction of degree-2 variable nodes, the target bit erasure probability and the gap between the channel capacity and the design rate of the ensemble. This paper demonstrates that the number of iterations which is required for successful message-passing decoding scales at least like the inverse of the gap (in rate) to capacity, provided that the fraction of degree-2 variable nodes of these turbo-like ensembles does not vanish (hence, the number of iterations becomes unbounded as the gap to capacity vanishes).

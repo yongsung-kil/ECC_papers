@@ -1,0 +1,38 @@
+# arXiv — 2012-04 (1차선별 통과)
+
+
+## Tight lower bound of consecutive lengths for QC-LDPC codes with girth twelve
+
+- **Status**: ✅
+- **Reason**: Tight length bound for girth-12 (3,L) QC-LDPC; binary code-design technique (girth/construction, CRT-based) directly transferable to NAND LDPC (category E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1204.4864v1
+- **Type**: preprint
+- **Published**: 2012-04-22
+- **Authors**: Zhang GuoHua, Wang XinMei
+- **PDF**: https://arxiv.org/pdf/1204.4864v1
+- **Abstract**: For an arbitrary (3,L) QC-LDPC code with a girth of twelve, a tight lower bound of the consecutive lengths is proposed. For an arbitrary length above the bound the resultant code necessarily has a girth of twelve, and for the length meeting the bound, the corresponding code inevitably has a girth smaller than twelve. The conclusion can play an important role in the proofs of the existence of large-girth QC-LDPC codes, the construction of large-girth QC-LDPC codes based on the Chinese remainder theorem, and the construction of LDPC codes with the guaranteed error correction capability.
+
+## Reduced-Complexity Column-Layered Decoding and Implementation for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Reduced-complexity column-layered min-sum decoding + VLSI architecture for QC-LDPC; transferable decoder algorithm + HW (categories C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1204.2577v1
+- **Type**: preprint
+- **Published**: 2012-04-11
+- **Authors**: Zhiqiang Cui, Zhongfeng Wang, Xinmiao Zhang
+- **PDF**: https://arxiv.org/pdf/1204.2577v1
+- **Abstract**: Layered decoding is well appreciated in Low-Density Parity-Check (LDPC) decoder implementation since it can achieve effectively high decoding throughput with low computation complexity. This work, for the first time, addresses low complexity column-layered decoding schemes and VLSI architectures for multi-Gb/s applications. At first, the Min-Sum algorithm is incorporated into the column-layered decoding. Then algorithmic transformations and judicious approximations are explored to minimize the overall computation complexity. Compared to the original column-layered decoding, the new approach can reduce the computation complexity in check node processing for high-rate LDPC codes by up to 90% while maintaining the fast convergence speed of layered decoding. Furthermore, a relaxed pipelining scheme is presented to enable very high clock speed for VLSI implementation. Equipped with these new techniques, an efficient decoder architecture for quasi-cyclic LDPC codes is developed and implemented with 0.13um CMOS technology. It is shown that a decoding throughput of nearly 4 Gb/s at maximum of 10 iterations can be achieved for a (4096, 3584) LDPC code. Hence, this work has facilitated practical applications of column-layered decoding and particularly made it very attractive in high-speed, high-rate LDPC decoder implementation.
+
+## Decomposition Methods for Large Scale LP Decoding
+
+- **Status**: ✅
+- **Reason**: ADMM 기반 LP 디코딩 분산 알고리즘+parity polytope projection, 바이너리 LDPC에 직접 이식 가능한 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1204.0556v2
+- **Type**: preprint
+- **Published**: 2012-04-02
+- **Authors**: Siddharth Barman, Xishuo Liu, Stark C. Draper +1
+- **PDF**: https://arxiv.org/pdf/1204.0556v2
+- **Abstract**: When binary linear error-correcting codes are used over symmetric channels, a relaxed version of the maximum likelihood decoding problem can be stated as a linear program (LP). This LP decoder can be used to decode error-correcting codes at bit-error-rates comparable to state-of-the-art belief propagation (BP) decoders, but with significantly stronger theoretical guarantees. However, LP decoding when implemented with standard LP solvers does not easily scale to the block lengths of modern error correcting codes. In this paper we draw on decomposition methods from optimization theory, specifically the Alternating Directions Method of Multipliers (ADMM), to develop efficient distributed algorithms for LP decoding.   The key enabling technical result is a "two-slice" characterization of the geometry of the parity polytope, which is the convex hull of all codewords of a single parity check code. This new characterization simplifies the representation of points in the polytope. Using this simplification, we develop an efficient algorithm for Euclidean norm projection onto the parity polytope. This projection is required by ADMM and allows us to use LP decoding, with all its theoretical guarantees, to decode large-scale error correcting codes efficiently.   We present numerical results for LDPC codes of lengths more than 1000. The waterfall region of LP decoding is seen to initiate at a slightly higher signal-to-noise ratio than for sum-product BP, however an error floor is not observed for LP decoding, which is not the case for BP. Our implementation of LP decoding using ADMM executes as fast as our baseline sum-product BP decoder, is fully parallelizable, and can be seen to implement a type of message-passing with a particularly simple schedule.

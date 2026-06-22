@@ -1,0 +1,26 @@
+# arXiv — 2013-05 (1차선별 통과)
+
+
+## Resource Efficient LDPC Decoders for Multimedia Communication
+
+- **Status**: ✅
+- **Reason**: D/E: 신규 HQC(계층적 QC) 코드구성 + 부분병렬 FPGA 디코더, 바이너리 LDPC로 NAND HW 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1305.6216v2
+- **Type**: preprint
+- **Published**: 2013-05-27
+- **Authors**: Vikram Arkalgud Chandrasetty, Syed Mahfuzul Aziz
+- **PDF**: https://arxiv.org/pdf/1305.6216v2
+- **Abstract**: Achieving high image quality is an important aspect in an increasing number of wireless multimedia applications. These applications require resource efficient error correction hardware to detect and correct errors introduced by the communication channel. This paper presents an innovative flexible architecture for error correction using Low-Density Parity-Check (LDPC) codes. The proposed partially-parallel decoder architecture utilizes a novel code construction technique based on multi-level Hierarchical Quasi-Cyclic (HQC) matrix with innovative layering of random sub-matrices. Simulation of a high-level MATLAB model shows that the proposed HQC matrices have bit error rate (BER) performance close to that of unstructured random matrices. The proposed decoder has been implemented on FPGA. It is very resource efficient and provides very high throughput compared to other decoders reported to date. Performance evaluation of the decoder has been carried out by transmitting JPEG images over an AWGN channel and comparing the quality of the reconstructed images with those from other decoders.
+
+## Memory Efficient Decoders using Spatially Coupled Quasi-Cyclic LDPC Codes
+
+- **Status**: ✅
+- **Reason**: E/D: 메모리효율 QC SC-LDPC 구성 + 패리티검사 저장 FPGA HW 모델, NAND 디코더 메모리 최적화로 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1305.5625v2
+- **Type**: preprint
+- **Published**: 2013-05-24
+- **Authors**: Vikram Arkalgud Chandrasetty, Sarah J. Johnson, Gottfried Lechner
+- **PDF**: https://arxiv.org/pdf/1305.5625v2
+- **Abstract**: In this paper we propose the construction of Spatially Coupled Low-Density Parity-Check (SC-LDPC) codes using a periodic time-variant Quasi-Cyclic (QC) algorithm. The QC based approach is optimized to obtain memory efficiency in storing the parity-check matrix in the decoders. A hardware model of the parity-check storage units has been designed for Xilinx FPGA to compare the logic and memory requirements for various approaches. It is shown that the proposed QC SC-LDPC code (with optimization) can be stored with reasonable logic resources and without the need of block memory in the FPGA. In addition, a significant improvement in the processing speed is also achieved.

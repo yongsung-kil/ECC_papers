@@ -1,0 +1,24 @@
+# arXiv — 2017-08
+
+
+## Optimization-Based Decoding Algorithms for LDPC Convolutional Codes in Communication Systems
+
+- **Status**: ❌
+- **Reason**: LDPC convolutional codes의 최적화 기반 디코딩이나 비디오 스트림 윈도우 디코딩 응용 특이적; 바이너리 LDPC지만 NAND ECC로 떼어낼 신규 디코더 기법 약함, 애매하나 정수계획 기반 디코딩은 실용성 낮음
+- **ID**: arxiv:1708.05618v1
+- **Type**: preprint
+- **Published**: 2017-08-18
+- **Authors**: Banu Kabakulak, Z. Caner Taşkın, Ali Emre Pusane
+- **PDF**: https://arxiv.org/pdf/1708.05618v1
+- **Abstract**: In a digital communication system, information is sent from one place to another over a noisy communication channel. It may be possible to detect and correct errors that occur during the transmission if one encodes the original information by adding redundant bits. Low-density parity-check (LDPC) convolutional codes, a member of the LDPC code family, encode the original information to improve error correction capability. In practice these codes are used to decode very long information sequences, where the information arrives in subsequent packets over time, such as video streams. We consider the problem of decoding the received information with minimum error from an optimization point of view and investigate integer programming-based exact and heuristic decoding algorithms for its solution. In particular, we consider relax-and-fix heuristics that decode information in small windows. Computational results indicate that our approaches identify near-optimal solutions significantly faster than a commercial solver in high channel error rates. Our proposed algorithms can find higher quality solutions compared with commonly used iterative decoding heuristics.
+
+## MaxMinSum Steiner Systems for Access-Balancing in Distributed Storage
+
+- **Status**: ❌
+- **Reason**: 분산스토리지 access-balancing용 Steiner system 조합설계; LDPC 부수 언급, NAND LDPC ECC로 떼어낼 디코더/코드설계 기법 없음
+- **ID**: arxiv:1708.04986v2
+- **Type**: preprint
+- **Published**: 2017-08-16
+- **Authors**: Hoang Dau, Olgica Milenkovic
+- **PDF**: https://arxiv.org/pdf/1708.04986v2
+- **Abstract**: Many code families such as low-density parity-check codes, fractional repetition codes, batch codes and private information retrieval codes with low storage overhead rely on the use of combinatorial block designs or derivatives thereof. In the context of distributed storage applications, one is often faced with system design issues that impose additional constraints on the coding schemes, and therefore on the underlying block designs. Here, we address one such problem, pertaining to server access frequency balancing, by introducing a new form of Steiner systems, termed MaxMinSum Steiner systems. MaxMinSum Steiner systems are characterized by the property that the minimum value of the sum of points (elements) within a block is maximized, or that the minimum sum of block indices containing some fixed point is maximized. We show that proper relabelings of points in the Bose and Skolem constructions for Steiner triple systems lead to optimal MaxMin values for the sums of interest; for the duals of the designs, we exhibit block labelings that are within a 3/4 multiplicative factor from the optimum.

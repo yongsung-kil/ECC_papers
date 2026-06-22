@@ -1,0 +1,13 @@
+# arXiv — 2005-12
+
+
+## Graph-Cover Decoding and Finite-Length Analysis of Message-Passing Iterative Decoding of LDPC Codes
+
+- **Status**: ✅
+- **Reason**: LDPC BP 반복디코딩의 유한길이 분석(graph-cover decoding, fundamental polytope) - 디코더 동작 이해·코드설계에 이식 가능
+- **ID**: arxiv:cs/0512078v1
+- **Type**: preprint
+- **Published**: 2005-12-20
+- **Authors**: Pascal O. Vontobel, Ralf Koetter
+- **PDF**: https://arxiv.org/pdf/cs/0512078v1
+- **Abstract**: The goal of the present paper is the derivation of a framework for the finite-length analysis of message-passing iterative decoding of low-density parity-check codes. To this end we introduce the concept of graph-cover decoding. Whereas in maximum-likelihood decoding all codewords in a code are competing to be the best explanation of the received vector, under graph-cover decoding all codewords in all finite covers of a Tanner graph representation of the code are competing to be the best explanation. We are interested in graph-cover decoding because it is a theoretical tool that can be used to show connections between linear programming decoding and message-passing iterative decoding. Namely, on the one hand it turns out that graph-cover decoding is essentially equivalent to linear programming decoding. On the other hand, because iterative, locally operating decoding algorithms like message-passing iterative decoding cannot distinguish the underlying Tanner graph from any covering graph, graph-cover decoding can serve as a model to explain the behavior of message-passing iterative decoding. Understanding the behavior of graph-cover decoding is tantamount to understanding the so-called fundamental polytope. Therefore, we give some characterizations of this polytope and explain its relation to earlier concepts that were introduced to understand the behavior of message-passing iterative decoding for finite-length codes.

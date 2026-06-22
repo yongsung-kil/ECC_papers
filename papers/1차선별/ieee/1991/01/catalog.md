@@ -1,0 +1,14 @@
+# IEEE Xplore — 1991-01 (1차선별 통과)
+
+
+## On two probabilistic decoding algorithms for binary linear codes
+
+- **Status**: ✅
+- **Reason**: Probabilistic decoding analysis explicitly includes an LDPC decoding algorithm and method to estimate success probability over parity-check sets; transferable binary LDPC decoder analysis (C).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:104339
+- **Type**: journal
+- **Published**: 1991
+- **Authors**: M. Zivkovic
+- **PDF**: https://ieeexplore.ieee.org/document/104339
+- **Abstract**: A generalization of the Sullivan inequality (1967) on the ratio of the probability of a linear code to that of any of its cosets is proved. Starting from this inequality, a sufficient condition for successful decoding of linear codes by a probabilistic method is derived. A probabilistic decoding algorithm for low-density parity-check codes is also analyzed. This method of analysis enables one to estimate experimentally the probability of successful decoding for any given linear code and for any chosen family of parity-check sets. Using the example of a linear (512,100) code, the author illustrates the dependence of the successful probability on the channel noise level.<>

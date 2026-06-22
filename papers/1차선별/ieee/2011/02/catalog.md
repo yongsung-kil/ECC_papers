@@ -1,0 +1,218 @@
+# IEEE Xplore — 2011-02 (1차선별 통과)
+
+
+## Tree-Structured Expectation Propagation for Decoding Finite-Length LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 유한길이 LDPC용 Tree-structured EP 디코더로 BP 실패 후 stopping set 회피; 바이너리 LDPC BP 개선 디코더(C)로 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5682215
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Pablo M. Olmos, Juan Jose Murillo-Fuentes, Fernando Pérez-Cruz
+- **PDF**: https://ieeexplore.ieee.org/document/5682215
+- **Abstract**: In this paper, we propose Tree-structured Expectation Propagation (TEP) algorithm to decode finite-length Low-Density Parity-Check (LDPC) codes. The TEP decoder is able to continue decoding once the standard Belief Propagation (BP) decoder fails, presenting the same computational complexity as the BP decoder. The BP algorithm is dominated by the presence of stopping sets (SSs) in the code graph. We show that the TEP decoder, without previous knowledge of the graph, naturally avoids some fairly common SSs. This results in a significant improvement in the system performance.
+
+## On Girth Conditioning for Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: LDPC girth conditioning - MBFS 기반 저복잡도 사이클 제거 신규 방법 제시 (E 코드설계)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5671565
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Samuele Bandi, Velio Tralli, Andrea Conti +1
+- **PDF**: https://ieeexplore.ieee.org/document/5671565
+- **Abstract**: Low-density parity-check (LDPC) codes are gaining interest for high data rate applications in both terrestrial and spatial communications. They can be designed and studied through a bipartite graph whose characteristics affect the performance. This paper proposes a low-complexity method to improve the performance of LDPC codes by selectively removing some cycles from the associated bipartite graph. The method is based on a modified version of the breadth first search (BFS) algorithm that we call modified BFS (MBFS), which is applied to find cycles, and a greedy procedure to eliminate them. Throughout the paper we will give a detailed description of the algorithm proposed and analytically study its complexity. Simulation results show that this girth conditioning method applied to some classes of codes, whose structure allows further optimization, can lead to a significative complexity reduction and a performance improvements with respect to other methods.
+
+## Iterative Algorithms for Decoding a Class of Two-Step Majority-Logic Decodable Cyclic Codes
+
+- **Status**: ✅
+- **Reason**: 순환 finite geometry LDPC의 4-cycle 영향 회피 신규 반복디코딩 알고리즘 3종 제안 - 이식 가능 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5668918
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Li Zhang, Qin Huang, Shu Lin
+- **PDF**: https://ieeexplore.ieee.org/document/5668918
+- **Abstract**: Codes constructed based on finite geometries form a large class of cyclic codes with large minimum distances which can be decoded with simple majority-logic decoding in one or multiple steps. In 2001, Kou, Lin and Fossorier showed that the one-step majority-logic decodable finite geometry codes form a class of cyclic LDPC codes whose Tanner graphs are free of cycles of length 4. These cyclic finite geometry LDPC codes perform very well over the AWGN channel using iterative decoding based on belief propagation (IDBP) and have very low error-floors. However, the standard IDBP is not effective for decoding other cyclic finite geometry codes because their Tanner graphs contain too many short cycles of length 4 which severely degrade the decoding performance. This paper investigates iterative decoding of two-step majority-logic decodable finite geometry codes. Three effective algorithms for decoding these codes are proposed. These algorithms are devised based on the orthogonal structure of the parity-check matrices of the codes to avoid or reduce the degrading effect of the short cycles of length 4. These decoding algorithms provide significant coding gains over the standard IDBP using either the sum-product or the min-sum algorithms.
+
+## Massively LDPC Decoding on Multicore Architectures
+
+- **Status**: ✅
+- **Reason**: 멀티코어/GPU/CELL 기반 병렬 LDPC 디코딩 데이터구조·알고리즘; 이식 가능 HW/병렬화 기법(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:5445086
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Gabriel Falcao, Leonel Sousa, Vitor Silva
+- **PDF**: https://ieeexplore.ieee.org/document/5445086
+- **Abstract**: Unlike usual VLSI approaches necessary for the computation of intensive Low-Density Parity-Check (LDPC) code decoders, this paper presents flexible software-based LDPC decoders. Algorithms and data structures suitable for parallel computing are proposed in this paper to perform LDPC decoding on multicore architectures. To evaluate the efficiency of the proposed parallel algorithms, LDPC decoders were developed on recent multicores, such as off-the-shelf general-purpose x86 processors, Graphics Processing Units (GPUs), and the CELL Broadband Engine (CELL/B.E.). Challenging restrictions, such as memory access conflicts, latency, coalescence, or unknown behavior of thread and block schedulers, were unraveled and worked out. Experimental results for different code lengths show throughputs in the order of 1 \sim 2 Mbps on the general-purpose multicores, and ranging from 40 Mbps on the GPU to nearly 70 Mbps on the CELL/B.E. The analysis of the obtained results allows to conclude that the CELL/B.E. performs better for short to medium length codes, while the GPU achieves superior throughputs with larger codes. They achieve throughputs that in some cases approach very well those obtained with VLSI decoders. From the analysis of the results, we can predict a throughput increase with the rise of the number of cores.
+
+## Deriving Good LDPC Convolutional Codes from LDPC Block Codes
+
+- **Status**: ✅
+- **Reason**: LDPC block에서 LDPC convolutional code 유도하는 graph-cover 구성법, 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695133
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Ali E. Pusane, Roxana Smarandache, Pascal O. Vontobel +1
+- **PDF**: https://ieeexplore.ieee.org/document/5695133
+- **Abstract**: Low-density parity-check (LDPC) convolutional codes are capable of achieving excellent performance with low encoding and decoding complexity. In this paper, we discuss several graph-cover-based methods for deriving families of time-invariant and time-varying LDPC convolutional codes from LDPC block codes and show how earlier proposed LDPC convolutional code constructions can be presented within this framework. Some of the constructed convolutional codes significantly outperform the underlying LDPC block codes. We investigate some possible reasons for this “convolutional gain,” and we also discuss the-mostly moderate-decoder cost increase that is incurred by going from LDPC block to LDPC convolutional codes.
+
+## Enumerators for Protograph-Based Ensembles of LDPC and Generalized LDPC Codes
+
+- **Status**: ✅
+- **Reason**: protograph LDPC의 weight/stopping/trapping set/pseudocodeword enumerator 도출, error floor 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695100
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Shadi Abu-Surra, Dariush Divsalar, William E. Ryan
+- **PDF**: https://ieeexplore.ieee.org/document/5695100
+- **Abstract**: Protograph-based LDPC and generalized LDPC (G-LDPC) codes have the advantages of a simple design procedure and highly structured encoders and decoders. The design of such “protograph-based codes” relies on what is effectively a computer-based search. As such, following Gallager, it is prudent to restrict the search to a “good ensemble,” for example, an ensemble whose minimum distance grows linearly with codeword length. A good ensemble can also mean one with good stopping set, trapping set, or pseudocodeword properties. In this paper, ensemble codeword weight enumerators for finite-length LDPC and G-LDPC codes based on protographs were derived, and then the asymptotic case was considered. The asymptotic results allow us to determine whether or not the typical relative minimum distance in the ensemble grows linearly with codeword length. Then, the codeword weight enumerator technique is adapted to yield ensemble stopping set, trapping set, and pseudocodeword enumerators for protograph LDPC and G-LDPC codes. In this case, the asymptotic results allow us to determine whether or not the typical relative smallest stopping set size, trapping set size, and pseudoweight grows linearly with codeword length. Trapping set enumerators for G-LDPC code ensembles represent a more complex problem which we do not consider here.
+
+## Processing-Task Arrangement for a Low-Complexity Full-Mode WiMAX LDPC Codec
+
+- **Status**: ✅
+- **Reason**: 불규칙 QC-LDPC 멀티모드 저복잡도 코덱 HW(주소생성기·재사용 아키텍처); 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:5598546
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Yu-Luen Wang, Yeong-Luh Ueng, Chien-Lien Peng +1
+- **PDF**: https://ieeexplore.ieee.org/document/5598546
+- **Abstract**: In this paper, we propose dividing the decoding operations of a variety of irregular quasi-cyclic (QC) low-density parity-check (LDPC) codes into several smaller tasks. An algorithm is devised in order to arrange these tasks in a similar form such that a highly reusable multimode architecture can be designed to process these tasks. For this task-based decoder, the associated memory access can be accomplished with the help of the proposed address generators. Using this approach, the difficulty of designing a low-complexity multimode decoder, which is capable of supporting a variety of irregular QC-LDPC codes, can be overcome. Layered encoding that enables the routing networks and memory for decoding to be reused for the encoding is also proposed. Using these techniques, a multimode codec which can support all 114 WiMAX LDPC codes is designed and implemented in a 90-nm process. The full-mode WiMAX codec achieves a moderate encoding (decoding) throughput of 800 Mb/s (200 Mb/s) and occupies an area of only 0.679 mm2.
+
+## LP Decoding of Regular LDPC Codes in Memoryless Channels
+
+- **Status**: ✅
+- **Reason**: regular LDPC의 LP 디코딩 girth 기반 임계값 분석, 디코더 성능 분석 이식 가능(C/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695116
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Nissim Halabi, Guy Even
+- **PDF**: https://ieeexplore.ieee.org/document/5695116
+- **Abstract**: We study error bounds for linear programming decoding of regular low-density parity-check (LDPC) codes. For memoryless binary-input output-symmetric channels, we prove bounds on the word error probability that are inverse doubly exponential in the girth of the factor graph. For memoryless binary-input AWGN channel, we prove lower bounds on the threshold for regular LDPC codes whose factor graphs have logarithmic girth under LP-decoding. Specifically, we prove a lower bound of σ = 0.735 (upper bound of [(Eb)/(N0)]=2.67 dB) on the threshold of (3, 6)-regular LDPC codes whose factor graphs have logarithmic girth. Our proof is an extension of a recent paper of Arora, Daskalakis, and Steurer [STOC 2009] who presented a novel probabilistic analysis of LP decoding over a binary symmetric channel. Their analysis is based on the primal LP representation and has an explicit connection to message passing algorithms. We extend this analysis to any MBIOS channel.
+
+## Divide and Concur and Difference-Map BP Decoders for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Divide-and-Concur 및 DMBP 디코더로 error floor 대폭 개선, BP 변형 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695135
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Jonathan S. Yedidia, Yige Wang, Stark C. Draper
+- **PDF**: https://ieeexplore.ieee.org/document/5695135
+- **Abstract**: The “Divide and Concur” (DC) algorithm introduced by Gravel and Elser can be considered a competitor to the belief propagation (BP) algorithm, in that both algorithms can be applied to a wide variety of constraint satisfaction, optimization, and inference problems. We show that DC can be interpreted as a message-passing algorithm on a “normal” factor graph. The “difference-map” dynamics of the DC algorithm enables it to avoid “traps” which may be related to the “trapping sets” or “pseudo-codewords” that plague BP decoders of low-density parity check (LDPC) codes in the error-floor regime. We investigate two decoders for LDPC codes based on these ideas. The first decoder is based directly on DC, while the second decoder borrows the important “difference-map” concept from the DC algorithm and translates it into a BP-like decoder. We show that this “difference-map belief propagation” (DMBP) decoder has dramatically improved error-floor performance compared to standard BP decoders, while maintaining a similar computational complexity. We present simulation results for LDPC codes comparing DC and DMBP decoders with other decoders based on sum-product BP, linear programming, and mixed-integer linear programming. We also describe the close relation of the DMBP decoder to reweighted min-sum algorithms, including those recently proposed by Ruozzi and Tatikonda.
+
+## Threshold Saturation via Spatial Coupling: Why Convolutional LDPC Ensembles Perform So Well over the BEC
+
+- **Status**: ✅
+- **Reason**: spatial coupling threshold saturation 메커니즘, SC-LDPC 코드설계 핵심 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695130
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Shrinivas Kudekar, Thomas J. Richardson, Rüdiger L. Urbanke
+- **PDF**: https://ieeexplore.ieee.org/document/5695130
+- **Abstract**: Convolutional low-density parity-check (LDPC) ensembles, introduced by Felström and Zigangirov, have excellent thresholds and these thresholds are rapidly increasing functions of the average degree. Several variations on the basic theme have been proposed to date, all of which share the good performance characteristics of convolutional LDPC ensembles. We describe the fundamental mechanism that explains why “convolutional-like” or “spatially coupled” codes perform so well. In essence, the spatial coupling of individual codes increases the belief-propagation (BP) threshold of the new ensemble to its maximum possible value, namely the maximum a posteriori (MAP) threshold of the underlying ensemble. For this reason, we call this phenomenon “threshold saturation.” This gives an entirely new way of approaching capacity. One significant advantage of this construction is that one can create capacity-approaching ensembles with an error correcting radius that is increasing in the blocklength. Although we prove the “threshold saturation” only for a specific ensemble and for the binary erasure channel (BEC), empirically the phenomenon occurs for a wide class of ensembles and channels. More generally, we conjecture that for a large range of graphical systems a similar saturation of the “dynamical” threshold occurs once individual components are coupled sufficiently strongly. This might give rise to improved algorithms and new techniques for analysis.
+
+## Lifting the Fundamental Cone and Enumerating the Pseudocodewords of a Parity-Check Code
+
+- **Status**: ✅
+- **Reason**: parity-check code의 pseudocodeword 구조/열거 알고리즘, error floor 분석 도구(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695120
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Wittawat Kositwattanarerk, Gretchen L. Matthews
+- **PDF**: https://ieeexplore.ieee.org/document/5695120
+- **Abstract**: The performance of message-passing iterative decoding and linear programming decoding depends on the Tanner graph representation of the code. If the underlying graph contains cycles, then such algorithms could produce a noncodeword output. The study of pseudocodewords aims to explain this noncodeword output. We examine the structure of the pseudocodewords and show that there is a one-to-one correspondence between graph cover pseudocodewords and integer points in a lifted fundamental cone. This gives a simple proof that the generating function of the pseudocodewords for a general parity-check code is rational (a fact first proved by Li, Lu, and Wang (Lecture Notes in Computer Science, vol. 5557, 2009) via other methods). Our approach yields algorithms for producing this generating function and provides tools for studying the irreducible pseudocodewords. Specifically, Barvinok's algorithm and the Barvinok-Woods projection algorithm are applied, and irreducible pseudocodewords are found via a Hilbert basis for the lifted fundamental cone.
+
+## On the Use of Soft-Decision Error-Correction Codes in nand Flash Memory
+
+- **Status**: ✅
+- **Reason**: NAND 플래시 LDPC 직접 (A): LLR 양자화·비균일 센싱·cell-to-cell interference 모델링, 소프트디시전 ECC
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5629456
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Guiqiang Dong, Ningde Xie, Tong Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/5629456
+- **Abstract**: As technology continues to scale down, NAND Flash memory has been increasingly relying on error-correction codes (ECCs) to ensure the overall data storage integrity. Although advanced ECCs such as low-density parity-check (LDPC) codes can provide significantly stronger error-correction capability over BCH codes being used in current practice, their decoding requires soft-decision log-likelihood ratio (LLR) information. This results in two critical issues. First, accurate calculation of LLR demands fine-grained memory-cell sensing, which nevertheless tends to incur implementation overhead and access latency penalty. Hence, it is critical to minimize the fine-grained memory sensing precision. Second, accurate calculation of LLR also demands the availability of a memory-cell threshold-voltage distribution model. As the major source for memory-cell threshold-voltage distribution distortion, cell-to-cell interference must be carefully incorporated into the model. However, these two critical issues have not been ever addressed in the open literature. This paper attempts to address these open issues. We derive mathematical formulations to approximately model the threshold-voltage distribution of memory cells in the presence of cell-to-cell interference, based on which the calculation of LLRs is mathematically formulated. This paper also proposes a nonuniform memory sensing strategy to reduce the memory sensing precision and, thus, sensing latency while still maintaining good error-correction performance. In addition, we investigate these design issues under the scenario when we can also sense interfering cells and hence explicitly estimate cell-to-cell interference strength. We carry out extensive computer simulations to demonstrate the effectiveness and involved tradeoffs, assuming the use of LDPC codes in 2-bits/cell NAND Flash memory.
+
+## On the Number of Errors Correctable with Codes on Graphs
+
+- **Status**: ✅
+- **Reason**: 그래프 코드(generalized LDPC) 반복 디코딩으로 선형 오류정정 가능 증명, 디코더 분석 기법 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5695098
+- **Type**: journal
+- **Published**: Feb. 2011
+- **Authors**: Alexander Barg, Arya Mazumdar
+- **PDF**: https://ieeexplore.ieee.org/document/5695098
+- **Abstract**: We study ensembles of codes on graphs (generalized low-density parity-check, or LDPC codes) constructed from random graphs and fixed local constrained codes, and their extension to codes on hypergraphs. It is known that the average minimum distance of codes in these ensembles grows linearly with the code length. We show that these codes can correct a linearly growing number of errors under simple iterative decoding algorithms. In particular, we show that this property extends to codes constructed by parallel concatenation of Hamming codes and other codes with small minimum distance. Previously known results that proved this property for graph codes relied on graph expansion and required the choice of local codes with large distance relative to their length.
+
+## A transform approach for analyzing and constructing quasi-cyclic low-density parity-check codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 구성/girth 분석을 위한 새 transform(Fourier+permutation) 접근 — 코드설계 기법(E) 이식 가능, 바이너리 LDPC
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5743557
+- **Type**: conference
+- **Published**: 6-11 Feb. 
+- **Authors**: Qiuju Diao, Qin Huang, Shu Lin +1
+- **PDF**: https://ieeexplore.ieee.org/document/5743557
+- **Abstract**: An approach for studying quasi-cyclic codes based on matrix transformations via Fourier transforms and row and column permutations is presented. These transformations put a parity-check matrix in the form of an array of circulant matrices into a diagonal array of matrices of the same size over an extension field. The approach is used to characterize certain structural properties of low-density parity-check (LDPC) codes such as the girths of their Tanner graphs. Many constructions of quasi-cyclic LDPC codes can be unified under the proposed approach.
+
+## LDPC absorbing sets, the null space of the cycle consistency matrix, and Tanner's constructions
+
+- **Status**: ✅
+- **Reason**: circulant-based LDPC absorbing set/cycle consistency 분석(CCM) — error floor·코드설계 기법(E) 이식, 바이너리
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5743618
+- **Type**: conference
+- **Published**: 6-11 Feb. 
+- **Authors**: Jiadong Wang, Lara Dolecek, Richard Wesel
+- **PDF**: https://ieeexplore.ieee.org/document/5743618
+- **Abstract**: Dolecek et al. introduced the cycle consistency condition, which is a necessary condition for cycles - and thus the absorbing sets that contain them - to be present in separable circulant-based (SCB) LDPC codes. This paper introduces a cycle consistency matrix (CCM) for each possible absorbing set in an SCB LDPC code. The CCM efficiently enforces the cycle consistency condition for all cycles in a specified absorbing set by spanning its associated binary cycle space. Under certain conditions, a CCM not having full column rank is a necessary and sufficient condition for the LDPC code to contain the absorbing set associated with that CCM. This paper uses the CCM approach to carefully analyze LDPC codes based on the Tanner construction for r = 4 rows of sub-matrices (i.e., Tanner-construction LDPC codes with column weight 4).
+
+## AWGN channel analysis of terminated LDPC convolutional codes
+
+- **Status**: ✅
+- **Reason**: terminated LDPC convolutional(SC-LDPC) 임계값/trapping set 분석 — SC-LDPC 구성·error floor 기법(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5743566
+- **Type**: conference
+- **Published**: 6-11 Feb. 
+- **Authors**: David G. M. Mitchell, Michael Lentmaier, Daniel J. Costello
+- **PDF**: https://ieeexplore.ieee.org/document/5743566
+- **Abstract**: It has previously been shown that ensembles of terminated protograph-based low-density parity-check (LDPC) convolutional codes have a typical minimum distance that grows linearly with block length and that they are capable of achieving capacity approaching iterative decoding thresholds on the binary erasure channel (BEC). In this paper, we review a recent result that the dramatic threshold improvement obtained by terminating LDPC convolutional codes extends to the additive white Gaussian noise (AWGN) channel. Also, using a (3,6)-regular protograph-based LDPC convolutional code ensemble as an example, we perform an asymptotic trapping set analysis of terminated LDPC convolutional code ensembles. In addition to capacity approaching iterative decoding thresholds and linearly growing minimum distance, we find that the smallest non-empty trapping set of a terminated ensemble grows linearly with block length.
+
+## Asymptotic distribution of absorbing sets and fully absorbing sets for regular sparse code ensembles
+
+- **Status**: ✅
+- **Reason**: absorbing/trapping set 점근 분포 분석으로 bit-flipping 디코더 error rate 정밀화, error floor 관련 코드설계 기법 (E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5728733
+- **Type**: conference
+- **Published**: 31 Jan.-3 
+- **Authors**: Chi-Wei Lin, Lara Dolecek
+- **PDF**: https://ieeexplore.ieee.org/document/5728733
+- **Abstract**: Past work focused on the asymptotic enumeration of trapping sets under random ensembles for specific codes. In this paper, we extend the asymptotic analysis of trapping sets to find the distribution of elementary absorbing sets and elementary fully absorbing sets, which are a special class of trapping sets. The asymptotic results for elementary (fully) absorbing sets are presented, and compared with the results of trapping sets. The distribution of fully absorbing sets allows one to determine the error rates for bit-flipping decoders more accurately.
+
+## DVB-S2 LDPC finite-precision decoder
+
+- **Status**: ✅
+- **Reason**: DVB-S2 LDPC 유한정밀도 디코더, 입력 양자화·반복수 최적화로 HW 효율 개선. LLR 양자화+HW(C/D) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5746062
+- **Type**: conference
+- **Published**: 13-16 Feb.
+- **Authors**: Sherif Welsen Shaker
+- **PDF**: https://ieeexplore.ieee.org/document/5746062
+- **Abstract**: The latest standard of Digital Video Broadcasting (DVB-S2) features a powerful forward error correction system. This is enabled by replacing the concatenated Reed-Solomon/convolutional coding approach of DVB-S with a concatenation of an outer BCH code and inner low-density parity-check (LDPC) code, which is considered one of the most powerful codes known today and it can even outperform TurboCodes. In the decoding of LDPC code, huge data processing, storage, and interconnect requirements is a real challenge for decoder realization. For decoder hardware implementation, reduced complexity leads to low power consumption which might be a key implementation issue. This paper investigates the effect of the number of iteration and the decoder's input quantization to achieve a significant improvement in the hardware implementation of the decoder architecture and hence leading to lower delay, higher throughput, reduction of area and power consumption in the whole radio receiver.

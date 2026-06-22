@@ -1,0 +1,242 @@
+# IEEE Xplore — 2013-02 (1차선별 통과)
+
+
+## Construction of Girth-Eight QC-LDPC Codes from Greatest Common Divisor
+
+- **Status**: ✅
+- **Reason**: GCD 기반 girth-8 QC-LDPC 신규 구성법 — 바이너리 코드설계(E) 직접 이식
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6400356
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Guohua Zhang, Rong Sun, Xinmei Wang
+- **PDF**: https://ieeexplore.ieee.org/document/6400356
+- **Abstract**: For any column weight J and any row weight L, a novel framework is proposed such that a girth-eight (J,L) quasi-cyclic low-density parity-check (QC-LDPC) code with any block length above a lower bound can be constructed via a simple inequality in terms of greatest common divisor (GCD). The main advantage is that the construction of a class of (J,L) girth-eight QC-LDPC codes is transformed into a rather simple task, searching for J integers satisfying the so-called GCD constraint for L. Combining the new method with masking matrices, a class of type-1 QC-LDPC codes is presented with girth at least eight. Simulation results show that the type-1 codes perform better than the random QC-LDPC codes and quadratic-congruence-based QC-LDPC codes for moderate block lengths and low code rates.
+
+## Turbo Adaptive Threshold Bit Flipping For LDPC Decoding
+
+- **Status**: ✅
+- **Reason**: 고처리율 LDPC용 신규 bit-flipping 디코더(turbo 원리+bit-local thresholding). 이식 가능 디코더 알고리즘(C).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6376044
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Mohamed Ismail, Justin Coon, Imran Ahmed +2
+- **PDF**: https://ieeexplore.ieee.org/document/6376044
+- **Abstract**: In this paper, we present a novel bit flipping algorithm for high-throughput decoding of LDPC codes. The algorithm exploits the turbo principle to reduce the average number of iterations and employs a bit-local thresholding operation to remove the need for a block-wise minimum operation — which is common to many conventional bit flipping decoders — that hinders decoder throughput. Through simulations the proposed decoder is shown to achieve comparable bit-error rate performance to state-of-the-art techniques while requiring approximately half the number of iterations on average thus facilitating high-throughput decoding.
+
+## Spatially Coupled Repeat-Accumulate Codes
+
+- **Status**: ✅
+- **Reason**: spatially-coupled RA 코드, SC-LDPC 대비 인코더·rate 이점 — SC 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6409343
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Sarah Johnson, Gottfried Lechner
+- **PDF**: https://ieeexplore.ieee.org/document/6409343
+- **Abstract**: In this paper we propose a new class of spatially coupled codes based on regular repeat-accumulate codes. We show that these codes have several advantages over spatially coupled regular low-density parity-check codes including simpler encoders and slightly higher code rates when the thresholds and decoding complexity (as measured by the Tanner graph edge density) are similar.
+
+## Error Rate Estimation of Low-Density Parity-Check Codes Decoded by Quantized Soft-Decision Iterative Algorithms
+
+- **Status**: ✅
+- **Reason**: 양자화 소프트 BP 디코딩 error rate 추정·error floor 열거법 — 바이너리 LDPC 코드설계/디코더(C/E) 활용
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6403864
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Hua Xiao, Amir H. Banihashemi, Mehdi Karimi
+- **PDF**: https://ieeexplore.ieee.org/document/6403864
+- **Abstract**: This paper describes a combinatorial approach to estimate the error rate performance of low-density parity-check (LDPC) codes decoded by (quantized) soft-decision iterative decoding algorithms. The method is based on efficient enumeration of input vectors with small distances to a reference vector whose elements are selected to be the most reliable values from the input alphabet. Several techniques, including modified cycle enumeration, and the efficient derivation of problematic inputs for finer quantizers from those of coarser ones are employed to reduce the complexity of the enumeration. The error rate estimate is derived by testing the input vectors of small distances followed by estimating the contribution of larger distance vectors. We demonstrate by a number of examples that the proposed method provides accurate estimates of error rate with computational complexity much lower than that of Monte Carlo simulations, especially at the error floor region.
+
+## Distributed Network-Channel Codes Design with Short Cycles Removal
+
+- **Status**: ✅
+- **Reason**: 단사이클 제거로 error floor 저감하는 코드 구성 알고리즘. LDGM 기반이나 사이클 제거 기법이 바이너리 LDPC 구성에 이식 가능(E).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6342879
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Kun Pang, Zihuai Lin, Yonghui Li +1
+- **PDF**: https://ieeexplore.ieee.org/document/6342879
+- **Abstract**: In this paper, we address short cycle effects in the distributed low density generator matrix (LDGM) codes. As a codeword is formed from various nodes, the decentralized code construction makes it difficult to eliminate short cycles, resulting in a degraded code performance. To mitigate this effect, we propose a distributed algorithm which can eliminate short cycles within the network. The complexity of the proposed algorithm is a linear function of the number of relay nodes in the network. The simulation results show that the code performance can lower the error floor of irregular LDGM codes significantly, when all short cycles have been removed.
+
+## Message-Passing Algorithms for Counting Short Cycles in a Graph
+
+- **Status**: ✅
+- **Reason**: 이분그래프 단사이클 개수 세는 메시지패싱 알고리즘. LDPC girth/사이클 제거·코드설계에 직접 활용 가능(E).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6336765
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Mehdi Karimi, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/6336765
+- **Abstract**: A message-passing algorithm for counting short cycles in a graph is presented. For bipartite graphs, which are of particular interest in coding, the algorithm is capable of counting cycles of length g, g+2, ..., 2g-2, where g is the girth of the graph. For a general (non-bipartite) graph, cycles of length g, g+1, ..., 2g-1 can be counted. The algorithm is based on performing integer additions and subtractions in the nodes of the graph and passing extrinsic messages to adjacent nodes. The complexity of the proposed algorithm grows as O(g |E|2), where |E| is the number of edges in the graph. For sparse graphs, the proposed algorithm significantly outperforms the existing algorithms, tailored for counting em short cycles, in terms of computational complexity and memory requirements. We also discuss a more generic and basic approach of counting short cycles which is based on matrix multiplication, and provide a message-passing interpretation for such an approach. We then demonstrate that an efficient implementation of the matrix multiplication approach has essentially the same complexity as the proposed message-passing algorithm.
+
+## Asymptotic Distribution of Absorbing Sets and Fully Absorbing Sets for Regular Sparse Code Ensembles
+
+- **Status**: ✅
+- **Reason**: absorbing set/error floor 점근 분포 분석 — 바이너리 LDPC error floor·코드설계(E)에 직접 활용
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6384614
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Behzad Amiri, Chi-Wei Lin, Lara Dolecek
+- **PDF**: https://ieeexplore.ieee.org/document/6384614
+- **Abstract**: It is well recognized that low-density parity-check (LDPC) codes can suffer from an error floor when decoded iteratively. This performance degradation is often attributed to the class of objects known as trapping sets. Past work has focused on characterizing the distribution of trapping sets for a variety of code ensembles, including regular, irregular and structured LDPC codes. As a subset of the trapping set collection, there exists a class of graphical structures called the absorbing sets. An absorbing set is a combinatorially-defined object; in particular a fully absorbing set is stable under bit-flipping decoding. By construction, there can exist trapping sets that are not stable under such a decoder. As a result, for finite-precision, iterative decoding algorithms used over additive channels, absorbing sets can describe decoding errors more accurately than the broader class of trapping sets. In this paper, we compute the normalized logarithmic asymptotic distributions of absorbing sets and fully absorbing sets, including elementary (fully) absorbing sets. The calculations are based on the trapping set enumeration method proposed by Milenkovic, Soljanin, and Whiting in [1]. We compare distributions of absorbing and trapping sets for representative code parameters of interest, and quantify the (lack of) discrepancies between the two. Good absorbing set properties are implied for known structured LDPC codes, including repeat accumulate codes and protograph-based constructions. Establishing the distribution of fully absorbing sets (especially when the discrepancy with the trapping set distribution is significant) allows one to further refine the estimates of the error rates under bit-flipping and related decoders.
+
+## Improved Check Node Decomposition for Linear Programming Decoding
+
+- **Status**: ✅
+- **Reason**: LP 디코딩 check node degree-4 분해로 제약 축소 — 이식 가능 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6400360
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Xiaopeng Jiao, Jianjun Mu
+- **PDF**: https://ieeexplore.ieee.org/document/6400360
+- **Abstract**: For the linear programming decoding (LPD) proposed by Feldman et al., the number of constraints increases exponentially with check degrees. By decomposing a high-degree check node into a number of degree-3 check nodes, the number of constraints grows linearly with check degrees. In this letter, we show that the size of the LPD can be reduced by decomposing a high-degree check node into a number of degree-4 check nodes. The LPD using the degree-4 decomposition leads to almost the same number of constraints as using the degree-3 decomposition, while the number of auxiliary variable nodes is less than half of the one using the degree-3 decomposition. Moreover, when decomposing a high degree check node into a number of check nodes with degree d, d>4, the number of constraints increases rapidly and the size of the LPD becomes larger than the degree-4 decomposition. It is demonstrated on an LDPC code and a BCH code that the decoding time of the degree-4 decomposition is the smallest among the different decomposition methods.
+
+## Low complexity LDPC decoder with modified Sum-Product algorithm
+
+- **Status**: ✅
+- **Reason**: 수정 SPA/Min-sum 보정항을 LUT로 구현+좌표변환으로 HW 복잡도 감소; 이식 가능 디코더/HW(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6449408
+- **Type**: journal
+- **Published**: Feb. 2013
+- **Authors**: Chen Qian, Weilong Lei, Zhaocheng Wang
+- **PDF**: https://ieeexplore.ieee.org/document/6449408
+- **Abstract**: This paper describes an efficient implementation of the Sum-Product Algorithm (SPA) within a Low Density Parity Check (LDPC) code decoder, where a horizontal process correction term is used to improve the decoding performance of the Min-Sum algorithms. The correction term is implemented as a look-up table. The algorithm uses the correction term redundancy by means of a coordinate transformation to reduce the hardware complexity. Simulations and hardware tests indicate that the decoding performance is very good with the appropriate look-up table.
+
+## Improved Decoding Algorithm of Serial Belief Propagation With a Stop Updating Criterion for LDPC Codes and Applications in Patterned Media Storage
+
+- **Status**: ✅
+- **Reason**: LDPC serial BP에 stop-updating 기준 추가한 신규 디코더 알고리즘(C), 바이너리 LDPC BP 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6238374
+- **Type**: journal
+- **Published**: Feb. 2013
+- **Authors**: Xingcheng Liu, Jinlong Cai, Longbo Wu
+- **PDF**: https://ieeexplore.ieee.org/document/6238374
+- **Abstract**: In high density patterned media storage system, the “multiple islands per read head” model is taken into account for inter-track interference (ITI) in bit-patterned media (BPM). It has been proposed that low-density parity-check (LDPC) codes could improve the symbol error rate (SER) performance significantly when only considering AWGN noise alone over the storage channel. LDPC decoding algorithm could be applied in LDPC joint decoder of patterned media storage system. In this paper, we proposed a decoding algorithm of serial belief propagation (SBP) with a stop updating criterion for LDPC decoder. Simulation results show that the proposed decoding algorithm could reduce the times of generating and propagating the message in decoding with negligible error rate performance loss over AWGN channels when appropriately choosing the parameter that determines which variable node has been converged. By taking advantage of extrinsic information transfer (EXIT) charts, it is demonstrated that the proposed decoding algorithm could maintain superior SER performance and convergence rate compared with the traditional SBP decoding algorithm. To further explore the performance of the proposed decoding algorithm in “multiple islands per read head” model, we performed a large number of simulations over this channel model with different distribution percentages between the AWGN and the island position jitter noise. Simulation results show that the LDPC codes could improve the SER performance when considering jitter noise while the proposed decoding algorithm behaves excellently over the patterned media storage channel and over the AWGN channel.
+
+## Joint Message-Passing Decoding of LDPC Codes and 2-D ISI Channels
+
+- **Status**: ✅
+- **Reason**: LDPC와 2D ISI 채널의 joint message-passing 디코더(병렬 구현, EXIT 분석); 부호 비의존적 BP 디코더 기법으로 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6417011
+- **Type**: journal
+- **Published**: Feb. 2013
+- **Authors**: Jun Yao, Kah Chan Teh, Kwok Hung Li
+- **PDF**: https://ieeexplore.ieee.org/document/6417011
+- **Abstract**: Two-dimensional (2-D) intersymbol-interference (ISI) channels represent an important class of next-generation data-storage systems. In order to mitigate the 2-D ISI and improve system performance, a joint message-passing decoding algorithm is proposed in this paper. The proposed algorithm conducts an iterative decoding of low-density parity-check code and a 2-D ISI channel, which can be implemented in a fully parallel manner. An extrinsic information transfer chart is also introduced to analyze the performance and convergence behavior of the proposed message-passing decoding system. Simulation results show that the proposed joint message-passing decoding algorithm outperforms some existing joint decoding algorithms.
+
+## Efficient memory optimization and high throughput decoding architecture based on LDPC codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC FPGA 디코더 벡터화 메모리 최적화/고처리율 아키텍처 — D HW 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:6508255
+- **Type**: conference
+- **Published**: 21-22 Feb.
+- **Authors**: Leevaston Ngangom, V. Manikandan
+- **PDF**: https://ieeexplore.ieee.org/document/6508255
+- **Abstract**: Low-Density Parity-Check (LDPC) code is one kind of prominent error correcting codes (ECC) being considered in next generation industry standards. Here, the memory bandwidth is the key performance limiting factor. And the decoding throughput of a LDPC decoder is limited by this memory bandwidth requirement. The decoder implementation complexity has been the bottleneck of its application. This paper present a specific optimization called vectorization to take advantage of the configurable data-width and depth of embedded memory in an FPGA to improve the throughput of a decoder for quasicyclic LDPC codes. It is shown that this presented hardware structure will be highly competent in high throughput and low decoding latency applications.
+
+## A 45nm 6b/cell charge-trapping flash memory using LDPC-based ECC and drift-immune soft-sensing engine
+
+- **Status**: ✅
+- **Reason**: A: 45nm 6b/cell 플래시 LDPC ECC + drift-immune soft-sensing 엔진, NAND/플래시 직접 적용
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6487709
+- **Type**: conference
+- **Published**: 17-21 Feb.
+- **Authors**: Kin-Chu Ho, Po-Chao Fang, Hsiang-Pang Li +2
+- **PDF**: https://ieeexplore.ieee.org/document/6487709
+- **Abstract**: To satisfy the demand of higher storage density, storing multiple-bits-per-cell technique is widely adopted. As presented in [1], a 4b/cell Flash memory by using error-detection (ED) scheme stores 2b data on two sides of a memory cell individually. Since the noise margin becomes smaller, the distribution drifts due to program disturb, data retention and temperature variation will cause higher raw bit-error-rate (RBER) if the sensing level (voltage) are not adjusted accordingly. The ED scheme can detect the drift direction by counting and storing the number of cells (Ni) with threshold voltage (VTH) below the ith sensing level (VREF i). A simple example with page size 1KB is demonstrated in Fig. 12.7.1. During a read operation, the number of cells (Ni, measured) whose VTH below VREF i is counted and compared to Ni. The ED scheme can find out a sub-optimal sensing level when Ni, measured and Ni is close enough. In this paper, a production 16Gb 45nm 4b/cell ONO-based charge-trapping (CT) Flash memory is demonstrated to achieve 6b/cell capability. Since the adjacent distributions for 6b/cell are much closer to each other, even a BCH code with ED scheme fails to correct all the patterns. However, by using a new 1-3-3 mapping and LDPC codes with a developed drift-immune soft-sensing (DI-SS) engine, the 45nm 4b/cell CT Flash memory is boosted to 6b/cell. The data flow of programming data is also shown in Fig. 12.7.1.
+
+## A 10.4pJ/b (32, 8) LDPC decoder with time-domain analog and digital mixed-signal processing
+
+- **Status**: ✅
+- **Reason**: D: (32,8) LDPC 디코더 시간영역 아날로그/디지털 혼성 HW 구현, 이식 가능 디코더 아키텍처
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:6487796
+- **Type**: conference
+- **Published**: 17-21 Feb.
+- **Authors**: Daisuke Miyashita, Ryo Yamaki, Kazunori Hashiyoshi +4
+- **PDF**: https://ieeexplore.ieee.org/document/6487796
+- **Abstract**: Analog computation is potentially more efficient in certain arithmetic operations since a single wire can represent multiple bits of information, while digital systems retain advantages, for example, in logical operations. However, the use of conventional voltage-domain analog computation [1, 2] is limited due to its poor scalability, design complexity, and the overhead of interface circuits (i.e. ADC/DAC) to a surrounding digital system. Therefore, an alternate technique is required for exploiting the efficiency of analog computation. In this paper, we propose time-domain analog and digital mixed (TDMixed) signal processing, wherein time instead of voltage is utilized as the analog signal. To verify the validity of the TDMixed signal processing, we implement an (32, 8) low-density parity-check (LDPC) decoder in 65nm CMOS. The decoder achieves power and area efficiencies of 10.4pJ/b and 6.1Gb/s/mm2, respectively.
+
+## Ultra-wide body-bias range LDPC decoder in 28nm UTBB FDSOI technology
+
+- **Status**: ✅
+- **Reason**: D: 802.11n LDPC 디코더 28nm FDSOI HW 구현, body-bias 저전력 기법 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:6487798
+- **Type**: conference
+- **Published**: 17-21 Feb.
+- **Authors**: Philippe Flatresse, Bastien Giraud, Jean-Philippe Noel +11
+- **PDF**: https://ieeexplore.ieee.org/document/6487798
+- **Abstract**: This paper presents an IEEE 802.11n Low-Density Parity-Check (LDPC) decoder implemented in 28nm Ultra-Thin Body and BOX Fully Depleted SOI (UTBB FDSOI), and demonstrates the performance gains of this circuit vs. 28nm LP high-к metal-gate CMOS bulk technology. It also introduces extended body bias (BB) design techniques to take advantage of specific features of the UTBB technology to overcome the +/−300mV BB range limitation of conventional bulk technologies [1].
+
+## Unified solid-state-storage architecture with NAND flash memory and ReRAM that tolerates 32× higher BER for big-data applications
+
+- **Status**: ✅
+- **Reason**: A/B: NAND 플래시 솔리드스테이트 스토리지 ECC 후 BER 개선, 스토리지 ECC 기법
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6487711
+- **Type**: conference
+- **Published**: 17-21 Feb.
+- **Authors**: Shuhei Tanakamaru, Masafumi Doi, Ken Takeuchi
+- **PDF**: https://ieeexplore.ieee.org/document/6487711
+- **Abstract**: Unified solid-state storage (USSS) provides high error tolerance with four techniques: reverse-mirroring (RM), error-reduction synthesis (ERS), page-RAID, and error-masking (EM). The acceptable raw bit-error rate (ABER) of NAND flash memory is enhanced by 32×, or endurance or data-retention time effectively extends by 4.2 or 34×, respectively. ABER is defined to realize BER after ECC below 10-15.
+
+## An efficient methodology for parallel concatenation of LDPC codes with reduced complexity and decoding delay
+
+- **Status**: ✅
+- **Reason**: LDPC 병렬 연접(PCGC) 신규 방법론으로 복잡도·디코딩지연 개선, 바이너리 LDPC 디코더/구성 이식 가능(C/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6487947
+- **Type**: conference
+- **Published**: 15-17 Feb.
+- **Authors**: R. Pravin Kumar, Rakhesh Singh Kshetrimayum
+- **PDF**: https://ieeexplore.ieee.org/document/6487947
+- **Abstract**: Parallel concatenated Gallager codes (PCGC) is a class of concatenated codes based on LDPC component codes. Conventional attempts for concatenating LDPC in parallel using the well known ‘Turbo code structure’ without interleavers have not been widely successful, because of its performance limitation and decoding delay. In this paper we present an efficient methodology for parallel concatenation of LDPC codes. We show that proposed methodology for PCGC outperforms existing PCGC in terms of BER performance in both AWGN and flat fading Rayleigh channels. We also present that proposed PCGC outperforms existing PCGC in terms of complexity as well as decoding delay.
+
+## An improved technique to find the trapping sets of the irregular LDPC codes
+
+- **Status**: ✅
+- **Reason**: 비정칙 LDPC trapping set 탐색 개선기법, error floor 분석에 직결(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6487954
+- **Type**: conference
+- **Published**: 15-17 Feb.
+- **Authors**: Kuntal Deka, A. Rajesh, P. K. Bora
+- **PDF**: https://ieeexplore.ieee.org/document/6487954
+- **Abstract**: This paper presents an efficient technique to find the dominant trapping sets of the irregular low density parity check (LDPC) codes. This technique is based on the approach of progressively finding the larger trapping sets from the smaller ones. The proposed technique is applied to some of the most commonly studied irregular codes and it is found to obtain more number of trapping sets compared to those of the techniques using the same approach and others as well.
+
+## EXIT chart based design of LDPC codes for higher order constellations
+
+- **Status**: ✅
+- **Reason**: EXIT chart+LP로 LDPC degree분포 최적화 설계, 바이너리 코드설계 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6487953
+- **Type**: conference
+- **Published**: 15-17 Feb.
+- **Authors**: Bhargav Joshi, Andrew Thangaraj
+- **PDF**: https://ieeexplore.ieee.org/document/6487953
+- **Abstract**: EXtrinsic Information Transfer (EXIT) chart is a graphical tool for analysis of low density parity check (LDPC) and other codes with iterative decoding. In this paper, we propose the design of LDPC codes for coded modulation schemes by application of linear programming with conditions derived from EXIT charts. Points on the EXIT curve for bit and check node operations are first computed either using analysis or by simulation. The entire EXIT curve is then obtained by linear interpolation. Finally, the EXIT curves are optimized to obtain the maximum possible rate for the code under a given threshold condition. To demonstrate the design procedure, we consider the cases of M-PAM and 8-PSK over the additive white Gaussian noise (AWGN) channel. The optimization method presented is versatile, and can be extended to other constellations and situations easily.
+
+## An efficient exhaustive low-weight codeword search for structured LDPC codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC trapping set 분해 기반 저중량 codeword 탐색+최소거리 보장 코드 구성, 바이너리 이식 가능 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6502981
+- **Type**: conference
+- **Published**: 10-15 Feb.
+- **Authors**: Seyed Mehrdad Khatami, Ludovic Danjean, Dung V. Nguyen +1
+- **PDF**: https://ieeexplore.ieee.org/document/6502981
+- **Abstract**: In this paper, we present an algorithm to find all low-weight codewords in a given quasi-cyclic (QC) low-density parity-check (LDPC) code with a fixed column-weight and girth. The main idea is to view a low-weight codeword as an (a, 0) trapping sets, and then show that each topologically different (a, 0) trapping set can be dissected into smaller trapping sets. The proposed search method relies on the knowledge of possible topologies of such smaller trapping sets present in a code ensemble, which enables an efficient search. Combined with the high-rate QC LDPC code construction which successively adds blocks of permutation matrices, the algorithm ensures that in the code construction procedure all codewords up to a certain weight are avoided, which leads to a code with the desired minimum distance. The algorithm can be also used to determine the multiplicity of the low-weight codewords with different trapping set structure.

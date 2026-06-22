@@ -1,0 +1,26 @@
+# arXiv — 2020-11 (1차선별 통과)
+
+
+## Topologically Driven Methods for Construction Of Multi-Edge Type (Multigraph with nodes puncturing) Quasi-Cyclic Low-density Parity-check Codes for Wireless Channel, WDM Long-Haul and Archival Holographic Memory
+
+- **Status**: ✅
+- **Reason**: MET QC-LDPC 구성(lifting/PEG/EMD/ACE, error-floor, LLR unbiasing HW 압축) 다수 신규 기법, Flash storage 언급—바이너리 LDPC 코드설계/HW로 직접 이식 가능(E/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2011.14753v3
+- **Type**: preprint
+- **Published**: 2020-11-30
+- **Authors**: Vasiliy Stanislavovich Usatyuk
+- **PDF**: https://arxiv.org/pdf/2011.14753v3
+- **Abstract**: In this Phd thesis discusses modern methods for constructing MET QC-LDPC codes with a given error correction ("waterfall, error-floor") and complexity (parallelism level according circulant size plus scheduler orthogonality of checks) profiles: 1. weight enumerators optimization, protograph construction using Density Evolution, MI (P/Exit-chart) and it approximation: Gaussian Approximation, Reciprocal-channel approximation and etc; 2. Covariance evolution and it approximation; 3. Lifting methods for QC codes construction:PEG, Guest-and-Test, Hill-Climbing with girth, EMD, ACE optimization; 4. Upper and lower bounds on code distance estimation and its parallel implementation using CPU/GPU; 5. Brouwer-Zimmerman and Number Geometry code distance estimation methods; 6. Importance Sampling for error-floor estimation; 7. Length and rate adaption methods for QC codes based on cyclic group decomposition; 8. Methods for interaction screening which allow to improve performance (decorrelate variables) under BP and it's approximation. We proposed several state-of-the-art methods: Simulated Annealing lifting for MET QC-LDPC codes construction; fast EMD and code distance estimation; floor scale modular lifting for lenght adaption; fast finite-length covariance evolution rate penalty from threshold for code construction and it hardware friendly compression for fast decoder's LLRs unbiasing due SNR's estimation error. We found topology reason's of efficient of such methods using topology thickening (homotopy of continuous and discrete curvature) under matched metric space which allow to generalize this idea to a class of nonlinear codes for Signal Processing and Machine Learning. Using the proposed algorithms several generations of WDM Long-Haul error-correction codes were built. It was applied for "5G eMBB" 3GPP TS38.212 and other applications like Flash storage, Compressed sensing measurement matrix.
+
+## Learned Decimation for Neural Belief Propagation Decoders
+
+- **Status**: ✅
+- **Reason**: 신경망 BP(NBP)에 learned decimation 추가하는 디코더 알고리즘—바이너리 단거리 LDPC 대상, 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2011.02161v1
+- **Type**: preprint
+- **Published**: 2020-11-04
+- **Authors**: Andreas Buchberger, Christian Häger, Henry D. Pfister +2
+- **PDF**: https://arxiv.org/pdf/2011.02161v1
+- **Abstract**: We introduce a two-stage decimation process to improve the performance of neural belief propagation (NBP), recently introduced by Nachmani et al., for short low-density parity-check (LDPC) codes. In the first stage, we build a list by iterating between a conventional NBP decoder and guessing the least reliable bit. The second stage iterates between a conventional NBP decoder and learned decimation, where we use a neural network to decide the decimation value for each bit. For a (128,64) LDPC code, the proposed NBP with decimation outperforms NBP decoding by 0.75 dB and performs within 1 dB from maximum-likelihood decoding at a block error rate of $10^{-4}$.

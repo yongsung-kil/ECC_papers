@@ -1,0 +1,158 @@
+# IEEE Xplore — 2023-03 (1차선별 통과)
+
+
+## Free-Ride Coding for Constructions of Coupled LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Free-ride 코딩 기반 결합 LDPC(GC-LDPC/product/SC-LDPC) 신규 구성 — 코드 설계 기법, 카테고리 E
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10018202
+- **Type**: journal
+- **Published**: March 2023
+- **Authors**: Qianfan Wang, Suihua Cai, Xiao Ma
+- **PDF**: https://ieeexplore.ieee.org/document/10018202
+- **Abstract**: Free-ride coding, as an approach that admits transmission of a few extra bits over a low-density parity-check (LDPC) coded link without bandwidth expansion, is applied in this paper to construct coupled LDPC codes. Firstly, we present a syndrome channel model and derive the lower and upper bounds on its capacity (referred to as accessible capacity), indicating the feasibility of the reliable transmission of extra bits. Secondly, we present the performance evaluation on both the word error rate (WER) and the bit error rate (BER) for the free-ride codes with simple lower and upper bounds. Then we propose three applications of free-ride coding to construct coupled LDPC codes, including implicit globally-coupled LDPC (GC-LDPC) codes, partial product-LDPC codes, and terminated spatially-coupled LDPC (SC-LDPC) codes, all of which have the figure of merits that they share the same code rates with the basic component LDPC codes. Simulation results show that: 1) the proposed GC-LDPC codes can outperform the component LDPC codes, yielding a coding gain of up to 0.8 dB; 2) the proposed product codes with  $(3,6)$ -regular LDPC component codes of length 1024 can lower the WER from  $10^{-2}$  down to  $10^{-6}$  at the SNR around 2 dB; 3) the proposed terminated SC-LDPC codes can perform as well as the conventional terminated SC-LDPC codes but without any rate loss.
+
+## Performance Evaluation of Burst Error Correction by LDPC Coding and Iterative Decoding System in Magnetic Tape Drive
+
+- **Status**: ✅
+- **Reason**: 스토리지(자기테이프) 바이너리 LDPC 인터리빙+반복디코딩+버스트에러검출 시스템 — 스토리지 ECC(B), 버스트 대응 기법 NAND 이식 가능성
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9868050
+- **Type**: journal
+- **Published**: March 2023
+- **Authors**: Yasuaki Nakamura, Taisei Akamatsu, Madoka Nishikawa +1
+- **PDF**: https://ieeexplore.ieee.org/document/9868050
+- **Abstract**: The tolerance for burst error of interleaved low-density parity-check (LDPC) code is evaluated with the cross-interleaved Reed–Solomon code (CIRC) in the magnetic tape drive using a BaFe magnetic tape. We evaluate the interleaved LDPC coding and iterative decoding system with burst error detector (LDPC-BD) system by the required signal-to-noise ratio (SNR) to achieve “No errors” for the burst-like deterioration such as media defects to the CIRC with erasure error correction (CIRC-EC) system by computer simulation. The results clarify that the LDPC-BD system tolerates the longer burst errors than the CIRC-EC system and the LDPC-BD system achieves “No errors” with the 3.0–4.5 dB lower SNR than the CIRC-EC system.
+
+## Efficient MP Decoding via Fast G-BADMM Approach for Binary LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC용 새 ADMM 기반 MP 디코더(G-BADMM)로 수렴속도 개선 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9999682
+- **Type**: journal
+- **Published**: March 2023
+- **Authors**: Jing Bai, Yuhao Chi, Chau Yuen
+- **PDF**: https://ieeexplore.ieee.org/document/9999682
+- **Abstract**: Mathematical programming (MP) decoding based on the alternate direction method of multipliers (ADMM) algorithm is a promising approach for low-density parity-check (LDPC) codes in recent years. For this kind of decoding, the convergence characteristic has been considered as a key factor to enhance its advantage in practice. In this letter, we propose an efficient decoding algorithm based on generalized Bregman ADMM (G-BADMM) technique to improve the convergence speed of ADMM-based MP decoding for binary LDPC codes. The G-BADMM algorithm is established by adding additional Bregman divergences to the ADMM iterations of MP decoding. Moreover, the resulted G-BADMM iterations are solved efficiently. Furthermore, we theoretically analyze the proposed G-BADMM algorithm including its decoding performance analysis and computational complexity. Simulations demonstrate the efficiency of the proposed G-BADMM-based decoding algorithm.
+
+## A Unified, SNR-Aware SC-LDPC Code Design With Applications to Magnetic Recording
+
+- **Status**: ✅
+- **Reason**: CB SC-LDPC 코드 설계 통합 프레임워크(threshold+cycle 동시 최적화, partitioning matrix 탐색) — 새 바이너리 코드설계 기여(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9878357
+- **Type**: journal
+- **Published**: March 2023
+- **Authors**: Homa Esfahanizadeh, Eshed Ram, Yuval Cassuto +1
+- **PDF**: https://ieeexplore.ieee.org/document/9878357
+- **Abstract**: Spatially coupled (SC)-low-density parity-check (LDPC) codes are known to have outstanding error-correction performance and low decoding latency, which make them an excellent choice for high-density magnetic recording (MR) technologies. Whereas previous works on LDPC and SC-LDPC codes mostly take either an asymptotic or a finite-length design approach, we propose a unified framework for jointly optimizing the codes’ thresholds and cycle counts to address both regimes. We focus on circulant-based (CB) SC-LDPC code family as a representative, high-performance exemplar of structured SC-LDPC codes. The framework is based on efficient traversal and pruning of the code search space, building on the fact that the performance of a CB SC-LDPC code depends on some characteristics of the code’s partitioning matrix, which by itself is much smaller than the code’s full parity-check matrix. We then propose an algorithm that traverses all non-equivalent partitioning matrices and outputs a list of codes, each offering an attractive point on the trade-off between asymptotic and finite-length performance. Our simulations show that our framework results in SC-LDPC codes that outperform the state-of-the-art constructions, over both additive white Gaussian noise (AWGN) and partial response (PR) channel models, and that it offers the flexibility to choose low-signal-to-noise ratio (SNR), high-SNR, or in- between SNR region considering system requirements, e.g., that of the MR device.
+
+## Optimization of Protograph LDPC Codes via Surrogate Channel for Unequal Power Allocation
+
+- **Status**: ✅
+- **Reason**: Protograph LDPC 코드 최적화(UPA-PEXIT, UPA-DE) 신규 설계 기법 — 바이너리 변조, 카테고리 E
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10019266
+- **Type**: journal
+- **Published**: March 2023
+- **Authors**: Qiwang Chen, Yu-Cheng He, Chen Chen +1
+- **PDF**: https://ieeexplore.ieee.org/document/10019266
+- **Abstract**: This paper investigates the possibilities of optimizing existing protograph low-density parity-check (PLDPC) codes and designing optimal PLDPC codes on both AWGN and Rayleigh channels under binary modulation with unequal power allocation (UPA) for nonuniform sources. While the binary UPA modulation achieves a power gain, it also results in unequal error protection on the coded bits in systematic codewords during transmission. For irregular codes, it is possible to best protect the information bits by optimizing the classification of variable nodes (VNs). Those VNs represent the coded bits in protograph that allows exploiting jointly the degree irregularity and the power differentiation. An algorithm for UPA-based protograph extrinsic information transfer (UPA-PEXIT) analysis on the Rayleigh channel is proposed with the concept of surrogate channel which circumvents the channel asymmetry problem with UPA. With the RJA code as example, it is shown that classification optimization does improve the decoding threshold when the source entropy is small. To design optimal codes, a UPA-based differential evolution (UPA-DE) algorithm is proposed in conjunction with the UPA-PEXIT analysis. A family of optimized codes are illustrated for three typical nonuniform source distributions and compared with the RJA and NND codes by simulations in error rate performance.
+
+## Low Error Floor QC-LDPC Codes Construction Using Modified Cole's Trapping Sets Enumerating
+
+- **Status**: ✅
+- **Reason**: QC-LDPC error floor 저감 위한 trapping set 열거 신기법 — 이식 가능 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10113442
+- **Type**: conference
+- **Published**: 29-31 Marc
+- **Authors**: Vasiliy S. Usatyuk
+- **PDF**: https://ieeexplore.ieee.org/document/10113442
+- **Abstract**: In order to count the number of trapping sets (TS), we changed Cole's Importance Sampling (IS) approach, which led to a message-passing decoder problem. Several concepts have been combined to suggest improvements to Cole's IS: utilizing short cycles and simultaneous TS impulse tree decomposition, un-wrapping of message passing iterations Tanner Graph/Forney's Normal Graph symmetry's Graph Authomorphism is a complex yet simple concept. Superior Velasquez-Subramani and Karimi-Banihashemi TS enumerating techniques were supported. The proposed technique under PEG (1008, 504) Mackay code for single thread implementation is 43 times quicker than the original Cole's method and 5027 times (71463 times, multi-thread) faster than the Velasquez-Subramani LP method. For the TS enumerating problem at (2640, 1320), Margulis's code is 37958 times quicker than the suggested Velasquez-Subramani LP approach for single thread implementation, 82 times faster than Karimi-Banihashemi, and 134 times faster than Cole's original solution. On the basis of the creation of QC-LDPC codes, we demonstrate the effects of improved EMD spectrum and increased hamming distance on the TS spectrum and BER/FER error-floor level.
+
+## An Approach to Routes Enumeration in QC LDPC Base Matrices
+
+- **Status**: ✅
+- **Reason**: QC-LDPC base matrix 사이클/EMD 경로 열거 신기법 — 이식 가능 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10113447
+- **Type**: conference
+- **Published**: 29-31 Marc
+- **Authors**: Aleksei Kharin, Konstantin Zavertkin, Sergei Ganin
+- **PDF**: https://ieeexplore.ieee.org/document/10113447
+- **Abstract**: This paper presents an approach to routes enumeration in QC LDPC base matrices. The approach is based on a tree search and allows to enumerate routes of arbitrary length in base matrices with circulants weight more than one. Equivalent cycles elimination mechanism and balanced cycle detection technique are included. Proposed approach also allows to build EMD-spectre for base matrices.
+
+## Reliability of 3D NAND Flash for Future Storage Systems (Invited)
+
+- **Status**: ✅
+- **Reason**: 3D NAND Flash 신뢰성 직접 다룸 — 카테고리 A 명백 포함
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10118280
+- **Type**: conference
+- **Published**: 26-30 Marc
+- **Authors**: Akira Goda, Kishore Kumar Muchherla, Peter Feeley
+- **PDF**: https://ieeexplore.ieee.org/document/10118280
+- **Abstract**: The 3D NAND Flash technologies have been successful, having realized the high density, high performance and highly reliable storage systems. With the continuous technology scaling, significant challenges and opportunities are expected in the future. SLC NAND technology plays a critical role for the high performance systems. The increased block size with further layer stacking requires innovative solutions to realize enhanced system performance and cost scaling. For the bits per cell (BPC) scaling beyond QLC, the reduction of the total cost of ownership (TCO) at the system level is the key. In this paper, we review and discuss the challenges and opportunities of 3D NAND reliability from the storage system perspectives.
+
+## Fully Parallel Fully Unrolled BP Decoding of LDPC and Polar Codes
+
+- **Status**: ✅
+- **Reason**: LDPC fully-parallel fully-unrolled BP 디코딩 아키텍처, 28nm 합성 — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:10118633
+- **Type**: conference
+- **Published**: 26-29 Marc
+- **Authors**: Alireza Hasani, Lukasz Lopacinski, Milos Krstic +1
+- **PDF**: https://ieeexplore.ieee.org/document/10118633
+- **Abstract**: Low-Density Parity-Check (LDPC) and polar codes are two classes of channel codes potentially able to achieve the channel capacity, and both are used in current 5G communication systems. Belief Propagation (BP), which is the main decoding algorithm for LDPC codes could also be used for decoding polar codes. A fully parallel fully unrolled BP decoding architecture has been recently proposed for both of these codes. In this paper, we investigate these two architectures further and compare the two codes from the viewpoint of Bit-Error Rate (BER) performance, achieved throughput, latency, chip area, and also energy efficiency. Toward that, both architectures have been synthesized in a 28 nm CMOS technology, and corresponding results are provided.
+
+## Learning to Decode Protograph LDPC Codes over Fadings with Imperfect CSIs
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 LDPC 신경망 min-sum 디코더(학습 가중치) — 이식 가능 신경망 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10118642
+- **Type**: conference
+- **Published**: 26-29 Marc
+- **Authors**: Chen Yang, Yanan Zhou, Zhongwei Si +1
+- **PDF**: https://ieeexplore.ieee.org/document/10118642
+- **Abstract**: Recently a number of low-density parity-check (LDPC) decoding algorithms based on deep learning have been proposed in the literature. However, most of the work has been targeted for additive white Gaussian noise (AWGN) channels. For more practical scenarios, in this paper we investigate the neural-network based min-sum (MS) decoding for protograph LDPC codes in fading channels. Since the wireless channel is complex and varying, accurate channel state information (CSI) cannot be always available at the receiver. We classify the scenarios into three cases with perfect CSIs, imperfect CSIs, and no CSIs. By assigning learnable weights on the edges in the iterative decoding, the proposed neural decoder compensates for the performance loss caused by the error/lack of CSIs. The trajectory-based extrinsic information transfer (T-EXIT) chart is employed as a theoretical tool to select the proper training dataset for the neural network and the proper channel initialization scheme for the receiver. Numerical results in terms of block error rates are provided, which agree with the T-EXIT analysis. It can be seen that the proposed neural MS decoder clearly outperforms the traditional MS algorithm in Rayleigh fading channels. Meanwhile, the proposed decoder shows a good compatibility so that it can be applied to the cases with different accuracy of CSIs.
+
+## Buffers optimization for multi-core decoders
+
+- **Status**: ✅
+- **Reason**: 다중코어 반복 디코더용 입출력 버퍼 최적화·정지기준 — 병렬 디코더 HW 아키텍처(D)로 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:10118631
+- **Type**: conference
+- **Published**: 26-29 Marc
+- **Authors**: Emmanuel Boutillon, Cédric Marchand
+- **PDF**: https://ieeexplore.ieee.org/document/10118631
+- **Abstract**: For very high-speed satellite communication (up to 10 Gbit/s), the natural level of parallelism of a single decoder might be insufficient to achieve the decoding throughput. A known solution is to implement several decoder cores working in parallel. This solution entails efficient control and design of the input and output buffers to regulate the varying number of decoding iterations of each decoder. This paper presents a methodology to build such a system effectively for iterative decoders with stopping criteria. As an application, we present the result of the implementation of 3 DVB-S2/S2X decoders in a single FPGA. Simulation results of the whole system show performance within (or very close to) the standard requirements. The implementation can handle code rates from 13/45 (3.3 Gbit/s air throughput) up to 9/10 (10 Gbit/s air throughput) for several modulation sizes.
+
+## MGC: Multiple-Gray-Code for 3D NAND Flash based High-Density SSDs
+
+- **Status**: ✅
+- **Reason**: A: 3D NAND QLC SSD gray-code 인코딩 전략, LDPC ECC 직접 연관 — NAND 직접
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10070946
+- **Type**: conference
+- **Published**: 25 Feb.-1 
+- **Authors**: Yina Lv, Liang Shi, Qiao Li +4
+- **PDF**: https://ieeexplore.ieee.org/document/10070946
+- **Abstract**: QLC (4-bit-per-cell) and more-bit-per-cell 3D NAND flash memories are increasingly adopted in large storage systems. While achieving significant cost reduction, these memories face degraded performance and reliability issues. The industry has adopted two-step programming (TSP), rather than one-step programming, to perform fine-granularity program control and choose gray-code encoding, as well as LDPC (Low-Density Parity-Check Code) for error correction. Different flash manufacturers often integrate different gray-codes in their products, which exhibit different performance and reliability characteristics. Unfortunately, a fixed gray-code encoding design lacks the ability to meet the dynamic read and program performance requirements at both application and device levels.In this paper, we propose MGC, a multiple-gray-code encoding strategy, that adaptively chooses the best gray-code to meet the optimization goals at runtime. In particular, MGC first extracts the performance and reliability requirements based on application-level access patterns and detects the reliability degree of SSD. It then determines the appropriate gray-code to encode the data, either from host/user application or due to garbage collection, before writing the pages to the flash memory. MGC is integrated in FTL (flash translation layer) and enhances the flash controller to enable runtime gray-code arbitration. We evaluate the proposed MGC scheme. The results show that MGC achieves better performance and lifetime guarantee compared with state-of-the-arts and introduces little overhead.
+
+## An Adaptive Exponential Min Sum Decoding Algorithm
+
+- **Status**: ✅
+- **Reason**: min-sum 변형(adaptive exponential correction factor AEMSA) 신규 디코더 — NMSA 대비 개선, HW 적용 지향(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10084886
+- **Type**: conference
+- **Published**: 20-22 Marc
+- **Authors**: Zhang Weijia, Dushantha Nalin K. Jayakody
+- **PDF**: https://ieeexplore.ieee.org/document/10084886
+- **Abstract**: The belief propagation (BP) algorithm for low density parity check (LDPC) codes has proven to have excellent performance and is close to the Shannon limit. However, the high computational complexity is not conducive to realistic use. Although the min sum algorithm (MSA) improves the computational convenience and applicability. It also weakens its decoding capability. In order to improve the decoding performance of MSA and exploit the potential, this paper propose an adaptive exponential correction factor. This can improve the decoding performance of MSA. Adaptive exponential min sum algorithm (AEMSA) demonstrate a noticeable improvement over the normalized min sum algorithm (NMSA) and the BP algorithm in high signal to noise ratio (SNR). AEMSA is also a simple, efficient, low power consuming and highly potential decoding algorithm that can be applied in hardware implementations.

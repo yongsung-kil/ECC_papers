@@ -1,0 +1,158 @@
+# IEEE Xplore — 2017-07 (1차선별 통과)
+
+
+## LDPC Codes Based on the Space of Symmetric Matrices Over Finite Fields
+
+- **Status**: ✅
+- **Reason**: E: 대칭행렬 공간 기반 새로운 바이너리 LDPC 명시적 구성, girth 8 + 최소/정지거리 분석 — 이식 가능 코드설계
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7883834
+- **Type**: journal
+- **Published**: July 2017
+- **Authors**: Changli Ma, Qi Wang, Meng Zhao
+- **PDF**: https://ieeexplore.ieee.org/document/7883834
+- **Abstract**: In this paper, we present a new method for explicitly constructing regular low-density parity-check (LDPC) codes based on Sn(Fq), the space of n × n symmetric matrices over Fq. Using this method, we obtain two classes of binary LDPC codes, C(n, q) and CT (n, q), both of which have grith 8. Then, both the minimum distance and the stopping distance of each class are investigated. It is shown that the minimum distance and the stopping distance of CT(n, q) are both 2q. As for C(n, q), we determine the minimum distance and the stopping distance for some special cases and obtain some lower bounds for other cases.
+
+## On Die Bit Error Rate Estimator for NAND Flash Memory
+
+- **Status**: ✅
+- **Reason**: A: NAND 플래시 LDPC ECC의 패리티검사로 BER 추정, 다이 온칩 HW 구현 — NAND 직접
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7569094
+- **Type**: journal
+- **Published**: July 2017
+- **Authors**: Mustafa N. Kaynak, Patrick R. Khayat, Sivagnanam Parthasarathy
+- **PDF**: https://ieeexplore.ieee.org/document/7569094
+- **Abstract**: In this brief, we propose a simple bit error rate (BER) estimator utilizing the parity check constraints of a low-density parity-check code-based error correction coding (ECC) scheme. The proposed estimator can be efficiently implemented on flash memory die with a very small area cost. We articulate applications in which flash memory controllers can take advantage of having the BER estimate before the ECC decoding scheme to significantly reduce programming errors and improve system performance in terms of latency and throughput.
+
+## FlexLevel NAND Flash Storage System Design to Reduce LDPC Latency
+
+- **Status**: ✅
+- **Reason**: A: NAND LDPC read latency 감소 시스템 설계(LevelAdjust/AccessEval) — NAND 직접
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7605542
+- **Type**: journal
+- **Published**: July 2017
+- **Authors**: Jie Guo, Wujie Wen, Jingtong Hu +3
+- **PDF**: https://ieeexplore.ieee.org/document/7605542
+- **Abstract**: Aggressive technology scaling and adoption of multilevel-cell technique lead to progressive increase of bit error rate (BER) of NAND flash memory. Consequently, conventional error correction code is not adequate to guarantee system reliability. As an alternative, low density parity check (LDPC) code is introduced to provide more powerful error correction capability. However, to achieve better performance, LDPC code demands extra memory sensing operations and more data transfer cycles, directly leading to longer read latency. To achieve both system reliability and read efficiency, we propose the FlexLevel NAND flash storage system design in this paper. FlexLevel consists of two levels of optimization: 1) LevelAdjust and 2) AccessEval. At device level, the LevelAdjust technique is proposed to reduce BER by broadening noise margin via threshold voltage level reduction. With LevelAdjust, BER is greatly reduced and no extra sensing levels are required to protect data integrity. Hence, read performance is improved. However, while LevelAdjust can improve system reliability and read performance, it causes density loss. To balance read performance improvement and density loss, we propose the AccessEval technique at system level. AccessEval identifies data with high LDPC overhead and only applies LevelAdjust technique to these data. The experimental results show that compared with the best existing works, the proposed design can achieve up to 11% read speedup with negligible density loss.
+
+## On irregular LDPC codes with quantized message passing decoding
+
+- **Status**: ✅
+- **Reason**: 비정칙 LDPC용 유한알파벳 LUT 디코더 신규 설계 + degree distribution 최적화 — C(디코더) 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8227780
+- **Type**: conference
+- **Published**: 3-6 July 2
+- **Authors**: Michael Meidlinger, Gerald Matz
+- **PDF**: https://ieeexplore.ieee.org/document/8227780
+- **Abstract**: Irregular low-density parity-check (LDPC) codes are among the best codes currently known. Unfortunately, the performance of existing codes may deteriorate substantially with practical finite-precision decoder implementations. This motivates us to extend our previous work on finite-alphabet decoders based on look-up tables (LUTs) to irregular LDPC codes. We devise a joint design of the LUTs used for different node degrees and present a strategy to optimize the degree distribution (DD) of the LDPC code under LUT decoding. Numerical simulations show that with 4-bit LUT decoding the resulting codes outperform state-of-the-art codes with floating point min-sum (MS) decoding.
+
+## A survey on decoding schedules of LDPC convolutional codes and associated hardware architectures
+
+- **Status**: ✅
+- **Reason**: LDPC-CC 디코딩 스케줄·HW 아키텍처 서베이지만 복잡도/성능/구조 정량 비교 포함 — 예외 포함(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8024640
+- **Type**: conference
+- **Published**: 3-6 July 2
+- **Authors**: Hayfa Ben Thameur, Bertrand Le Gal, Nadia Khouja +2
+- **PDF**: https://ieeexplore.ieee.org/document/8024640
+- **Abstract**: Low-density parity-check convolutional codes (LDPC-CC) have interesting error correction features. They have a great potential to become a key error-correcting codes for enhancing reliability of modern digital communication systems, optical systems and storage devices. On the implementation side, however, the design of low-cost low-power and high-throughput LDPC-CC decoders remains challenging. This survey paper provides an overview of the state-of-the-art of different algorithmic optimizations proposed to ease and improve the LDPC-CC decoder implementations. To this end, a summary of the available decoding scheduling approaches is provided. Besides, a complexity analysis, performance comparison and an architectural analysis of LDPC-CC decoders based on different scheduling techniques is detailed.
+
+## A Multi-Gbps Fully Pipelined Layered Decoder for IEEE 802.11n/ac/ax LDPC Codes
+
+- **Status**: ✅
+- **Reason**: IEEE 802.11 QC-LDPC fully-pipelined layered 디코더 VLSI 아키텍처 — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7987518
+- **Type**: conference
+- **Published**: 3-5 July 2
+- **Authors**: Saleh Usman, Mohammad M. Mansour, Ali Chehab
+- **PDF**: https://ieeexplore.ieee.org/document/7987518
+- **Abstract**: This paper presents a fully pipelined layered decoder architecture for IEEE 802.11 n/ac/ax LDPC codes, free of idle cycles. Several decoder architectures for such codes have emerged in the literature featuring throughputs in the multi- Gbps range. The proposed architecture surpasses the highest reported throughput for IEEE 802.11 n/ac/ax LDPC codes. This is achieved 1) algorithmically, by implementing the layered LDPC decoding schedule, and 2) architecturally, by optimizing register-based memories for IEEE 802.11n/ac LDPC codes and implementing an idle-cycle-free pipelined single-codeword datapath decoder. Register-based memories provide full bandwidth access to read and write all messages of a layer in one clock cycle. Single-codeword processing in the datapath significantly reduces memory overhead compared to other architectures that process multiple codewords to boost throughput at the expense of a larger footprint. The proposed architecture is synthesized in 40 nm CMOS process for IEEE 802.11 n/ac, rate 1/2 LDPC codes. The decoder occupies an area of 0.38 mm2, runs at a frequency of 780 MHz, and achieves a throughput of 4.2 Gbps.
+
+## Ultra High Throughput Unrolled Layered Architecture for QC-LDPC Decoders
+
+- **Status**: ✅
+- **Reason**: QC-LDPC unrolled layered 디코더 아키텍처(layer unrolling, 파이프라인) — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7987523
+- **Type**: conference
+- **Published**: 3-5 July 2
+- **Authors**: Oana Boncalo, Alexandru Amaricai
+- **PDF**: https://ieeexplore.ieee.org/document/7987523
+- **Abstract**: This paper proposes a layered decoder architecture for array QC-LDPC codes which targets tens of Gbps data rates. It relies on layer unrolling with pipeline stages in between layers, allowing simultaneous decoding of multiple layers. The most important features of the proposed decoder are: (i) fully parallel processing units within each layer (ii) hardwired layer interconnect that allows the removal of high cost variable shift units, (iii) A posteriori log-likelihood ratio (AP-LLR) message memory type of storage is replaced by in-between layers pipeline registers, as the messages are being forwarded from one layer to the next. Data dependencies is this masively parallel structure is resolved by decoding multi-codewords at time. Hence, the proposed architecture allows optimum throughput/cost ratio. FPGA based implementation results indicate that for a 1296 bits LDPC code with 3 layers, throughput of up to 62 Gbps for an average of 4 iterations is by obtained using the proposed architecture.
+
+## IMWBF decoding algorithm with dynamic magnitude update for LDPC codes
+
+- **Status**: ✅
+- **Reason**: IMWBF(비트플리핑) 디코더에 동적 magnitude 업데이트 신규 변형 제안 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8035302
+- **Type**: conference
+- **Published**: 21-23 July
+- **Authors**: Hui Zhao, Jianping Zheng
+- **PDF**: https://ieeexplore.ieee.org/document/8035302
+- **Abstract**: This paper proposes a modified IMWBF decoding algorithm for low-density parity-check (LDPC) codes. In the proposed modification, the magnitude of the received signal is updated when the number of the unsatisfied parity-check equations participated by this received signal is larger than a predetermined threshold. Through this modification, the outlier, defined as the undesired large-magnitude received signal, can achieve a larger probability to be flipped, compared with the conventional IMWBF. Simulation results show that the proposed method has better performance than the conventional IMWBF, especially for the LDPC code with low column-degree distribution.
+
+## Novel Puncturing Strategy for Rate-Compatible Low-Density Parity-Check Codes with Diagonal Structure
+
+- **Status**: ✅
+- **Reason**: diagonal 구조 LDPC용 신규 puncturing(PNR) 코드설계 기법 — rate-compatible 바이너리 LDPC 구성(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8110553
+- **Type**: conference
+- **Published**: 21-23 July
+- **Authors**: Wenwen Li, Jing Lei, Erbao Li +2
+- **PDF**: https://ieeexplore.ieee.org/document/8110553
+- **Abstract**: Puncturing is a good way to achieve Rate-Compatible (RC) family codes with high rate. In this paper, asimple yet efficient puncturing strategy for Low Density ParityCheck (LDPC) codes with diagonal structure is proposed andanalyzed. In order to minimize the recovery step of puncturednodes, all the parity nodes (PNs) are assumed being punctured atfirst and then recovered step by step. The algorithm is named asProgressive Node Recovery (PNR) and acquires puncturingorder reversely from recovery order. The diagonal structure ofmother code provides great convenience during the procedure.Extensive experimental results show that the PNR algorithm canreduce the performance loss caused by puncturing and thusguarantees the good error correction performance of RC familycodes with high code rates
+
+## An irregular row weight problem resolution for DVB-S2 LDPC short frame
+
+- **Status**: ✅
+- **Reason**: DVB-S2 LDPC short frame의 불규칙 행무게 디코딩 실패 해결책 — 표준 LDPC지만 디코딩 동작 개선 기법, 애매하여 in(Phase3 재검토)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8076509
+- **Type**: conference
+- **Published**: 21-23 July
+- **Authors**: Han Hao, Jinshu Chen, Ying Zhou
+- **PDF**: https://ieeexplore.ieee.org/document/8076509
+- **Abstract**: In this paper, we studied the irregular row weight problem of DVB-S2 LDPC short frame. This problem will cause the failure of decoding. Based on a special structure of check matrix address table, we have achieved a simple and common solution to the problem.
+
+## Design of LDPC decoder based on adaptive code length
+
+- **Status**: ✅
+- **Reason**: 적응형 코드길이 LLR-BP 디코더 + partial-parallel HW + pre-termination 전략 — 이식 가능 디코더/HW(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8076613
+- **Type**: conference
+- **Published**: 21-23 July
+- **Authors**: Bo Chen, Congcong Chen, Xiuli Du +3
+- **PDF**: https://ieeexplore.ieee.org/document/8076613
+- **Abstract**: LDPC still receives extensive attention in the field of channel coding because of its superior error correction performance, high throughput and low decoding complexity. Considering the poor adaptability and limited expansibility of traditional LDPC decoder, a design method of LLR-BP decoder based on adaptive code length is proposed. A partial parallel LDPC decoder structure is designed under the ISE 14.7 environment, which adopts the pre-termination iteration strategy and effectively reduces the iteration number of it. And this decoder realizes the complex probability function operation by taking the limit in LLR-BP algorithm that can reduce the complexity of algorithm. Through simulation analysis, the decoder effectively improves the decoding speed, reduces the hardware logic resource share, and solves the decoding problem of multi-code length simultaneously in the premise of ensuring the bit error rate.
+
+## FPGA-based rate-adaptive LDPC-coded modulation for the next generation of optical communication systems
+
+- **Status**: ✅
+- **Reason**: shortening 기반 rate-adaptive LDPC와 FPGA 통합 아키텍처, 이식 가능 HW(D)+코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8024788
+- **Type**: conference
+- **Published**: 2-6 July 2
+- **Authors**: Ivan B. Djordjevic, Ding Zou
+- **PDF**: https://ieeexplore.ieee.org/document/8024788
+- **Abstract**: In this invited paper, we describe a rate-adaptive FEC scheme based on LDPC codes together with its software reconfigurable unified FPGA architecture. By FPGA emulation, we demonstrate that this class of rate-adaptive LDPC codes based on shortening with an overhead from 25% to 42.9% provides a coding gain ranging from 13.08 dB to 14.28 dB at a post-FEC BER of 10-15 for BPSK transmission. In addition, the proposed rate-adaptive LDPC coding combined with higher-order modulations have been demonstrated including QPSK, 8-QAM, 16-QAM, 32-QAM, and 64-QAM, which covers a wide range of signal-to-noise ratios. Furthermore, we apply the unequal error protection by employing different LDPC codes on different bits in 16-QAM and 64-QAM, which results in additional 0.5 dB gain compared to conventional LDPC coded modulation with the same code rate of corresponding LDPC code.
+
+## Early stopping criterion for LDPC
+
+- **Status**: ✅
+- **Reason**: LDPC 디코더 조기종료 기준(저복잡도 stopping criterion); 부호 비의존 디코더 기법 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8023197
+- **Type**: conference
+- **Published**: 14-17 July
+- **Authors**: Janak Sodha
+- **PDF**: https://ieeexplore.ieee.org/document/8023197
+- **Abstract**: A log-likelihood ratio (LLR) test on the single Mth check node of an LDPC decoder is utilised to develop an improved low complexity stopping criterion. The average number of iterations required at low SNRs is significantly reduced without sacrificing the BER performance. At high SNRs, unlike typical stopping criteria which suffer a penalty in the BER performance because the decoder inadvertently stops the decoder too early, the proposed algorithm adaptively switches off at high SNRs. Simulation results are presented for the rate 1/2 (288, 576) WiMAX 802.16e LDPC code digits using binary phase shift keying (BPSK) over an AWGN channel.

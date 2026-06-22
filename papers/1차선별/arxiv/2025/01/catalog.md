@@ -1,0 +1,38 @@
+# arXiv — 2025-01 (1차선별 통과)
+
+
+## 5G LDPC Linear Transformer for Channel Decoding
+
+- **Status**: ✅
+- **Reason**: 선형시간 transformer 디코더로 LDPC 복호 — 이식 가능 신경망 디코더(C), 5G 응용이나 기법 떼어낼 수 있음
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2501.14102v1
+- **Type**: preprint
+- **Published**: 2025-01-23
+- **Authors**: Mario Hernandez, Fernando Pinero
+- **PDF**: https://arxiv.org/pdf/2501.14102v1
+- **Abstract**: This work introduces a novel, fully differentiable linear-time complexity transformer decoder and a transformer decoder to correct 5G New Radio (NR) LDPC. We propose a scalable approach to decode linear block codes with $O(n)$ complexity rather than $O(n^2)$ for regular transformers. The architectures' performances are compared to Belief Propagation (BP), the production-level decoding algorithm used for 5G New Radio (NR) LDPC codes. We achieve bit error rate performance that matches a regular Transformer decoder and surpases one iteration BP, also achieving competitive time performance against BP, even for larger block codes. We utilize Sionna, Nvidia's 5G & 6G physical layer research software, for reproducible results.
+
+## Threshold Selection for Iterative Decoding of $(v,w)$-regular Binary Codes
+
+- **Status**: ✅
+- **Reason**: (v,w)-regular 바이너리 코드 bit-flipping 디코더 임계값 선택 새 기준·DFR 모델 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2501.13865v1
+- **Type**: preprint
+- **Published**: 2025-01-23
+- **Authors**: Alessandro Annechini, Alessandro Barenghi, Gerardo Pelosi
+- **PDF**: https://arxiv.org/pdf/2501.13865v1
+- **Abstract**: Iterative bit flipping decoders are an efficient and effective decoder choice for decoding codes which admit a sparse parity-check matrix. Among these, sparse $(v,w)$-regular codes, which include LDPC and MDPC codes are of particular interest both for efficient data correction and the design of cryptographic primitives. In attaining the decoding the choice of the bit flipping thresholds, which can be determined either statically, or during the decoder execution by using information coming from the initial syndrome value and its updates. In this work, we analyze a two-iterations parallel hard decision bit flipping decoders and propose concrete criteria for threshold determination, backed by a closed form model. In doing so, we introduce a new tightly fitting model for the distribution of the Hamming weight of the syndrome after the first decoder iteration and substantial improvements on the DFR estimation with respect to existing approaches.
+
+## Enhanced Min-Sum Decoding of Quantum Codes Using Previous Iteration Dynamics
+
+- **Status**: ✅
+- **Reason**: min-sum에 이전 iteration 메시지 활용하는 message-passing 변형 — 양자 degeneracy 의존이나 디코더 갱신규칙 자체는 이식 가능성, 애매하여 Phase3 재검토
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2501.05021v1
+- **Type**: preprint
+- **Published**: 2025-01-09
+- **Authors**: Dimitris Chytas, Nithin Raveendran, Bane Vasic
+- **PDF**: https://arxiv.org/pdf/2501.05021v1
+- **Abstract**: In this paper, we propose a novel message-passing decoding approach that leverages the degeneracy of quantum low-density parity-check codes to enhance decoding performance, eliminating the need for serial scheduling or post-processing. Our focus is on two-block Calderbank-Shor-Steane (CSS) codes, which are composed of symmetric stabilizers that hinder the performance of conventional iterative decoders with uniform update rules. Specifically, our analysis shows that, under the isolation assumption, the min-sum decoder fails to converge when constant-weight errors are applied to symmetric stabilizers, as variable-to-check messages oscillate in every iteration. To address this, we introduce a decoding technique that exploits this oscillatory property by applying distinct update rules: variable nodes in one block utilize messages from previous iterations, while those in the other block are updated conventionally. Logical error-rate results demonstrate that the proposed decoder significantly outperforms the normalized min-sum decoder and achieves competitive performance with belief propagation enhanced by order-zero ordered statistics decoding, all while maintaining linear complexity in the code's block length.

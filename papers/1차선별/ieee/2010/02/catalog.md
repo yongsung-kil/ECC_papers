@@ -1,0 +1,218 @@
+# IEEE Xplore — 2010-02 (1차선별 통과)
+
+
+## A class of QC-LDPC codes with low encoding complexity and good error performance
+
+- **Status**: ✅
+- **Reason**: 바이너리 QC-LDPC 새 패리티검사 구조(approximate lower triangular)로 인코딩 복잡도+성능 개선 → E 이식 가능 코드 설계
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5403623
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Wai M. Tam, Francis C.M. Lau, Chi K. Tse
+- **PDF**: https://ieeexplore.ieee.org/document/5403623
+- **Abstract**: We propose a novel approximate lower triangular structure for the parity part of the parity-check matrix of QC-LDPC codes. About half of the non-zero elements in the parity part are set to locate on the upper diagonal while the remaining non-zero elements can be located almost anywhere within the lower triangular area, provided certain rules are observed. Compared with the typical dual-diagonal structure, the proposed structure requires very similar encoding complexity and produces lower error rates over an AWGN channel.
+
+## Design of irregular LDPC codes with optimized performance-complexity tradeoff
+
+- **Status**: ✅
+- **Reason**: 바이너리 irregular LDPC의 복잡도-성능 트레이드오프 최적화 설계(반복수 포함 복잡도 척도, DE/EXIT) → C/E 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5407615
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Benjamin Smith, Masoud Ardakani, Wei Yu +1
+- **PDF**: https://ieeexplore.ieee.org/document/5407615
+- **Abstract**: The optimal performance-complexity tradeoff for error-correcting codes at rates strictly below the Shannon limit is a central question in coding theory. This paper proposes a numerical approach for the minimization of decoding complexity for long-block-length irregular low-density parity-check (LDPC) codes. The proposed design methodology is applicable to any binary-input memoryless symmetric channel and any iterative message-passing decoding algorithm with a parallel-update schedule. A key feature of the proposed optimization method is a new complexity measure that incorporates both the number of operations required to carry out a single decoding iteration and the number of iterations required for convergence. This paper shows that the proposed complexity measure can be accurately estimated from a density-evolution and extrinsic-information transfer chart analysis of the code. A sufficient condition is presented for convexity of the complexity measure in the variable edge-degree distribution; when it is not satisfied, numerical experiments nevertheless suggest that the local minimum is unique. The results presented herein show that when the decoding complexity is constrained, the complexity-optimized codes significantly outperform threshold-optimized codes at long block lengths, within the ensemble of irregular codes.
+
+## Low-Floor Detection/Decoding of LDPC-Coded Partial Response Channels
+
+- **Status**: ✅
+- **Reason**: 바이너리 QC-LDPC의 trapping set pinning, G-LDPC error-floor 완화, importance sampling 등 신규 디코더/시뮬 기법 — C/E 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5402492
+- **Type**: journal
+- **Published**: February 2
+- **Authors**: Yang Han, William E. Ryan
+- **PDF**: https://ieeexplore.ieee.org/document/5402492
+- **Abstract**: The error-rate floor phenomenon associated with iterative LDPC decoders has delayed the use of LDPC codes in certain communication and storage systems. Error floors are known to generally be caused by so-called trapping sets which have the effect of confounding the decoder. In this paper, we introduce two techniques that lower the error-rate floors for LDPC-coded partial response (PR) channels which are applicable to magnetic and optical storage. The techniques involve, via external measures, "pinning" one of the bits in each problematic trapping set and then letting the iterative decoder proceed to correct the rest of the bits. We also extend our earlier work on generalized-LDPC (G-LDPC) decoders for error-floor mitigation on the AWGN channel to partial response channels. Our simulations on PR1 and EPR4 channels demonstrate that the floor for the code chosen for this study, a 0.78(2048,1600) quasicyclic LDPC code, is lowered by orders of magnitude, beyond the reach of simulations. Because simulation in the floor region is so time-consuming, a method for accelerating such simulations is essential for research in this area. In this paper, we present an extension of Richardson's importance sampling technique for estimating the level of error floors.
+
+## Ruling out small stopping sets and small girth in Tanner graph of QC-LDPC code
+
+- **Status**: ✅
+- **Reason**: E. QC-LDPC 구성에서 small stopping set/girth 동시 제거하는 신규 구성법, 바이너리 LDPC 코드설계 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6073063
+- **Type**: journal
+- **Published**: Feb. 2010
+- **Authors**: Lingjun Kong, Yang Xiao
+- **PDF**: https://ieeexplore.ieee.org/document/6073063
+- **Abstract**: The existing constructions of quasi-cyclic low-density parity-check (QC-LDPC) codes do not consider the problems of small stopping sets and small girth together in the Tanner graph, while their existences will lead to the bit error rate (BER) performance of QC-LDPC codes being much poorer than that of randomly constructed LDPC codes even decoding failure. To solve the problem, some theorems of the specific chosen parity-check matrix of QC-LDPC codes without small stopping sets and small girth are proposed. A novel construction for QC-LDPC codes with long block lengths is presented by multiplying mmin or the multiple of mmin, which is the minimum order of the identity matrix for the chosen parity-check matrix. The simulation results show that the specific chosen parity-check matrix of QC-LDPC codes can effectively avoid specified stopping sets and small girth and exhibit excellent BER performance than random LDPC codes with the same longer codes length.
+
+## SpreadStore: A LDPC Erasure Code Scheme for Distributed Storage System
+
+- **Status**: ✅
+- **Reason**: 분산스토리지용 바이너리 LDPC erasure 부호 — 카테고리 B 스토리지 ECC, 단 효율 분석 위주라 Phase3 재검토
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5452613
+- **Type**: conference
+- **Published**: 9-10 Feb. 
+- **Authors**: Harihara Subramanyam G., Balaji Janakiram, M. Girish Chandra +4
+- **PDF**: https://ieeexplore.ieee.org/document/5452613
+- **Abstract**: A wide proliferation of distributed storage systems call for more robust and efficient systems than regular replication based storage systems. The Low density parity check (LDPC) codes have become a popular alternative to traditional Reed-Solomon (RS) erasure codes due to their low computational complexity. In this paper we propose, Spread Store- a distributed storage system based on LDPC code. Also, a brief analysis is made by examining different LDPC codes from the perspective of their efficiency and erasure handling capabilities.
+
+## Simple improvements of bit-flipping decoding
+
+- **Status**: ✅
+- **Reason**: bias term 도입한 bit-flipping 디코딩 개선(CBBF 변형) - 이식 가능 LDPC 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5440493
+- **Type**: conference
+- **Published**: 7-10 Feb. 
+- **Authors**: Hiroshi Kamabe, Shusaku Kobota
+- **PDF**: https://ieeexplore.ieee.org/document/5440493
+- **Abstract**: A bit-flipping (BF) algorithm is a decoding algorithm for LDPC codes that can be efficiently implemented by electronic circuits. Although its error correcting performance is rather poor, we show that a BF algorithm with bias terms has good error correcting performance. We also introduce two more parameters to improve the performance further. We also propose a variant of candidate bit based BF (CBBF) algorithm by introducing bias terms. We see that these algorithms having bias terms exhibit very good error correcting performances.
+
+## On the existence of typical minimum distance for protograph-based LDPC codes
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 LDPC의 typical minimum distance 존재성/유한길이 weight enumerator 분석으로 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454136
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Shadi Abu-Surra, Dariush Divsalar, William E. Ryan
+- **PDF**: https://ieeexplore.ieee.org/document/5454136
+- **Abstract**: In this paper we prove that, for a certain class of protograph-based LDPC codes with degree-two variable nodes, a typical minimum distance exists. We obtain a tight bound on the sum of weight enumerators, up to some weight d*, for the ensemble of finite-length protograph LDPC codes. Then we prove that this sum goes to zero as the block length goes to infinity. Finally, we prove that Pr(d < d*) goes to zero as the block length goes to infinity. This typical minimum distance exists if degree-two nodes have certain connections to the check nodes. This is also important in practice since it identifies a certain class of protograph LDPC codes that have typical minimum distances.
+
+## On absorbing sets of structured sparse graph codes
+
+- **Status**: ✅
+- **Reason**: 구조적 sparse graph 코드의 absorbing set(error floor) 조합론적 경계와 최소 absorbing set 확대 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454137
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Lara Dolecek
+- **PDF**: https://ieeexplore.ieee.org/document/5454137
+- **Abstract**: In contrast to the capacity approaching performance of iteratively decoded low-density parity check (LDPC) codes, many practical finite-length LDPC codes exhibit performance degradation, manifested in a so-called error floor. Previous work has linked this phenomenon to the presence of certain combinatorial structures within the Tanner graph representation of the code, termed absorbing sets. Absorbing sets are stable under the bit-flipping operations and have been shown to act as fixed points (¿absorbers¿) for a wider class of iterative decoding algorithms. Codes often possess absorbing sets whose size is smaller than the minimum distance: the smallest absorbing sets are deemed most detrimental culprits behind the error floor. This paper focuses on the elementary combinatorial bounds of the smallest (candidate) absorbing sets. For certain classes of practical codes we demonstrate the tightness of these bounds and show how can the structure of the code and the structure of the absorbing sets be utilized to increase the size of the smallest absorbing sets without compromising other code properties such as the node degrees and the girth. As such, this work provides a step towards a better code design by taking into account the combinatorial nature of fixed points of iterative decoding algorithms.
+
+## Asymptotically regular LDPC codes with linear distance growth and thresholds close to capacity
+
+- **Status**: ✅
+- **Reason**: protograph 기반 SC-LDPC 종단으로 거의 정규·capacity 근접 임계값/선형 거리성장 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454141
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Michael Lentmaier, David G. M. Mitchell, Gerhard P. Fettweis +1
+- **PDF**: https://ieeexplore.ieee.org/document/5454141
+- **Abstract**: Families of asymptotically regular LDPC block code ensembles can be formed by terminating (J, K)-regular protograph-based LDPC convolutional codes. By varying the termination length, we obtain a large selection of LDPC block code ensembles with varying code rates and substantially better iterative decoding thresholds than those of (J, K)-regular LDPC block code ensembles, despite the fact that the terminated ensembles are almost regular. Also, by means of an asymptotic weight enumerator analysis, we show that minimum distance grows linearly with block length for all of the ensembles in these families, i.e., the ensembles are asymptotically good. We find that, as the termination length increases, families of ¿asymptotically regular¿ codes with capacity approaching iterative decoding thresholds and declining minimum distance growth rates are obtained, allowing a code designer to trade-off between distance growth rate and threshold. Further, we show that the thresholds and the distance growth rates can be improved by carefully choosing the component protographs used in the code construction.
+
+## Quasi-cyclic LDPC codes on Latin squares and the ranks of their parity-check matrices
+
+- **Status**: ✅
+- **Reason**: Latin square 기반 QC-LDPC 신규 구성 및 패리티검사 랭크 분석(E), 바이너리 QC-LDPC
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454149
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Li Zhang, Qin Huang, Shu Lin +2
+- **PDF**: https://ieeexplore.ieee.org/document/5454149
+- **Abstract**: Quasi-cyclic codes are the most promising class of structured LDPC codes due to their ease of implementation and excellent performance over noisy channels when decoded with message-passing algorithms as extensive simulation studies have shown. An approach for constructing quasi-cyclic LDPC codes based on Latin squares over finite fields is presented. By analyzing the parity-check matrices of these codes, expressions for their ranks are derived. Experimental results show that, with iterative decoding algorithms, the constructed codes perform very well over the AWGN and the binary erasure channels.
+
+## Iterative decoding of a class of cyclic codes
+
+- **Status**: ✅
+- **Reason**: 순환부호용 신규 반복 디코딩 알고리즘 2종 제안(채널 soft info 활용). 부호 비의존 메시지패싱 기법으로 이식 가능성(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454113
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Li Zhang, Qin Huang, Shu Lin
+- **PDF**: https://ieeexplore.ieee.org/document/5454113
+- **Abstract**: Among the classes of LDPC codes that have been constructed and designed, the only class of LDPC codes that are cyclic is the class of codes constructed based on the incidence vectors of lines of finite geometries, called finite geometry LDPC codes. Cyclic finite geometry LDPC codes are known to have large minimum distances and can provide good error performance with very low error-floors using iterative decoding based on belief propagation. Their cyclic structure allows them to be efficiently and systematically encoded with simple shift-registers in linear time with linear complexity. An obvious question is whether, besides cyclic finite geometry LDPC codes, there are other cyclic codes with large minimum distances that can be efficiently decoded iteratively using channel soft information. In this paper, we present one such class of cyclic codes. Codes in this class are two-step majority-logic decodable and they are also constructed based on finite geometries. Two iterative decoding algorithms are devised for this class of cyclic codes and they provide significant coding gain over the two-step majority-logic decoding of codes in this class.
+
+## Iterative decoding beyond belief propagation
+
+- **Status**: ✅
+- **Reason**: BP를 넘어선 새 반복 디코더 패러다임(belief 대신 그래프 국소구조 반영 메시지)로 error floor 개선, 신규 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454076
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Shiva Kumar Planjery, Shashi Kiran Chilappagari, Bane Vasić +2
+- **PDF**: https://ieeexplore.ieee.org/document/5454076
+- **Abstract**: At the heart of modern coding theory lies the fact that low-density parity-check (LDPC) codes can be efficiently decoded by belief propagation (BP). The BP is an inference algorithm which operates on a graphical model of a code, and lends itself to low-complexity and high-speed implementations, making it the algorithm of choice in many applications. It has unprecedentedly good error rate performance, so good that when decoded by the BP, LDPC codes approach theoretical limits of channel capacity. However, this capacity approaching property holds only in the asymptotic limit of code length, while codes of practical lengths suffer abrupt performance degradation in the low noise regime known as the error floor phenomenon. Our study of error floor has led to an interesting and surprising finding that it is possible to design iterative decoders which are much simpler yet better than belief propagation! These decoders do not propagate beliefs but a rather different kind of messages that reflect the local structure of the code graph. This has opened a plethora of exciting theoretical problems and applications. This paper introduces this new paradigm.
+
+## Trapping set enumerators for specific LDPC codes
+
+- **Status**: ✅
+- **Reason**: Tanner 그래프로 특정 LDPC 코드의 trapping set 열거(증강+weight-enumeration)하는 코드설계 분석 기법, error floor 진단에 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5454095
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Shadi Abu-Surra, David DeClercq, Dariush Divsalar +1
+- **PDF**: https://ieeexplore.ieee.org/document/5454095
+- **Abstract**: In this paper, a method is presented for enumerating the trapping sets of a specific LDPC code given its Tanner graph. The technique involves augmenting the original Tanner graph with additional variable nodes, and then applying a weight-enumeration algorithm to the augmented Tanner graph. The proposed method is used to find trapping set enumerators for several LDPC codes in communication standards. The complexity of the proposed algorithm is discussed.
+
+## Efficient Retransmission of RB-HARQ with LDPC Codes
+
+- **Status**: ✅
+- **Reason**: LDPC soft-decision/degree 기반 RB-HARQ 재전송 비트 선택 — 신뢰도 기반 메시지패싱 활용 기법, 애매하여 in(Phase3 재검토)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5437704
+- **Type**: conference
+- **Published**: 26-28 Feb.
+- **Authors**: Chia-Sheng Tsai, Chian-Chi Shih
+- **PDF**: https://ieeexplore.ieee.org/document/5437704
+- **Abstract**: In the paper, we study the RB-HARQ and the degree reliability using IEEE802.16e LDPC codes. The retransmission bits according to soft-decision output and degree in LDPC codes. We can select the bits with small absolute value of soft-decision output and the small degree has the priority to retransmit. To improve the efficiency of retransmission based on RB-HARQ using LDPC codes.
+
+## Comparison of distributed LDPC coding schemes for decode-and-forward relay channels
+
+- **Status**: ✅
+- **Reason**: puncturing 기반 distributed LDPC 코드 설계 비교 — 펑처링 코드설계 기법(E) 이식 가능성, 애매하므로 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5456456
+- **Type**: conference
+- **Published**: 23-24 Feb.
+- **Authors**: Meng Wu, Petra Weitkemper, Dirk Wübben +1
+- **PDF**: https://ieeexplore.ieee.org/document/5456456
+- **Abstract**: In order to approach the theoretical limit of the decode-and-forward strategy for the half-duplex relay channel, distributed LDPC coding schemes have been proposed. In these schemes, the code applied at the source should be decodable at the relay to yield correct parity bits. With the help of the parity bits the destination should also be able to estimate the transmitted information correctly. For successful decoding the distributed coding scheme has to be designed jointly, requiring a high design complexity. As an alternative a distributed LDPC scheme based on puncturing is investigated, which requires only the design of one mother code. In this paper we compare three different approaches for designing distributed LDPC codes with respect to their performance and their design complexity.
+
+## The effect of cycles on binary message-passing decoding of LDPC codes
+
+- **Status**: ✅
+- **Reason**: 바이너리 메시지패싱 디코더의 error-floor 유발 그래프 구조 식별 + 회피용 차수분포 제약 도출 → 코드설계(E)/디코더(C) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5426759
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Gottfried Lechner
+- **PDF**: https://ieeexplore.ieee.org/document/5426759
+- **Abstract**: We study the error-floor behavior of binary message-passing decoders for low-density parity-check (LDPC) codes. We find that the stability condition is independent of the quality of the channel messages (i.e. soft or hard decision). Furthermore, we identify a structure in the graph where the involved variable nodes cannot be corrected by the binary message-passing decoder. This leads to an error floor for regular LDPC codes with variable node degree smaller than four. An additional constraint on the degree distribution is derived which allows to avoid this structure, leading to optimized LDPC codes without error floors.
+
+## Degree-dependent decoding of LDPC codes
+
+- **Status**: ✅
+- **Reason**: 차수별 변수노드 그룹 부분활성화로 디코딩 복잡도 절감 + DE 기반 최적화 → 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:5426773
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Gottfried Lechner, Ingmar Land
+- **PDF**: https://ieeexplore.ieee.org/document/5426773
+- **Abstract**: In this paper we present a new method to reduce the decoding complexity of LDPC codes. The variable nodes are grouped according to their degrees, and in each iteration only a subset of variable node groups is activated. The variable and check node message updates are associated with a certain cost, and the activation is then optimized such that the overall cost is minimized. The optimum activation order is determined by density evolution. The complexity savings are illustrated by some examples.
+
+## A generic conflict-free architecture for decoding LDPC codes using Perfect Difference Networks
+
+- **Status**: ✅
+- **Reason**: Perfect Difference Network 기반 conflict-free 재구성형 LDPC 디코더 아키텍처 → 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:5426777
+- **Type**: conference
+- **Published**: 2-5 Feb. 2
+- **Authors**: Balaji Janakiram, M.Girish Chandra, B.S. Adiga +2
+- **PDF**: https://ieeexplore.ieee.org/document/5426777
+- **Abstract**: The flurry of activities in the area of low density parity check (LDPC) codes from last one decade have led to different flavors of codes and the corresponding decoders. The decoder involves computing elements and an interconnection mechanism, usually tailor made for a particular code. This paper explores a generic reconfigurable architecture for decoding different LDPC codes based on the perfect difference networks (PDNs). The architecture is conflict-free in terms of the message data access by the nodes and can also be utilized in large factor-graph based processing.

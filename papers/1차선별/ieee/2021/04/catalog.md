@@ -1,0 +1,230 @@
+# IEEE Xplore — 2021-04 (1차선별 통과)
+
+
+## Girth Analysis and Design of Periodically Time-Varying SC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 주기적 시변 SC-LDPC girth 분석/설계 — 바이너리 코드설계(E), girth 개선 기법 NAND LDPC 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9354189
+- **Type**: journal
+- **Published**: April 2021
+- **Authors**: Massimo Battaglioni, Franco Chiaraluce, Marco Baldi +1
+- **PDF**: https://ieeexplore.ieee.org/document/9354189
+- **Abstract**: Time-varying spatially coupled low-density parity-check (SC-LDPC) codes with very large period are characterized by significantly better error rate performance and girth properties than their time-invariant counterparts, but the number of parameters they require to be described is usually very large and unpractical. Time-invariant SC-LDPC codes, which can be seen as periodically time-varying codes with unitary period, are represented through a small number of parameters and designed exploiting few degrees of freedom, but their error rate performance and girth properties are sub-optimal. In this paper, we show that the limits of time-invariant SC-LDPC codes can be overcome by transforming them into time-varying SC-LDPC codes with very small period. In particular, we show that periodically time-varying SC-LDPC codes with small period may exhibit significantly better girth properties than the corresponding time-invariant codes by exploiting a larger number of degrees of freedom in the code design, which however scale at most linearly with the product of the code period and the size of the considered base matrix.
+
+## $l_2$-Box ADMM Decoding for LDPC Codes Over ISI Channels
+
+- **Status**: ✅
+- **Reason**: ISI 채널용 신규 l2-box ADMM LDPC 디코딩 — 이식 가능 디코더 알고리즘 신규 기여(C), NAND는 ICI/ISI 유사 상관 채널
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9384303
+- **Type**: journal
+- **Published**: April 2021
+- **Authors**: Xiaopeng Jiao, Haiyang Liu, Jianjun Mu +1
+- **PDF**: https://ieeexplore.ieee.org/document/9384303
+- **Abstract**: The alternating direction method of multipliers (ADMM) has been adapted for decoding low-density parity-check (LDPC) codes over intersymbol interference (ISI) channels in order to reduce the complexity of the traditional Turbo equalization (TE) method. However, the error rate performance of ADMM decoding may be degraded in certain ISI channels when compared with the TE at high signal-to-noise ratio regions. In order to address the problem, we derive a novel ADMM-based decoding method, called l2-box ADMM decoding, for LDPC codes over ISI channels. By introducing suitable penalty functions to l2-box ADMM decoding, we present an enhanced method, called l2-box ADMM penalized decoding, to further improve the performance. Simulation results on several ISI channels indicate that the proposed l2-box ADMM penalized decoding can achieve better error rate performances compared with the TE and the existing ADMM penalized decoding methods, especially for ISI channels with long memory, while maintaining the low-complexity advantage of the ADMM penalized decoding.
+
+## Perturbed Adaptive Belief Propagation Decoding for High-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: HDPC(BCH/RS)용 Perturbed ABP — BP 기반 SISO 디코더 개선(스케줄링·sparsification), 바이너리 LDPC BP 디코더로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9306872
+- **Type**: journal
+- **Published**: April 2021
+- **Authors**: Li Deng, Zilong Liu, Yong Liang Guan +4
+- **PDF**: https://ieeexplore.ieee.org/document/9306872
+- **Abstract**: Algebraic codes such as BCH code are receiving renewed interest as their short block lengths and low/no error floors make them attractive for ultra-reliable low-latency communications (URLLC) in 5G wireless networks. This article aims at enhancing the traditional adaptive belief propagation (ABP) decoding, which is a soft-in-soft-out (SISO) decoding for high-density parity-check (HDPC) algebraic codes, such as Reed-Solomon (RS) codes, Bose-Chaudhuri-Hocquenghem (BCH) codes, and product codes. The key idea of traditional ABP is to sparsify certain columns of the parity-check matrix corresponding to the least reliable bits with small log-likelihood-ratio (LLR) values. This sparsification strategy may not be optimal when some bits have large LLR magnitudes but wrong signs. Motivated by this observation, we propose a Perturbed ABP (P-ABP) to incorporate a small number of unstable bits with large LLRs into the sparsification operation of the parity-check matrix. In addition, we propose to apply partial layered scheduling or hybrid dynamic scheduling to further enhance the performance of P-ABP. Simulation results show that our proposed decoding algorithms lead to improved error correction performances and faster convergence rates than the prior-art ABP variants.
+
+## Spatially Coupled LDPC Codes via Partial Superposition and Their Application to HARQ
+
+- **Status**: ✅
+- **Reason**: Partial superposition 기반 신규 SC-LDPC(BMST-LDPC) 구성, error floor 낮춤 — 바이너리 코드설계 신규 기여(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9374097
+- **Type**: journal
+- **Published**: April 2021
+- **Authors**: Qianfan Wang, Suihua Cai, Wenchao Lin +3
+- **PDF**: https://ieeexplore.ieee.org/document/9374097
+- **Abstract**: This paper proposes a new class of spatially coupled codes, which are constructed by sending codewords of a low-density parity-check block code (LDPC-BC) in a block Markov superposition transmission (BMST) manner, resulting in the BMST-LDPC codes. Different from the conventional spatially coupled LDPC (SC-LDPC) codes, the proposed BMST-LDPC codes can have encoder/decoder implemented using the structure of the corresponding LDPC-BCs. The proposed construction is universal, which is applicable to any existing LDPC-BCs including the 5 G New Radio (5G-NR) LDPC-BCs to obtain extra coding gains. The proposed BMST-LDPC codes are also a special class of BMST codes, which have lower error floors even with an encoding memory of one, inheriting a low decoding latency. Moreover, partial superposition, where a fraction of the coded bits are superimposed onto the following codewords, is introduced to alleviate the decoding error propagation. The construction can be optimized, for random long codes, by a protograph-based extrinsic information transfer (EXIT) chart analysis, or by a one-dimensional search for structured block codes. Furthermore, the BMST-LDPC scheme is integrated with the hybrid automatic retransmission request (HARQ) over the block fading channel, improving the throughput performance. Numerical results are presented to validate our analysis and demonstrate the performance advantage of the BMST-LDPC codes over the LDPC-BCs. They also show that the proposed HARQ scheme can yield a throughput improvement of up to 10% over the conventional HARQ scheme.
+
+## Machine Learning Based Early Termination for Turbo and LDPC Decoders
+
+- **Status**: ✅
+- **Reason**: ML 기반 LDPC 디코더 조기종료(ET) 기법 — 반복 횟수 절감, NAND LDPC 디코더에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9417420
+- **Type**: conference
+- **Published**: 29 March-1
+- **Authors**: Anusha Gunturu, Avani Agrawal, Ashok Kumar Reddy Chavva +1
+- **PDF**: https://ieeexplore.ieee.org/document/9417420
+- **Abstract**: Turbo and low-density parity-check (LDPC) codes have been chosen in wireless communications because of their near channel capacity performance. However, they consume huge power and also induce delay because of the iterative nature of the decoders. Various types of early termination (ET) techniques have been introduced within these decoders to decrease the power consumption and delay. Recently, machine learning (ML) algorithms are being explored to replace or improve the complex receiver algorithms in wireless communications, as a part of 6G research. In this paper, we propose a novel algorithm to use ML within the turbo and LDPC decoders, to identify the iteration for ET. We show that the proposed algorithm outperforms the improved hard decision aided ET method by 25% ~ 57%, in reducing the average number of iterations (ANI) of turbo decoder at 10% block error rate (BLER), for multiple modulation schemes. We also show that the proposed ET method outperforms parity check equation ET method of LDPC decoder by 30% ~ 36%, in reducing the ANI at 10% BLER, for multiple modulation schemes. The proposed method has negligible loss in BLER performance compared to typical implementation of fixed iteration decoders.
+
+## LDPC Decoders using Non-Uniform Quantizers and Associative Check Node Operations
+
+- **Status**: ✅
+- **Reason**: 비균일 양자화 + associative check node 연산으로 4비트 양자화 디코더 — LLR 양자화/디코더 기법 이식 가능, 바이너리(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9417480
+- **Type**: conference
+- **Published**: 29 March-1
+- **Authors**: Adrian Vidal
+- **PDF**: https://ieeexplore.ieee.org/document/9417480
+- **Abstract**: In this paper, we present a class of associative check node operations for LDPC decoders operating on non-uniformly quantized channel outputs over a binary-input additive white Gaussian noise channel (BIAWGNC). The proposed quantizer has thresholds that depend on the noise variance and can be easily calculated using binary search. A relatively small collection of check node operations is proposed where each operation can be described using a short list of integers. Simulation results using rate-1/2 and 2/3 DVB-S2 codes indicate that the proposed decoder under 4-bit quantization can come close to floating-point sum-product decoder error performance in the waterfall region to within 0.4 dB and 0.1 dB for the rate-1/2 and 2/3 codes, respectively. Moreover, tests with short LDPC codes indicate that the proposed 4-bit decoders may approach or even surpass floating-point error performance at high signal-to-noise ratios.
+
+## A Study on Iterative Decoding by Neural Network Detector in SMR System
+
+- **Status**: ✅
+- **Reason**: NND 신경망 검출기로 반복적 LLR 계산하는 LDPC 반복 디코딩 — 이식 가능 신경망 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9579979
+- **Type**: conference
+- **Published**: 26-30 Apri
+- **Authors**: M. Nishikawa, Y. Nakamura, Y. Kanai +2
+- **PDF**: https://ieeexplore.ieee.org/document/9579979
+- **Abstract**: We study the low-density parity-check (LDPC) coding and iterative decoding system, as a signal processing system for the shingled magnetic recording (SMR) in two-dimensional magnetic recording (TDMR). Previously we reported that a waveform equalization using a two-dimensional finite impulse response (TD-FIR) filter or an inter-track interference (ITI) canceler reduced the influence of ITI. We also proposed a neural network detector (NND), and evaluated the performance of the first decoding by the NND. In this paper, we propose the NND which iteratively calculates the log-likelihood ratio (LLR) as the decoding reliability using the returned sum-product (SP) decoder output sequence in addition to the TD-FIR filter output sequence. Furthermore, we evaluate the performance of the iterative decoding system using an NND, and compare it to that of the system using a soft-output Viterbi algorithm (SOVA) detector with the signal-dependent noise predictor.
+
+## Dynamic Dual Quantization-Domain Decoding for NR LDPC Codes
+
+- **Status**: ✅
+- **Reason**: C — NR LDPC dynamic dual quantization-domain 디코더 + self-correction, 양자화/min-sum계열 새 디코더 기법 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9448789
+- **Type**: conference
+- **Published**: 25-28 Apri
+- **Authors**: Taehyun Kim, JooSung Park
+- **PDF**: https://ieeexplore.ieee.org/document/9448789
+- **Abstract**: In this paper, we propose a low-density parity-check (LDPC) decoder with a dynamic dual quantization-domain (DQD) that check nodes are operated in a 3-bit domain while variable nodes are operated in a higher bits domain. The proposed mapping to transform messages from a domain to the other domain gradually changes during the LDPC decoding process and is optimized by differential evolution and machine learning. In addition, for performance improvement, the variable node performs self-correction (SC) that the unreliable messages are erased. Simulation results show that the proposed dynamic DQDSC decoder has better error correction performance compared to the previously proposed hybrid DQD decoder.
+
+## The Effect of Coupling Memory and Block Length on Spatially Coupled Serially Concatenated Codes
+
+- **Status**: ✅
+- **Reason**: E — SC 직렬연접부호의 coupling memory/block length 설계 탐색, spatial coupling 코드설계 기법 이식 가능성
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9448689
+- **Type**: conference
+- **Published**: 25-28 Apri
+- **Authors**: Mojtaba Mahdavi, Muhammad Umar Farooq, Liang Liu +3
+- **PDF**: https://ieeexplore.ieee.org/document/9448689
+- **Abstract**: Spatially coupled serially concatenated codes (SC-SCCs) are a class of spatially coupled turbo-like codes, which have a close-to-capacity performance and low error floor. In this paper, we perform a comprehensive design space exploration, revealing different aspects of SC-SCCs and discussing various design trade-offs. In particular, we investigate the impact of coupling memory, block length, decoding window size, and number of iterations on the performance, complexity, and latency of SC-SCCs. As a result, we propose design guidelines to make the code design independent of the block length. By introducing a modified window decoding schedule, we are able to demonstrate that the block length and coupling memory can be exchanged flexibly without changing the latency and complexity of decoding and without performance loss. Thus, thanks to spatial coupling, a certain code strength and performance can be achieved by either a very small block length or a large one, while the complexity and latency are fixed. Moreover, our results show that using higher coupling memory with smaller blocks can even improve the performance without increasing the latency and complexity. For all considered cases we observe that the performance of SC-SCCs is improved with respect to the uncoupled ensembles for a fixed latency and complexity.
+
+## A Low Complexity Model-Driven Deep Learning LDPC Decoding Algorithm
+
+- **Status**: ✅
+- **Reason**: 신경망 기반 NOMS/SNOMS min-sum BP 디코더 + codebook 양자화 — 이식 가능한 새 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9449266
+- **Type**: conference
+- **Published**: 23-26 Apri
+- **Authors**: Qingle WU, Su-Kit TANG, Yuanhui LIANG +2
+- **PDF**: https://ieeexplore.ieee.org/document/9449266
+- **Abstract**: A novel Neural Offset Min-Sum(NOMS) Belief Propagation(BP) decoding algorithm based on model-driven is proposed which applied to LDPC decoding. NOMS is improved multiplication in Neural Normalized Min-Sum(NNMS) into addition operation to reduce the complexity of calculation., a better Bit Error Rate (BER) performance is simultaneously achieved in the same condition. Secondly, considering that there are still many multiplication operations in NOMS, we propose a novel Shared Offset Min-Sum(SNOMS) to reduce the number of weights in the network by sharing parameters. Finally, codebook-based quantization is used to further reduce the memory consumption. Simulation experimental results show that the proposed method has a better BER performance, and the decoding accuracy of the decoder is 0.65dB higher than that of the NNMS after 5 iterations. In addition, SNOMS decoding method achieves almost the same decoding performance comparable to that of NOMS, but requires less complex calculation. Proposed quantization of code-book method reduces memory requirement significantly with slight performance loss.
+
+## Low latency Improved Weighted Hard-Decision LDPC Algorithm for 5G NR
+
+- **Status**: ✅
+- **Reason**: 개선된 Weighted Hard-Decision LDPC 디코딩 알고리즘(저지연·저자원) — 이식 가능 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9449218
+- **Type**: conference
+- **Published**: 23-26 Apri
+- **Authors**: Ao Li, Qingshan Jiang, Wei Luo
+- **PDF**: https://ieeexplore.ieee.org/document/9449218
+- **Abstract**: 5G data channel is latency-sensitive and demands high throughput. The Min-Sum (MS) algorithm, known as one of the LDPC Soft-Decision decoding algorithms, is widely used with guaranteed performance. However, the MS algorithm's latency and resource consumption are non-negligible drawbacks, especially for 5G system. In this paper, different strategies for FEC (Forward Error Correction) of LDPC codes are discussed. An improved Weighted Hard-Decision algorithm is proposed targeting to reduce resource occupation and latency. The decoding process is given in detail and performance is validated via simulations. Comparing with the MS algorithm and IHD (Improved Hard-Decision) algorithm, our proposed algorithm shows its potentiality to be applied in 5G data channel. Furthermore, a test bench is launched in Cisco server using X86 chipset to identify the advantage of this proposal.
+
+## An Improved Offset Min-Sum LDPC Decoding Algorithm for 5G New Radio
+
+- **Status**: ✅
+- **Reason**: Improved Offset Min-Sum(IOMS) — check-node 업데이트에 곱셈 인자 적용한 min-sum 변형 디코더, 부호 비의존적으로 바이너리 LDPC BP에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9418782
+- **Type**: conference
+- **Published**: 15-16 Apri
+- **Authors**: Bich Ngoc Tran-Thi, Thien Truong Nguyen-Ly, Hoa Nguyen Hong +1
+- **PDF**: https://ieeexplore.ieee.org/document/9418782
+- **Abstract**: This paper presents an Improved Offset Min-Sum (IOMS) algorithm for Low-Density Parity-Check (LDPC) decoders, used in 5th generation (5G) mobile communication. The proposed algorithm IOMS applies a multiplication factor to check-node update information messages. The simulation results show that the proposed IOMS algorithm offers a better error correction performance than the existing Min-Sum-based algorithms at the expense of a slight increase in complexity. At the BER of 10–5, the IOMS achieves a decoding gain of 0.1dB with respect to the OMS algorithm.
+
+## An decoding parameter optimization method for LDPC codes in 5G NR based on 3D EXIT chart
+
+- **Status**: ✅
+- **Reason**: QC-LDPC LOMS/LNMS min-sum 변형의 offset/normalization 파라미터 최적화 + 고정소수점 분석 — 이식 가능 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9434901
+- **Type**: conference
+- **Published**: 14-16 Apri
+- **Authors**: Wenyi Cheng, Chao Dong, Kai Niu +1
+- **PDF**: https://ieeexplore.ieee.org/document/9434901
+- **Abstract**: Low-density parity-check (LDPC) codes are channel code of fifth-generation(5G) New Radio(NR), and it is important to explore low-complexity decoding algorithms that are easy to implement on hardware. In order to realize 5G ultra-reliable low latency communication (URLLC), low-complexity decoding of short packets is necessary. For quasi-cyclic LDPC (QC-LDPC) codes in 5G NR, the layer offset min-sum (LOMS) algorithm and the layer normalized min-sum (LNMS) algorithm are two efficient algorithms with low complexity. The performance of these two simplified decoding algorithms is significantly affected by the values of the above two decoding parameters. In this paper, the 3D extrinsic information transfer (EXIT) chart is introduced as an analysis tool to indicate the performance of different values for the offset and normalization parameters. The simulation results show that with different values of the above two factors, the changing of the output information of EXIT chart is consistent with that of the block error rate (BLER) in decoding simulations. In addition, it is shown that this analysis method can be extended to the decoding with fixed-point inputs.
+
+## Construction of Quasi-Cyclic Low-Density Parity-Check Codes based on Quadratic Residue Codes
+
+- **Status**: ✅
+- **Reason**: QR code 기반 QC-LDPC 구성, length-4 cycle-free high-rate 코드 설계 — 바이너리 이식 가능 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9434943
+- **Type**: conference
+- **Published**: 14-16 Apri
+- **Authors**: Yong Li, Hao Yan, Rui Liu +2
+- **PDF**: https://ieeexplore.ieee.org/document/9434943
+- **Abstract**: Motivated by the success of constructing quasi-cyclic low-density parity-check (QC-LDPC) codes based on Reed-Solomon codes, a construction method for QC-LDPC codes is presented in this paper, using the check matrices of quadratic residues codes. Three QC-LDPC codes are obtained by utilizing two quadratic residues codes of lengths less than 100, and the resultant QC-LDPC codes are regular, high-rate and free of length-4 cycles. Simulation results show that the proposed QC-LDPC codes achieves similar performance as the random LDPC codes, but they have less short cycles. In addition, the proposed (279, 158) QC-LDPC code outperforms its counterpart constructed from Reed-Solomon codes at high signal-to-noise ratios.
+
+## Matched Quantized Min-Sum Decoding of Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: 이진 LDPC용 신규 양자화 min-sum 디코더(matched quantized) + 밀도진화 분석 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9457667
+- **Type**: conference
+- **Published**: 11-15 Apri
+- **Authors**: Emna Ben Yacoub
+- **PDF**: https://ieeexplore.ieee.org/document/9457667
+- **Abstract**: A quantized message passing decoding algorithm for low-density parity-check codes is presented. The algorithm relies on the min approximation at the check nodes, and on modelling the variable node inbound messages as observations of an extrinsic discrete memoryless channel. The performance of the algorithm is analyzed and compared to quantized min-sum decoding by means of density evolution, and almost closes the gap with the performance of the sum-product algorithm. A stability analysis is derived, which highlights the role played by degree-3 variable nodes in the stability condition. Finite-length simulation results confirm large gains predicted by the asymptotic analysis.
+
+## Dimension of a Subset of Residue Classes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC HW 구현 최적화를 위한 잔여류 기저집합 문제 — D(HW 아키텍처) 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9457603
+- **Type**: conference
+- **Published**: 11-15 Apri
+- **Authors**: V. Yu. Shchukin
+- **PDF**: https://ieeexplore.ieee.org/document/9457603
+- **Abstract**: This paper introduces a problem in additive number theory which is motivated by optimization of hardware implementation of QC-LDPC codes. For a fixed subset S, S ⊂ℤq, of residue classes modulo q the object of interest is a basis set G, G ⊂ℤq, of minimal size, such that every element of S is representable as a sum of several elements from G. For a fixed number k, k ≤⌈log2 q⌉, the object of interest is a function ζ(q,k) defined as a maximum number such that, for every set of cardinality <; ζ(q,k), there exists a basis set of cardinality <; k.
+
+## Concentrated Stopping Set Design for Coded Merkle Tree: Improving Security Against Data Availability Attacks in Blockchain Systems
+
+- **Status**: ✅
+- **Reason**: EC-PEG 알고리즘으로 stopping set 제어하는 신규 바이너리 LDPC 구성 — E(코드 설계) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9457630
+- **Type**: conference
+- **Published**: 11-15 Apri
+- **Authors**: Debarnab Mitra, Lev Tauz, Lara Dolecek
+- **PDF**: https://ieeexplore.ieee.org/document/9457630
+- **Abstract**: In certain blockchain systems, light nodes are clients that download only a small portion of the block. Light nodes are vulnerable to data availability (DA) attacks where a malicious node hides an invalid portion of the block from the light nodes. Recently, a technique based on erasure codes called Coded Merkle Tree (CMT) was proposed by Yu et al. that enables light nodes to detect a DA attack with high probability. The CMT is constructed using LDPC codes for fast decoding but can fail to detect a DA attack if a malicious node hides a small stopping set of the code. To combat this, Yu et al. used well-studied techniques to design random LDPC codes with high minimum stopping set size. Although effective, these codes are not necessarily optimal for this application. In this paper, we demonstrate a more specialized LDPC code design to improve the security against DA attacks. We achieve this goal by providing a deterministic LDPC code construction that focuses on concentrating stopping sets to a small group of variable nodes rather than only eliminating stopping sets. We design these codes by modifying the Progressive Edge Growth algorithm into a technique called the entropy-constrained PEG (EC-PEG) algorithm. This new method demonstrates a higher probability of detecting DA attacks and allows for good codes at short lengths.
+
+## Adaptive Doping of Spatially Coupled LDPC Codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 슬라이딩윈도우 디코딩의 적응적 VN doping으로 BLER 개선 — C/E 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9457651
+- **Type**: conference
+- **Published**: 11-15 Apri
+- **Authors**: Min Zhu, David G. M. Mitchell, Michael Lentmaier +1
+- **PDF**: https://ieeexplore.ieee.org/document/9457651
+- **Abstract**: In this paper, we study the problem of error propagation in sliding window decoding (SWD) of spatially coupled LDPC (SC-LDPC) codes. A general decoder model that accounts for error propagation is proposed and analyzed, and the decoded block error rate (BLER) is calculated using the model. In order to improve the BLER performance under decoder error propagation conditions, adaptive variable node (VN) doping is proposed, assuming a noiseless binary feedback channel is available. Example calculations using the proposed model, as well as numerical simulation results, are used to show that adaptive VN doping improves the BLER performance compared to the periodic VN doping and to the undoped case.
+
+## Two is Better than One: Reducing the Loss of the Window Decoder for SC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 윈도우 디코더의 forward-backward 개선(threshold/BER 향상) — C 이식 가능 디코더
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9457609
+- **Type**: conference
+- **Published**: 11-15 Apri
+- **Authors**: Alberto Tarable, Marco Ferrari, Luca Barletta
+- **PDF**: https://ieeexplore.ieee.org/document/9457609
+- **Abstract**: In this paper, we consider spatially coupled LDPC codes derived from protographs. In particular, we analyze the performance of the window decoder (WD), which allows reducing the complexity, the memory requirements, and the latency of the flood belief-propagation decoder. We show that the performance degradation of WD is due to the fact that it exploits a single decoding wave instead of two. This has effect both in the ideal case of infinite code length, where it may imply a threshold loss, and in the case of finite length, where it affects the slope of the BER curve in the waterfall region. We show how a forward-backward decoder can reduce such problems at the price of a limited increase of average complexity.

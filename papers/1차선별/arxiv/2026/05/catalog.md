@@ -1,0 +1,146 @@
+# arXiv — 2026-05 (1차선별 통과)
+
+
+## Best-First Ordered Statistics Decoding of Quantum LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Best-First OSD 디코더 알고리즘 개선(가능도순 탐색으로 query 1/100); OSD 변형은 NAND LDPC에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.25777v1
+- **Type**: preprint
+- **Published**: 2026-05-25
+- **Authors**: Michele Banfi, Marco Ferrari, Antonino Favano +2
+- **PDF**: https://arxiv.org/pdf/2605.25777v1
+- **Abstract**: Belief Propagation (BP) followed by Ordered Statistics Decoding (OSD) has emerged as the gold standard for decoding quantum low-density parity-check (QLDPC) codes. Recent advancements in this field have proposed new methods and algorithms to lower the complexity of this standard pipeline. Because of code degeneracy, and more in general because multiple distinct error patterns can produce the same syndrome, OSD is inherently a list-decoding technique; that is, it enumerates a set of syndrome-consistent candidates and returns the most probable one. In this work, we propose a variant of OSD, which we call Best-First OSD (BF-OSD), that explores the error-candidate space more efficiently by traversing it in order of decreasing likelihood, rather than by brute-force enumeration of a pre-selected subset. In addition, we depart from the conventional BP+OSD cascade: instead of conditioning the OSD invocation on BP convergence, we invoke OSD after a fixed, small number of BP iterations. This design choice is motivated by the full circuit-level noise regime, in which BP is particularly unreliable. Monte Carlo simulations of a family of Bivariate Bicycle (BB) codes under full circuit-level noise show that BF-OSD matches the performance of the BP+OSD baseline while exploring the solution space with 1/100th of the query budget.
+
+## A Two-Branch Finite-Field Construction for Regular CSS LDPC Bases
+
+- **Status**: ✅
+- **Reason**: 유한체 QC형 base 구성+girth≥8/4-cycle 제거+cyclic lift+log-domain BP; 코드설계(E)·디코더(C) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.23894v1
+- **Type**: preprint
+- **Published**: 2026-05-22
+- **Authors**: Koki Okada, Kenta Kasai
+- **PDF**: https://arxiv.org/pdf/2605.23894v1
+- **Abstract**: This paper develops a two-branch multiplicative-coset construction for regular Calderbank-Shor-Steane (CSS) quantum low-density parity-check base matrices. For a target column weight \(J\) and an even row weight \(L\), the method reduces regularity, CSS orthogonality, and same-type 4-cycle exclusion to explicit quotient-coset conditions over a finite field. A normalized exhaustive search for these conditions produces base matrices for several \((J,L)\) pairs, so the construction is not tied to a single degree distribution. The construction separates the finite-length design into two stages: the base matrix fixes the degree distribution and the first girth constraints, and a cyclic lift randomizes edge connections subject to exact algebraic checks. As a detailed example, we carry one \((3,10)\)-regular base through the lift and decoding stages. For this example, the selected 64-fold lift gives a code whose same-type Tanner graphs have girth at least eight, and it also excludes a specified weight-16 nondegenerate logical-support orbit. The resulting instance is a \([[10240,4108,\,10\le d\le32]]\) CSS code. For decoding, we use joint log-domain belief propagation together with low-complexity deterministic post-processing rules for small residual syndromes, including repairs for residual patterns with two unsatisfied checks. The frame error rate (FER) measurements provide finite-length decoding data for this detailed example; at depolarizing probability \(p=0.058\), the post-processing FER is \(1.0\times10^{-7}\).
+
+## Existence and Counting Bounds for High-Memory Spatially-Coupled Codes via the Combinatorial Nullstellensatz
+
+- **Status**: ✅
+- **Reason**: 고전 SC-LDPC 단주기·girth 제거 설계공간 특성화 (E) — 비록 nonconstructive bound
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.18323v1
+- **Type**: preprint
+- **Published**: 2026-05-18
+- **Authors**: Lei Huang
+- **PDF**: https://arxiv.org/pdf/2605.18323v1
+- **Abstract**: The finite-length performance of spatially-coupled low-density parity-check (SC-LDPC) codes is strongly affected by short cycle configurations and the harmful structures induced by them. This paper studies SC-LDPC code design directly at the protograph level, where the design variables are the edge-spreading assignments specified by the partition matrix. In contrast to CLLL/Moser--Tardos based constructive frameworks for QC-SC-LDPC codes, we focus on sharper nonconstructive existence and counting bounds. By encoding cycle-activation conditions as polynomial vanishing constraints over finite grids, we apply the Combinatorial Nullstellensatz to derive sufficient memory conditions for eliminating prescribed cycle-induced harmful structures. For fully connected $(γ,κ)$ base graphs, the resulting bounds explicitly characterize the memory required to destroy all $4$-cycles as well as all $4$- and $6$-cycles, and for fixed $γ$, they are asymptotically tight up to a constant factor compared with known lower bounds. We further apply the Alon--Füredi theorem to obtain lower bounds on the number of feasible edge-spreading assignments, including an explicit counting bound for assignments that eliminate all $4$-cycles and hence yield girth at least six. These results provide a refined algebraic-combinatorial characterization of the feasible design space for high-memory SC-LDPC codes, although no corresponding construction algorithm is provided.
+
+## Multiple-Bases Belief Propagation List Decoding for Quantum LDPC Codes
+
+- **Status**: ✅
+- **Reason**: MBBP 리스트 BP 디코더(사이클프리 서브트리 다양성)는 고전 LDPC로 이식 가능 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.14170v1
+- **Type**: preprint
+- **Published**: 2026-05-13
+- **Authors**: Sheida Rabeti, Hessam Mahdavifar
+- **PDF**: https://arxiv.org/pdf/2605.14170v1
+- **Abstract**: In this paper, we propose a belief-propagation (BP)-based decoder, termed the Multiple-Bases Belief-Propagation List Decoder (MBBP-LD), for quantum low-density parity-check (QLDPC) codes. The key idea is to generate \emph{structured decoding diversity} by constructing multiple redundant parity-check representations via cycle-free subtree decompositions of the Tanner graph, and running BP decoding in parallel across these representations. This extends the classical Multiple-Bases Belief-Propagation (MBBP) framework to the quantum setting while preserving the linear-time complexity and efficiency of standard BP decoding, and avoids the need for super-linear post-processing.   Simulation results demonstrate that MBBP-LD improves upon existing BP-based decoders, including BP with ordered statistics decoding (BP-OSD) and belief propagation with guided decimation (BPGD) across several QLDPC codes, while requiring substantially fewer total BP iterations. For bivariate bicycle codes $[[144,12,12]]$ and $[[288,12,18]]$, MBBP-LD achieves up to $20\%$ reduction in error rate compared to BPGD and up to $30\%$ compared to BP-OSD in the low- and moderate-error regimes. For the larger B1 code $[[882, 24, 18 \leq d \leq 24]]$, MBBP-LD attains comparable or improved performance relative to BPGD while maintaining BP-like decoding latency under parallel implementation.
+
+## Scalable Mamba-Based Message-Passing Neural Decoder for Error-Correcting Codes
+
+- **Status**: ✅
+- **Reason**: Mamba 기반 메시지패싱 신경망 디코더(MMPD), (1056,880) LDPC에서 검증 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.10681v1
+- **Type**: preprint
+- **Published**: 2026-05-11
+- **Authors**: Rostislav Gusev, Nikita Aleksandrov, Artem Solomkin +1
+- **PDF**: https://arxiv.org/pdf/2605.10681v1
+- **Abstract**: Forward error correction is essential for reliable communication over noisy channels. Attention-based model-free neural decoders have shown strong performance for short codes, but their scalability to longer codes is limited by the quadratic memory and computational cost of attention. In this paper, we introduce the Mamba message-passing decoder (MMPD), an attention-free syndrome-based neural decoder for binary linear codes. MMPD retains the Tanner-graph structure of a message-passing decoder by performing local pairwise aggregation along variable-check edges. To enable efficient long-range information propagation, these local updates are combined with bidirectional Mamba state-space blocks. By avoiding dense attention matrices, MMPD scales more favorably for long codes in both memory and computation. Experiments on the (1056, 880) LDPC code show that MMPD achieves a 0.45 dB gain over the state-of-the-art CrossMPT decoder at a specified target bit error rate, while reducing memory consumption by a factor of 1.5. This reduction factor increases substantially for longer codes, demonstrating the applicability of MMPD to scalable neural decoding of practical long codes.
+
+## Syndrome Adaptive Gain Control for Min-Sum Decoding of Quantum LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Syndrome adaptive gain Min-Sum 디코더(SAGMS) — 양자LDPC 대상이나 온라인 게인 적응 MS 변형은 NAND LDPC로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.10433v1
+- **Type**: preprint
+- **Published**: 2026-05-11
+- **Authors**: Hernan Cordova, Alexios Balatsoukas-Stimming, Yunus Can Gültekin +2
+- **PDF**: https://arxiv.org/pdf/2605.10433v1
+- **Abstract**: Min-Sum (MS) decoding is a popular low-complexity alternative to belief propagation (BP), retaining only the minimum incoming message magnitude during check-node (CN) processing, at the cost of systematic message magnitude overestimation. The scaled MS (SMS) decoder compensates for this effect using a fixed scaling factor. We propose the syndrome adaptive gain Min-Sum (SAGMS) decoder for quantum low-density parity-check (QLDPC) codes, which adapts the message gain online based on the fraction of unsatisfied stabilizers, requiring no per-code or per-noise level optimization. We show that the scaling factor required for SMS to match belief propagation decreases with the CN degree, so any fixed scaling optimized for one degree incurs into a growing penalty as the CN degree varies. SAGMS avoids this limitation by adapting the gain during decoding. Simulations on generalized bicycle QLDPC codes demonstrate that SAGMS matches or outperforms the frame error rate (FER) of an offline optimized SMS decoder. Moreover, SAGMS approaches BP performance and, under certain conditions outperforms it while retaining MS-level complexity.
+
+## A Global Coding Scheme for OFDM over Finite Fields
+
+- **Status**: ✅
+- **Reason**: GF(2^s) QC-LDPC 구성 + 병렬 이진 소프트결정 반복 디코딩, error floor 없음 — 이식 가능 코드설계/디코더(E/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.09865v1
+- **Type**: preprint
+- **Published**: 2026-05-11
+- **Authors**: Juane Li, Qi-yue Yu, Khaled Abdel-Ghaffar +1
+- **PDF**: https://arxiv.org/pdf/2605.09865v1
+- **Abstract**: This paper proposes a highly efficient global coded-multiplexing scheme, conceptualized as Orthogonal Frequency Division Multiplexing over a finite field (FF-OFDM), for reliable multiuser communications. By utilizing a prime length cyclic code and its Hadamard equivalents as algebraic subcarriers, independent data streams are globally multiplexed via a Galois Fourier Transform (GFT) without rate loss. We show that this finite-field synthesis intrinsically generates a global Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) code over $\mathrm{GF}(2^s)$, whose parity-check matrix is governed by the structural rigor of partial geometries. At the receiver, supported by a binary decomposition theorem, the received nonbinary global codeword is jointly decoded using parallel binary iterative soft-decision algorithms prior to demultiplexing. This joint decoding enables seamless reliability information sharing across all user streams, achieving near-bound error performance, rapid convergence without error floors, and strictly linear amortized decoding complexity.
+
+## On Codes with Support-Constrained Parity Checks
+
+- **Status**: ✅
+- **Reason**: 패리티체크 support 제약 하 최소거리 최대화 코드설계 — LDPC 설계에 직접 적용되는 구성 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.08644v1
+- **Type**: preprint
+- **Published**: 2026-05-09
+- **Authors**: Barron Han, Hikmet Yildiz, Babak Hassibi
+- **PDF**: https://arxiv.org/pdf/2605.08644v1
+- **Abstract**: We study linear codes that maximize minimum distance subject to arbitrary support constraints on the parity-check matrix. Such constraints arise naturally in the design of LDPC codes, locally repairable codes, and hardware-constrained systems where each parity check must involve only a limited number of code symbols. They are also essential in quantum error correction, where sparse stabilizers reduce measurement noise and respect the connectivity constraints of physical qubit architectures. We derive the optimal minimum distance possible given support constraints on the parity-check matrix and show it is achievable over sufficiently large fields. When this maximum distance coincides with the Singleton bound for unconstrained parity check matrices, the dual GM-MDS construction yields generalized Reed--Solomon codes obeying the mask. In the generator-matrix setting, the GM-MDS theorem guarantees that the optimal distance can always be achieved by a subcode of a generalized Reed--Solomon code while satisfying arbitrary support constraints. We show that this is not true for the parity-check setting. We exhibit a set of support constraints, derived from the vertex-edge incidence of $K_{6,6}$, for which the optimal minimum distance cannot be realized by any subcode of a generalized Reed--Solomon code over any field. We also analyze structured constraint families -- regular, balanced, and cyclic masks -- through numerical optimization, providing design guidance for practical code constructions.
+
+## RFNoC-Based FPGA Offloading for Fully Programmable PHY Acceleration
+
+- **Status**: ✅
+- **Reason**: FPGA 기반 LDPC 인코딩/디코딩·LLR 추정 HW 가속 — 이식 가능 HW 아키텍처(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: arxiv:2605.07704v1
+- **Type**: preprint
+- **Published**: 2026-05-08
+- **Authors**: A. Oguz Kislal, Osman Mert Yilmaz, Bengu Bilgic Keskin +2
+- **PDF**: https://arxiv.org/pdf/2605.07704v1
+- **Abstract**: Hardware acceleration has emerged as a key research topic for supporting computationally intensive signal processing and artificial intelligence applications in 6G research and development studies. This paper presents an RF Network on Chip (RFNoC) based hardware acceleration framework that offloads key physical layer procedures to a field programmable gate array (FPGA). The proposed design accelerates procedures, including low density parity check codes (LDPC) encoding and decoding, rate matching and unmatching, interleaving and deinterleaving, scrambling and descrambling, and log likelihood ratio estimation. The accelerator is integrated directly into the OpenAirInterface radio access network software, enabling simultaneous use of the FPGA as driver of the radio front end and a high throughput accelerator. The proposed system is validated through real time experiments with a commercial smartphone successfully connecting to the network. The implementation results demonstrate that a throughput of about 900 Mbps is achiievable using a moderate FPGA resource utlization.
+
+## Affine Subcode Ensemble Decoding for Degeneracy-Aware Quantum Error Correction
+
+- **Status**: ✅
+- **Reason**: Affine subcode ensemble BP 디코딩 + overcomplete 행렬 — 양자 대상이나 고전 BP 개선 기법으로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.06547v2
+- **Type**: preprint
+- **Published**: 2026-05-07
+- **Authors**: Leo Wursthorn, Jonathan Mandelbaum, Sisi Miao +4
+- **PDF**: https://arxiv.org/pdf/2605.06547v2
+- **Abstract**: Quantum low-density parity-check codes are promising candidates for low-overhead fault-tolerant quantum computing, but degeneracy is known to impair the convergence of belief-propagation (BP) decoding of these codes. In this work, we show that appending linearly independent rows to a check matrix of a stabilizer code can reduce the search space for a valid degenerate solution. Motivated by this, we extend the recently proposed affine subcode ensemble decoding technique from the classical to the quantum setting. Moreover, we employ overcomplete matrices for each decoding path. Monte-Carlo simulations on toric and generalized bicycle codes demonstrate improved convergence and reduced logical error rate.
+
+## Combinatorial Analysis of Dyadic and Quasi-Dyadic Codes
+
+- **Status**: ✅
+- **Reason**: QLDPC 동기이나 dyadic/quasi-dyadic 기반 짧은사이클 열거·제어, PEG식 girth 최대화, absorbing set/error-floor 분석 — 고전 LDPC 코드설계(E)에 직접 이식 가능.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2605.01942v1
+- **Type**: preprint
+- **Published**: 2026-05-03
+- **Authors**: Anthony Gómez-Fonseca, Gretchen L. Matthews, Kirsten D. Morris +1
+- **PDF**: https://arxiv.org/pdf/2605.01942v1
+- **Abstract**: Quantum low-density parity-check (QLDPC) codes offer a promising route to scalable fault-tolerant quantum computation, but their performance under iterative decoding is strongly influenced by short-cycle structure and other harmful subgraphs in the associated Tanner graphs. This paper develops an algebraic framework for constructing and analyzing (Q)LDPC codes from dyadic and quasi-dyadic matrices-translation-invariant $2^\ell \times 2^\ell$ binary matrices specified compactly by a signature row and forming a commutative ring with recursive block structure. Leveraging this structure, we relate cycles in lifted Tanner graphs to tailless backtrackless closed walks in the protograph and derive efficient, implementable methods to enumerate and control short cycles (notably $4$-, $6$-, and $8$-cycles). We introduce dyadic-aware PEG-style construction algorithms that use forbidden sets of shifts to maximize attainable girth when possible and otherwise minimize the multiplicity of the shortest cycles at the target girth. Motivated by error-floor phenomena, we further characterize and explicitly enumerate absorbing sets in key dyadic layout boundary cases, identifying configurations that induce abundant $(a,0)$-absorbing sets. Finally, we propose CSS-oriented dyadic constructions that satisfy commutation constraints by design and demonstrate via belief-propagation simulations that reducing short-cycle multiplicity can yield substantial decoding gains even when girth cannot be increased.
+
+## A Scalable FPGA Architecture for Real-Time Decoding of Quantum LDPC Codes Using GARI
+
+- **Status**: ✅
+- **Reason**: 양자 LDPC용이나 message-passing 디코더 FPGA 아키텍처(자원재사용·병렬도·저지연) — HW 아키텍처(D) 이식 가능성 있어 애매하므로 살림.
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: arxiv:2605.01035v1
+- **Type**: preprint
+- **Published**: 2026-05-01
+- **Authors**: Daniel Báscones, Arshpreet Singh Maan, Valentin Savin +1
+- **PDF**: https://arxiv.org/pdf/2605.01035v1
+- **Abstract**: In this work, we introduce a new hardware architecture for decoding correlated errors in quantum LDPC codes. The decoder is based on message passing and exploits the structure of the detector error model obtained through the recently introduced Graph Augmentation and Rewiring for Inference (GARI) method. The proposed architecture enables flexible scaling and can, in principle, adapt to any quantum LDPC codes using the GARI framework. It leverages resource reuse while maintaining a modest degree of parallelism, thereby reducing power consumption and area requirements, while preserving low decoding latency.   As a case study, the architecture was implemented on a VCU19P FPGA as an ensemble of three decoder cores targeting the [[144,12,12]] bivariate bicycle code, achieving an average latency of 596 ns per decoding round. This implementation consumes six times fewer resources than the previous GARI-based proposal, being the first reported implementation of multiple decoder cores for correlated errors on a single FPGA device. This enables better energy-conscious scaling of the quantum error correction layer on the classical side, reducing overall power consumption while meeting real-time constraints without compromising decoding accuracy under correlated errors.

@@ -1,0 +1,62 @@
+# IEEE Xplore — 2025-02 (1차선별 통과)
+
+
+## Rate-Adaptive Protograph-Based MacKay-Neal Codes
+
+- **Status**: ✅
+- **Reason**: Protograph LDPC error floor 분석 및 density evolution, rate-adaptive 코드 설계 기법 포함 — 무선 응용이지만 코드 설계·error floor 분석 기법 이식 가능 (E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10793401
+- **Type**: journal
+- **Published**: Feb. 2025
+- **Authors**: Ayman Zahr, Emna Ben Yacoub, Balázs Matuz +1
+- **PDF**: https://ieeexplore.ieee.org/document/10793401
+- **Abstract**: Rate-adaptive MacKay-Neal (MN) codes based on protographs are analyzed. The code construction employs an outer distribution matcher (DM) to adapt the rate of the scheme. The DM is coupled with an inner protograph-based low-density parity-check (LDPC) code. The performance achievable by the resulting code structure, that is nonlinear, is studied by means of an equivalent communication model that reduces the problem to the analysis of the inner (linear) LDPC code with transmission that takes place in parallel over the communication channel, and over a suitably defined binary symmetric channel. A density evolution analysis of protograph MN code ensembles is outlined, and it is complemented by an error floor analysis that relies on the derivation of the average input-output weight distribution of the inner LDPC code ensemble. Conditions on the shape of the normalized logarithmic asymptotic input-output weight distribution are defined, which allow discarding code ensembles with bad error floor properties during the code design phase. Examples of code designs are provided, showing how the use of a single LDPC code ensemble allows operating within 1 dB from the Shannon limit over a wide range of code rates, where the code rate is selected by tuning the DM parameters. By enabling rate flexibility with a constant blocklength, and with a fixed LDPC code as inner code, the construction provides an appealing solution for very high-throughput wireless (optical) links that employ binary-input modulations.
+
+## Efficient Active Deep Decoding of Linear Codes Using Importance Sampling
+
+- **Status**: ✅
+- **Reason**: WBP(Weight Belief Propagation) 디코더에 active learning + IS 분포 결합으로 error floor 개선 — BP 변형 디코더 기법으로 LDPC ECC에 이식 가능 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10787032
+- **Type**: journal
+- **Published**: Feb. 2025
+- **Authors**: Hassan Noghrei, Mohammad-Reza Sadeghi, Wai Ho Mow
+- **PDF**: https://ieeexplore.ieee.org/document/10787032
+- **Abstract**: The quality and quantity of training data significantly affect deep learning model performance. In error correction, generating high-quality samples with minimal noise is crucial. This letter presents a method that combines a modified Importance Sampling (IS) distribution with active learning to generate high-quality samples. The suggested IS distribution generates samples iteratively from shells with error probabilities within a specific range. This approach enhances the performance of BCH(63,36) and BCH(63,45) codes with cycle-reduced parity-check matrices. The proposed IS-based-active Weight Belief Propagation (WBP) decoder improves the error-floor region by up to 1.9dB on the BER curve compared to the conventional WBP decoder.
+
+## Soft-Output Guessing Codeword Decoding
+
+- **Status**: ✅
+- **Reason**: GRAND 기반 soft-output GCD로 SISO 디코더 구현 — iterative decoding에 적용 가능한 범용 디코더 기법 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10795170
+- **Type**: journal
+- **Published**: Feb. 2025
+- **Authors**: Ken R. Duffy, Peihong Yuan, Joseph Griffin +1
+- **PDF**: https://ieeexplore.ieee.org/document/10795170
+- **Abstract**: We establish that it is possible to extract accurate blockwise and bitwise soft output (SO) from Guessing Codeword Decoding (GCD) with minimal additional computational complexity by considering it through the lens of Guessing Random Additive Noise Decoding (GRAND). Blockwise SO can be used to control decoding misdetection rate, while bitwise SO results in a soft-input soft-output (SISO) decoder that can be used for efficient iterative decoding of long, high redundancy codes.
+
+## Flash-Gen: Spatio-Temporal Generator for Flash Memory Systems
+
+- **Status**: ✅
+- **Reason**: NAND 플래시 메모리 read voltage 생성 모델 + ECC·constrained code 설계 워크플로우 직접 제안; A 범주 직접 해당
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10634193
+- **Type**: journal
+- **Published**: Feb. 2025
+- **Authors**: Simeng Zheng, Chih-Hui Ho, Wenyu Peng +1
+- **PDF**: https://ieeexplore.ieee.org/document/10634193
+- **Abstract**: Modeling spatio-temporal read voltages with complex distortions arising from the write and read mechanisms in flash memory devices is essential for the design of signal processing and coding algorithms. In this work, we propose Flash-Gen, a data-driven approach to generating flash memory read voltages in both space and time using conditional generative networks. This generative modeling method reconstructs read voltages from an individual memory cell based on the program levels of the cell and its surrounding cells, as well as the time stamp, in a time-efficient, resource-saving, and function-comprehensive manner. We evaluate the model over a range of time stamps using the read voltage distributions, the cell level error rates, and the relative frequency of errors for patterns most susceptible to inter-cell interference (ICI) effects. We propose a flash system optimization procedure, referred to as the Flash-Gen coding workflow, that leverages reconstructed read voltages for the development of error correction codes (ECCs) and constrained codes. Experimental results demonstrate that the model accurately captures the complex spatial and temporal features of the flash memory channel. Flash-Gen coding workflow can effectively address a range of important tasks, including threshold determination, coding performance estimation, and pattern characterization.
+
+## Soft-Output Successive Cancellation List Decoding
+
+- **Status**: ✅
+- **Reason**: GLDPC 반복 디코딩에 적용 가능한 SISO soft-output 디코더 제안; 극 부호 기반이나 GLDPC 이식 가능성 있어 애매하므로 in 처리 (Phase 3 재검토)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10778976
+- **Type**: journal
+- **Published**: Feb. 2025
+- **Authors**: Peihong Yuan, Ken R. Duffy, Muriel Médard
+- **PDF**: https://ieeexplore.ieee.org/document/10778976
+- **Abstract**: We introduce an algorithm for approximating the codebook probability that is compatible with all successive cancellation (SC)-based decoding algorithms, including SC list (SCL) decoding. This approximation is based on an auxiliary distribution that mimics the dynamics of decoding algorithms with an SC decoding schedule. Based on this codebook probability and SCL decoding, we introduce soft-output SCL (SO-SCL) to generate both blockwise and bitwise soft-output (SO). Using that blockwise SO, we first establish that, in terms of both block error rate (BLER) and undetected error rate (UER), SO-SCL decoding of dynamic Reed-Muller (RM) codes significantly outperforms the CRC-concatenated polar codes from 5G New Radio under SCL decoding. Moreover, using SO-SCL, the decoding misdetection rate (MDR) can be constrained to not exceed any predefined value, making it suitable for practical systems. Proposed bitwise SO can be readily generated from blockwise SO via a weighted sum of beliefs that includes a term where SO is weighted by the codebook probability, resulting in a soft-input soft-output (SISO) decoder. Simulation results for SO-SCL iterative decoding of product codes and generalized LDPC (GLDPC) codes, along with information-theoretical analysis, demonstrate significant superiority over existing list-max and list-sum approximations.

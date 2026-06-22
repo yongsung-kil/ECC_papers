@@ -1,0 +1,38 @@
+# arXiv — 2020-01 (1차선별 통과)
+
+
+## 100Mbps Reconciliation for Quantum Key Distribution Using a Single Graphics Processing Unit
+
+- **Status**: ✅
+- **Reason**: QKD reconciliation이나 multi-matrix LDPC 디코딩의 GPU 병렬 구현/처리량 최적화 — 떼어낼 HW/병렬화 기법(D) 가능, 애매하므로 살림
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: arxiv:2001.07979v1
+- **Type**: preprint
+- **Published**: 2020-01-22
+- **Authors**: Yu Guo, Chaohui Gao, Dong Jiang +1
+- **PDF**: https://arxiv.org/pdf/2001.07979v1
+- **Abstract**: An efficient error reconciliation scheme is important for post-processing of quantum key distribution (QKD). Recently, a multi-matrix low-density parity-check codes based reconciliation algorithm which can provide remarkable perspectives for high efficiency information reconciliation was proposed. This paper concerns the improvement of reconciliation performance. Multi-matrix algorithm is implemented and optimized on the graphics processing unit (GPU) to obtain high reconciliation throughput. Experimental results indicate that GPU-based algorithm can highly improve reconciliation throughput to an average 85.67 Mbps and a maximum 102.084 Mbps with typical code rate and efficiency. This is the best performance of reconciliation on GPU platform to our knowledge.
+
+## Pruning Neural Belief Propagation Decoders
+
+- **Status**: ✅
+- **Reason**: neural BP 디코더에서 머신러닝으로 과완비 패리티검사행렬을 가지치기, 반복마다 다른 H 사용 — short LDPC 포함 바이너리 LDPC에 이식 가능한 신경망 디코더 기법(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2001.07464v2
+- **Type**: preprint
+- **Published**: 2020-01-21
+- **Authors**: Andreas Buchberger, Christian Häger, Henry D. Pfister +2
+- **PDF**: https://arxiv.org/pdf/2001.07464v2
+- **Abstract**: We consider near maximum-likelihood (ML) decoding of short linear block codes based on neural belief propagation (BP) decoding recently introduced by Nachmani et al.. While this method significantly outperforms conventional BP decoding, the underlying parity-check matrix may still limit the overall performance. In this paper, we introduce a method to tailor an overcomplete parity-check matrix to (neural) BP decoding using machine learning. We consider the weights in the Tanner graph as an indication of the importance of the connected check nodes (CNs) to decoding and use them to prune unimportant CNs. As the pruning is not tied over iterations, the final decoder uses a different parity-check matrix in each iteration. For Reed-Muller and short low-density parity-check codes, we achieve performance within 0.27 dB and 1.5 dB of the ML performance while reducing the complexity of the decoder.
+
+## Design of Capacity-Approaching Low-Density Parity-Check Codes using Recurrent Neural Networks
+
+- **Status**: ✅
+- **Reason**: RNN으로 Density Evolution 모델링하여 capacity-approaching 바이너리 비정규 LDPC degree 분포 설계 — 이식 가능한 코드 설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2001.01249v1
+- **Type**: preprint
+- **Published**: 2020-01-05
+- **Authors**: Eleni Nisioti, Nikolaos Thomos
+- **PDF**: https://arxiv.org/pdf/2001.01249v1
+- **Abstract**: In this paper, we model Density Evolution (DE) using Recurrent Neural Networks (RNNs) with the aim of designing capacity-approaching Irregular Low-Density Parity-Check (LDPC) codes for binary erasure channels. In particular, we present a method for determining the coefficients of the degree distributions, characterizing the structure of an LDPC code. We refer to our RNN architecture as Neural Density Evolution (NDE) and determine the weights of the RNN that correspond to optimal designs by minimizing a loss function that enforces the properties of asymptotically optimal design, as well as the desired structural characteristics of the code. This renders the LDPC design process highly configurable, as constraints can be added to meet applications' requirements by means of modifying the loss function. In order to train the RNN, we generate data corresponding to the expected channel noise. We analyze the complexity and optimality of NDE theoretically, and compare it with traditional design methods that employ differential evolution. Simulations illustrate that NDE improves upon differential evolution both in terms of asymptotic performance and complexity. Although we focus on asymptotic settings, we evaluate designs found by NDE for finite codeword lengths and observe that performance remains satisfactory across a variety of channels.

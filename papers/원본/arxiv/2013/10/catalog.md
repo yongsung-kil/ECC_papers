@@ -1,0 +1,79 @@
+# arXiv — 2013-10
+
+
+## Quantum error-correcting codes and 4-dimensional arithmetic hyperbolic manifolds
+
+- **Status**: ❌
+- **Reason**: 4차원 쌍곡 다양체 기반 homological 양자 LDPC 부호, 양자 전용 위상 구성으로 고전 이식 불가
+- **ID**: arxiv:1310.5555v1
+- **Type**: preprint
+- **Published**: 2013-10-21
+- **Authors**: Larry Guth, Alexander Lubotzky
+- **PDF**: https://arxiv.org/pdf/1310.5555v1
+- **Abstract**: Using 4-dimensional arithmetic hyperbolic manifolds, we construct some new homological quantum error correcting codes. They are LDPC codes with linear rate and distance $n^ε$. Their rate is evaluated via Euler characteristic arguments and their distance using $\mathbb{Z}_2$-systolic geometry. This construction answers a queston of Zémor, who asked whether homological codes with such parameters could exist at all.
+
+## M-ary Detection and q-ary Decoding in Large-Scale MIMO: A Non-Binary Belief Propagation Approach
+
+- **Status**: ❌
+- **Reason**: non-binary(q-ary) LDPC 및 NB-BP 디코더, 비이진 LDPC는 제외 대상
+- **ID**: arxiv:1310.4347v1
+- **Type**: preprint
+- **Published**: 2013-10-16
+- **Authors**: T. Lakshmi Narasimhan, A. Chockalingam
+- **PDF**: https://arxiv.org/pdf/1310.4347v1
+- **Abstract**: In this paper, we propose a non-binary belief propagation approach (NB-BP) for detection of $M$-ary modulation symbols and decoding of $q$-ary LDPC codes in large-scale multiuser MIMO systems. We first propose a message passing based symbol detection algorithm which computes vector messages using a scalar Gaussian approximation of interference, which results in a total complexity of just $O(KN\sqrt{M})$, where $K$ is the number of uplink users and $N$ is the number of base station (BS) antennas. The proposed NB-BP detector does not need to do a matrix inversion, which gives a complexity advantage over MMSE detection. We then design optimized $q$-ary LDPC codes by matching the EXIT charts of the proposed detector and the LDPC decoder. Simulation results show that the proposed NB-BP detection-decoding approach using the optimized LDPC codes achieve significantly better performance (by about 1 dB to 7 dB at $10^{-5}$ coded BER for various system loading factors with number of users ranging from 16 to 128 and number of BS antennas fixed at 128) compared to using linear detectors (e.g., MMSE detector) and off-the-shelf $q$-ary irregular LDPC codes. Also, even with estimated channel knowledge (e.g., with MMSE channel estimate), the performance of the proposed NB-BP detector is better than that of the MMSE detector.
+
+## Spatially Coupled Sparse Codes on Graphs - Theory and Practice
+
+- **Status**: ❌
+- **Reason**: spatially-coupled 부호 리뷰/서베이, 구체적 신규 디코더·구성·HW 기여 없는 개관
+- **ID**: arxiv:1310.3724v1
+- **Type**: preprint
+- **Published**: 2013-10-14
+- **Authors**: Daniel J. Costello,, Lara Dolecek, Thomas E. Fuja +3
+- **PDF**: https://arxiv.org/pdf/1310.3724v1
+- **Abstract**: Since the discovery of turbo codes 20 years ago and the subsequent re-discovery of low-density parity-check codes a few years later, the field of channel coding has experienced a number of major advances. Up until that time, code designers were usually happy with performance that came within a few decibels of the Shannon Limit, primarily due to implementation complexity constraints, whereas the new coding techniques now allow performance within a small fraction of a decibel of capacity with modest encoding and decoding complexity. Due to these significant improvements, coding standards in applications as varied as wireless mobile transmission, satellite TV, and deep space communication are being updated to incorporate the new techniques. In this paper, we review a particularly exciting new class of low-density parity-check codes, called spatially-coupled codes, which promise excellent performance over a broad range of channel conditions and decoded error rate requirements.
+
+## Fault-Tolerant Quantum Computation with Constant Overhead
+
+- **Status**: ❌
+- **Reason**: 양자 LDPC 기반 fault-tolerant 양자 연산 오버헤드 이론, 고전 바이너리 LDPC 이식 기법 없음
+- **ID**: arxiv:1310.2984v3
+- **Type**: preprint
+- **Published**: 2013-10-10
+- **Authors**: Daniel Gottesman
+- **PDF**: https://arxiv.org/pdf/1310.2984v3
+- **Abstract**: What is the minimum number of extra qubits needed to perform a large fault-tolerant quantum circuit? Working in a common model of fault-tolerance, I show that in the asymptotic limit of large circuits, the ratio of physical qubits to logical qubits can be a constant. The construction makes use of quantum low-density parity check codes, and the asymptotic overhead of the protocol is equal to that of the family of quantum error-correcting codes underlying the fault-tolerant protocol.
+
+## Transmit Beamforming for MIMO Communication Systems with Low Precision ADC at the Receiver
+
+- **Status**: ❌
+- **Reason**: MIMO 빔포밍/저정밀 ADC 연구, LDPC는 부수 언급일 뿐 떼어낼 ECC 기법 없음
+- **ID**: arxiv:1310.1571v1
+- **Type**: preprint
+- **Published**: 2013-10-06
+- **Authors**: Tapan Shah, Onkar Dabeer
+- **PDF**: https://arxiv.org/pdf/1310.1571v1
+- **Abstract**: Multiple antenna systems have been extensively used by standards designing multi-gigabit communication systems operating in bandwidth of several GHz. In this paper, we study the use of transmitter (Tx) beamforming techniques to improve the performance of a MIMO system with a low precision ADC. We motivate an approach to use eigenmode transmit beamforming (which imposes a diagonal structure in the complete MIMO system) and use an eigenmode power allocation which minimizes the uncoded BER of the finite precision system. Although we cannot guarantee optimality of this approach, we observe that even low with precision ADC, it performs comparably to full precision system with no eigenmode power allocation. For example, in a high throughput MIMO system with a finite precision ADC at the receiver, simulation results show that for a 3/4 LDPC coded 2x2 MIMO OFDM 16-QAM system with 3-bit precision ADC at the receiver, a BER of 0.0001 is achieved at an SNR of 26 dB. This is 1 dB better than that required for the same system with full precision but equal eigenmode power allocation.
+
+## Advanced channel coding for space mission telecommand links
+
+- **Status**: ❌
+- **Reason**: 우주 텔레커맨드 부호 옵션 비교(turbo/BCH 중심), 표준 LDPC 비교 수준이라 신규 이식 기법 없음
+- **ID**: arxiv:1310.0744v1
+- **Type**: preprint
+- **Published**: 2013-10-02
+- **Authors**: Marco Baldi, Marco Bianchi, Franco Chiaraluce +3
+- **PDF**: https://arxiv.org/pdf/1310.0744v1
+- **Abstract**: We investigate and compare different options for updating the error correcting code currently used in space mission telecommand links. Taking as a reference the solutions recently emerged as the most promising ones, based on Low-Density Parity-Check codes, we explore the behavior of alternative schemes, based on parallel concatenated turbo codes and soft-decision decoded BCH codes. Our analysis shows that these further options can offer similar or even better performance.
+
+## Advanced coding schemes against jamming in telecommand links
+
+- **Status**: ❌
+- **Reason**: 재밍 환경 텔레커맨드 부호 성능 비교(turbo/BCH 포함), 신규 바이너리 LDPC 디코더·구성 기여 없음
+- **ID**: arxiv:1310.0721v1
+- **Type**: preprint
+- **Published**: 2013-10-02
+- **Authors**: Marco Baldi, Marco Bianchi, Franco Chiaraluce +4
+- **PDF**: https://arxiv.org/pdf/1310.0721v1
+- **Abstract**: The aim of this paper is to study the performance of some coding schemes recently proposed for updating the TC channel coding standard for space applications, in the presence of jamming. Besides low-density parity-check codes, that appear as the most eligible candidates, we also consider other solutions based on parallel turbo codes and extended BCH codes. We show that all these schemes offer very good performance, which approaches the theoretical limits achievable.

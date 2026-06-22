@@ -1,0 +1,26 @@
+# arXiv — 2021-01 (1차선별 통과)
+
+
+## Codes approaching the Shannon limit with polynomial complexity per information bit
+
+- **Status**: ✅
+- **Reason**: weight-3 LDPC+polar 결합 디코딩, error floor BER bound 분석 — error floor 분석 및 새 결합 디코딩 구조 이식 가능(C/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2101.10145v1
+- **Type**: preprint
+- **Published**: 2021-01-25
+- **Authors**: Ilya Dumer, Navid Gharavi
+- **PDF**: https://arxiv.org/pdf/2101.10145v1
+- **Abstract**: We consider codes for channels with extreme noise that emerge in various low-power applications. Simple LDPC-type codes with parity checks of weight 3 are first studied for any dimension $m\rightarrow\infty.$ These codes form modulation schemes: they improve the original channel output for any $SNR>$ $-6$ dB (per information bit) and gain $3$ dB over uncoded modulation as $SNR$ grows. However, they also have a floor on the output bit error rate (BER) irrespective of their length. Tight lower and upper bounds, which are virtually identical to simulation results, are then obtained for BER at any SNR. We also study a combined scheme that splits $m$ information bits into $b$ blocks and protects each with some polar code. Decoding moves back and forth between polar and LDPC codes, every time using a polar code of a higher rate. For a sufficiently large constant $b$ and $m\rightarrow\infty$, this design yields a vanishing BER at any SNR that is arbitrarily close to the Shannon limit of -1.59 dB. Unlike other existing designs, this scheme has polynomial complexity of order $m\ln m$ per information bit.
+
+## Unequal Error Protection Achieves Threshold Gains on BEC and BSC via Higher Fidelity Messages
+
+- **Status**: ✅
+- **Reason**: UEP 패리티비트 고신뢰 보호로 threshold 이득, MR/스토리지 동기·RA-LDPC degree distribution 최적화 — 코드설계 기법 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2101.09238v1
+- **Type**: preprint
+- **Published**: 2021-01-22
+- **Authors**: Beyza Dabak, Ahmed Hareedy, Alexei Ashikhmin +1
+- **PDF**: https://arxiv.org/pdf/2101.09238v1
+- **Abstract**: Because of their capacity-approaching performance, graph-based codes have a wide range of applications, including communications and storage. In these codes, unequal error protection (UEP) can offer performance gains with limited rate loss. Recent empirical results in magnetic recording (MR) systems show that extra protection for the parity bits of a low-density parity-check (LDPC) code via constrained coding results in significant density gains. In particular, when UEP is applied via more reliable parity bits, higher fidelity messages of parity bits are spread to all bits by message passing algorithm, enabling performance gains. Threshold analysis is a tool to measure the effectiveness of a graph-based code or coding scheme. In this paper, we provide a theoretical analysis of this UEP idea using extrinsic information transfer (EXIT) charts in the binary erasure channel (BEC) and the binary symmetric channel (BSC). We use EXIT functions to investigate the effect of change in mutual information of parity bits on the overall coding scheme. We propose a setup in which parity bits of a repeat-accumulate (RA) LDPC code have lower erasure or crossover probabilities than input information bits. We derive the a-priori and extrinsic mutual information functions for check nodes and variable nodes of the code. After applying our UEP setup to the information functions, we formulate a linear programming problem to find the optimal degree distribution that maximizes the code rate under the decoding convergence constraint. Results show that UEP via higher fidelity parity bits achieves up to about $17\%$ and $28\%$ threshold gains on BEC and BSC, respectively.

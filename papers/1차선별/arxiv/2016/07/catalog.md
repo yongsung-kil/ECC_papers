@@ -1,0 +1,14 @@
+# arXiv — 2016-07 (1차선별 통과)
+
+
+## Design of LDPC Codes using Multipath EMD Strategies and Progressive Edge Growth
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 그래프 구성 신규 Multipath EMD 메트릭으로 error floor 개선, 바이너리 LDPC 코드 설계 기법(E)으로 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1607.05647v2
+- **Type**: preprint
+- **Published**: 2016-07-19
+- **Authors**: C. T. Healy, R. C. de Lamare
+- **PDF**: https://arxiv.org/pdf/1607.05647v2
+- **Abstract**: Low-density parity-check (LDPC) codes are capable of achieving excellent performance and provide a useful alternative for high performance applications. However, at medium to high signal-to-noise ratios (SNR), an observable error floor arises from the loss of independence of messages passed under iterative graph-based decoding. In this paper, the error floor performance of short block length codes is improved by use of a novel candidate selection metric in code graph construction. The proposed Multipath EMD approach avoids harmful structures in the graph by evaluating certain properties of the cycles which may be introduced in each edge placement. We present Multipath EMD based designs for several structured LDPC codes including quasi-cyclic and irregular repeat accumulate codes. In addition, an extended class of diversity-achieving codes on the challenging block fading channel is proposed and considered with the Multipath EMD design. This combined approach is demonstrated to provide gains in decoder convergence and error rate performance. A simulation study evaluates the performance of the proposed and existing state-of-the-art methods.

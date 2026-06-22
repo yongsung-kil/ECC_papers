@@ -1,0 +1,14 @@
+# arXiv — 2018-04 (1차선별 통과)
+
+
+## Joint Quantizer Optimization based on Neural Quantizer for Sum-Product Decoder
+
+- **Status**: ✅
+- **Reason**: sum-product 디코더용 신경망 기반 저정밀 양자기 최적화 — NAND LLR 양자화 직접 관련(A/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1804.06002v1
+- **Type**: preprint
+- **Published**: 2018-04-17
+- **Authors**: Tadashi Wadayama, Satoshi Takabe
+- **PDF**: https://arxiv.org/pdf/1804.06002v1
+- **Abstract**: A low-precision analog-to-digital converter (ADC) is required to implement a frontend device of wideband digital communication systems in order to reduce its power consumption. The goal of this paper is to present a novel joint quantizer optimization method for minimizing lower-precision quantizers matched to the sum-product algorithms. The principal idea is to introduce a quantizer that includes a feed-forward neural network and the soft staircase function. Since the soft staircase function is differentiable and has non-zero gradient values everywhere, we can exploit backpropagation and a stochastic gradient descent method to train the feed-forward neural network in the quantizer. The expected loss regarding the channel input and the decoder output is minimized in a supervised training phase. The experimental results indicate that the joint quantizer optimization method successfully provides an 8-level quantizer for a low-density parity-check (LDPC) code that achieves only a 0.1-dB performance loss compared to the unquantized system.

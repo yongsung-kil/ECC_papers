@@ -1,0 +1,14 @@
+# arXiv — 2019-06 (1차선별 통과)
+
+
+## Deep Learning-Based Quantization of L-Values for Gray-Coded Modulation
+
+- **Status**: ✅
+- **Reason**: 딥러닝 기반 LLR(L-value) 양자화·저장 압축, NAND LLR 양자화/메모리 풋프린트 절감에 직결(A/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1906.07849v2
+- **Type**: preprint
+- **Published**: 2019-06-18
+- **Authors**: Marius Arvinte, Sriram Vishwanath, Ahmed H. Tewfik
+- **PDF**: https://arxiv.org/pdf/1906.07849v2
+- **Abstract**: In this work, a deep learning-based quantization scheme for log-likelihood ratio (L-value) storage is introduced. We analyze the dependency between the average magnitude of different L-values from the same quadrature amplitude modulation (QAM) symbol and show they follow a consistent ordering. Based on this we design a deep autoencoder that jointly compresses and separately reconstructs each L-value, allowing the use of a weighted loss function that aims to more accurately reconstructs low magnitude inputs. Our method is shown to be competitive with state-of-the-art maximum mutual information quantization schemes, reducing the required memory footprint by a ratio of up to two and a loss of performance smaller than 0.1 dB with less than two effective bits per L-value or smaller than 0.04 dB with 2.25 effective bits. We experimentally show that our proposed method is a universal compression scheme in the sense that after training on an LDPC-coded Rayleigh fading scenario we can reuse the same network without further training on other channel models and codes while preserving the same performance benefits.

@@ -1,0 +1,242 @@
+# IEEE Xplore — 2019-11 (1차선별 통과)
+
+
+## On Finite Alphabet Iterative Decoding of LDPC Codes With High-Order Modulation
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC용 MIM 유한알파벳 반복디코딩(FAID) LLR 양자화 디코더 — 이식 가능 디코더(C) 및 LLR 양자화 기법, NAND ECC 핵심 직결
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8811567
+- **Type**: journal
+- **Published**: Nov. 2019
+- **Authors**: Xuan He, Kui Cai, Zhen Mei
+- **PDF**: https://ieeexplore.ieee.org/document/8811567
+- **Abstract**: This work aims to apply the mutual information-maximizing finite alphabet iterative decoding (MIM-FAID) method to decode low-density parity-check (LDPC) codes with high-order modulation. To this end, we propose an efficient model, through which our task becomes to design an MIM quantizer for a binary-input continuous memoryless channel (CMC) with log-likelihood ratios (LLRs) as the output. We then properly discretize the LLRs to convert the CMC to a discrete memoryless channel (DMC) such that we can obtain the MIM quantizer by using dynamic programming. Both theoretical analysis and simulation results verify the effectiveness of our proposed method.
+
+## Performance Analysis of Finite-Length LDPC Codes Over Asymmetric Memoryless Channels
+
+- **Status**: ✅
+- **Reason**: 비대칭 무기억채널에서 유한길이 바이너리 LDPC waterfall 성능분석/예측 — NAND 비대칭채널 코드설계(E)에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8851282
+- **Type**: journal
+- **Published**: Nov. 2019
+- **Authors**: Zhen Mei, Kui Cai, Guanghui Song
+- **PDF**: https://ieeexplore.ieee.org/document/8851282
+- **Abstract**: In this paper, we analyze the waterfall performance of finite-length low-density parity-check (LDPC) codes for asymmetric memoryless channels by considering variations of channel parameters: the observed bit error rate Pobs and mutual information Iobs during the real-time transmission. Moreover, we propose to use the variation of a new channel parameter: the maximal achievable channel coding rate Robs at finite blocklengths to estimate the waterfall performance. Simulation results demonstrate that our estimations can well predict the waterfall performance of LDPC codes. In particular, the estimation based on Robs can fit the waterfall performance for various code lengths. For estimations based on Pobs and Iobs, their accuracy increases as the codeword length increases and no curve fitting is required.
+
+## A Study on Block-Based Neural Network Equalization in TDMR System With LDPC Coding
+
+- **Status**: ✅
+- **Reason**: TDMR 스토리지에서 신경망 이퀄라이저+LDPC(sum-product) 비교 — 스토리지 ECC 맥락이며 NN 디코딩/이퀄라이저 기법 재검토 가치(B/C), 애매하여 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8802283
+- **Type**: journal
+- **Published**: Nov. 2019
+- **Authors**: Ke Luo, Shaobing Wang, Kheong Sann Chan +4
+- **PDF**: https://ieeexplore.ieee.org/document/8802283
+- **Abstract**: To achieve a high track density, two-dimensional magnetic recording (TDMR) is combined with shingled magnetic recording (SMR). SMR makes it possible to record 1 bit on a few grains. However, the performance will be remarkably deteriorated by the increased media noise, the inter-track and inter-symbol interference (ITI and ISI). Therefore, the application of effective equalization and error control coding are required. In this paper, we investigate a simple block-based neural network equalizer (NNE) that mitigates the influence of ITI and ISI. We compare the equalization effects of the NNE and a conventional 2-D equalizer with low-density parity-check (LDPC) coding based on a random Voronoi grain media model. Simulation results show the proposed block-based NNE achieves better bit error rate performance than the conventional 2-D linear equalizer followed by the a posteriori probability (APP) detector and a sum-product (SP) decoder. In addition, we find the block-based NNE is sensitive to write errors.
+
+## Construction of Girth-8 QC-LDPC Codes Free of Small Trapping Sets
+
+- **Status**: ✅
+- **Reason**: girth-8 QC-LDPC를 small trapping set 없이 설계하는 신규 구성 기법(E) — 바이너리 LDPC error floor 개선에 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8792126
+- **Type**: journal
+- **Published**: Nov. 2019
+- **Authors**: Sima Naseri, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8792126
+- **Abstract**: In this letter, we propose a new technique to design quasi-cyclic low-density parity-check (QC-LDPC) codes with girth 8 and variable node degrees 3 and 4. Small trapping sets are avoided in the designed codes by imposing simple constraints on the cycles of length 8 in the code's Tanner graph. We also derive lower bounds on the block length of the codes that can satisfy such constraints. Simulation results are provided to demonstrate the superiority of the designed codes in comparison with similar codes in the literature.
+
+## Neighbor-A-Posteriori Information Assisted Cell-State Adaptive Detector for NAND Flash Memory
+
+- **Status**: ✅
+- **Reason**: NAND 플래시 cell-state adaptive 검출(CSAD)+neighbor a-posteriori — NAND 직접(A), 검출 latency/LLR 정확도 개선 기법
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8805334
+- **Type**: journal
+- **Published**: Nov. 2019
+- **Authors**: Zishuai Peng, Ruiquan He, Guojun Han +2
+- **PDF**: https://ieeexplore.ieee.org/document/8805334
+- **Abstract**: Cell-to-Cell interferences (CCIs), which arise from adjacent cells through parasitic coupling-capacitance, severely degrade the performance of threshold voltage detection. Pre-processing and post-processing methods have been proposed to mitigate the effect of CCIs on threshold voltage variation. The performance of the aforementioned methods heavily depends on the accuracy of the threshold voltages adjacent to the victim cells. However, to obtain high accuracy, these methods requires multi-sensing operations, thus significantly resulting in high detection latency. In this letter, a novel non-uniform detection scheme based on the threshold voltage of cell states, which is referred to as the cell-state adaptive detection (CSAD), is proposed to adapt the shifts of the threshold voltages. Then, the neighbor-a-posteriori information is exploited to mitigate the overcompensation phenomenon and further improve the performance of the CSAD under the block read mode scenario. Simulation results show that the proposed CSAD scheme and its improved version not only achieve better bit-error-rate performance but also keep lower detection latency compared with the existing detection schemes.
+
+## Sampling Graphs without Forbidden Subgraphs and Unbalanced Expanders with Negligible Error
+
+- **Status**: ✅
+- **Reason**: 상수차수 불균형 expander 그래프 구성을 LDPC 부호구성에 응용(E) — 이진 부호설계 기법, 애매하여 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8948701
+- **Type**: conference
+- **Published**: 9-12 Nov. 
+- **Authors**: Benny Applebaum, Eliran Kachlon
+- **PDF**: https://ieeexplore.ieee.org/document/8948701
+- **Abstract**: Suppose that you wish to sample a random graph G over n vertices and m edges conditioned on the event that G does not contain a “small" t-size graph H (e.g., clique) as a subgraph. Assuming that most such graphs are H-free, the problem can be solved by a simple rejected-sampling algorithm (that tests for t-cliques) with an expected running time of nO(t). Is it possible to solve the problem in running time that does not grow polynomially with nt? In this paper, we introduce the general problem of sampling a “random looking'' graph G with a given edge density that avoids some arbitrary predefined t-size subgraph H. As our main result, we show that the problem is solvable with respect to some specially crafted k-wise independent distribution over graphs. That is, we design a sampling algorithm for k-wise independent graphs that supports efficient testing for subgraph-freeness in time f(t) · nc where f is a function of t and the constant c in the exponent is independent of t. Our solution extends to the case where both G and H are d-uniform hypergraphs. We use these algorithms to obtain the first probabilistic construction of constant-degree polynomially-unbalanced expander graphs whose failure probability is negligible in n (i.e., n-ω(1)). In particular, given constants d>c, we output a bipartite graph that has n left nodes, nc right nodes with right-degree of d so that any right set of size at most nΩ(1) expands by factor of Ω(d). This result is extended to the setting of unique expansion as well. We observe that such a negligible-error construction can be employed in many useful settings, and present applications in coding theory (batch codes and LDPC codes), pseudorandomness (low-bias generators and randomness extractors) and cryptography. Notably, we show that our constructions yield a collection of polynomial-stretch locally-computable cryptographic pseudorandom generators based on Goldreich's one-wayness assumption resolving a central open problem in parallel-cryptography (cf., Applebaum-Ishai-Kushilevitz, FOCS 2004; and Ishai-Kushilevitz-Ostrovsky-Sahai, STOC 2008).
+
+## An Enhanced Offset Min-Sum decoder for 5G LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Enhanced Offset Min-Sum 디코더 변형(3번째 최소값 활용, 적응적 offset)으로 카테고리 C 이식 가능 디코더 알고리즘
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9026399
+- **Type**: conference
+- **Published**: 6-8 Nov. 2
+- **Authors**: Hangxuan Cui, Khoa Le Trung, Fakhreddine Ghaffari +3
+- **PDF**: https://ieeexplore.ieee.org/document/9026399
+- **Abstract**: This paper presents an Enhanced Offset Min-Sum (EOMS) decoder for Low-Density Parity-Check (LDPC) codes used in the 5th generation (5G) mobile communications. It is observed that a significant part of Variable Nodes (VNs) in the 5G LDPC codes are with degree-1 and are very sensitive to be erroneous, leading to the fact that the decoding performance is generally reduced. In the EOMS decoding, the core check nodes (CN) and extension CNs are processed with different update rules. A new CN -update criterion is also proposed by making use of the third minimum value. As a result, the offset factors are adaptively selected and the error probability of degree-1 VNs is significantly reduced. Simulation results show that the proposed EOMS decoder offers a much better error-correction performance than the state-of-the-art benchmarks for several 5G LDPC codes with a negligible complexity overhead.
+
+## Node Processing Unit for Flexible LDPC Decoders with Subnode for Min-Sum Algorithm
+
+- **Status**: ✅
+- **Reason**: flexible LDPC 디코더용 Node Processing Unit + min-sum subnode HW 아키텍처 — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8986156
+- **Type**: conference
+- **Published**: 6-8 Nov. 2
+- **Authors**: Aswathy Ambass, V. Lalu
+- **PDF**: https://ieeexplore.ieee.org/document/8986156
+- **Abstract**: Low Density Parity Check (LDPC) decoding has received significant attention due to its superior error correction performance, and has been adopted by recent communication standards. Architecture of a Node Processing Unit(NPU) has significant impact on an LDPC decoder hardware resource requirement and processing throughput. A generalised algorithm for NPU is created using flexible dual-tree structure and these NPUs are designed to act as both Control node as well as Variable node. Simulation of a generalised algorithmic method for constructing NPUs which can support flexible LDPC decoders is done and the subnode function is designed to support min-sum algorithm. Proposed system helps to improve hardware efficiency and power requirement based on processed inputs.
+
+## A 3.01 mm2 65.38Gb/s Stochastic LDPC Decoder for IEEE 802.3an in 65 nm
+
+- **Status**: ✅
+- **Reason**: 802.3an(2048,1723) 바이너리 LDPC용 stochastic 디코더 VLSI, VN 초기화/bit-flipping/하드결정 신규 전략 — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9056915
+- **Type**: conference
+- **Published**: 4-6 Nov. 2
+- **Authors**: Qichen Zhang, Yun Chen, Xiaoyang Zeng +2
+- **PDF**: https://ieeexplore.ieee.org/document/9056915
+- **Abstract**: A fully-parallel high-throughput LDPC decoder architecture leads to high power consumption and large area. Using stochastic logic, this paper proposes three novel strategies to improve throughput and reduce power consumption; these include: variable node initialization, bit-flipping post-processing and posterior-information-based hard decision. Moreover, a random number based probability stochastic sequences generator is proposed to reduce hardware resources. Chip test results from an LDPC decoder for the 10GBASE-T standard (2048, 1723) code using 65 nm CMOS process demonstrate a 74.3% reduction in average decoding cycles at 4.4 dB with satisfactory decoding performance. The decoder supports 65.38 Gb/s throughput at 420 MHz and requires 1.1W power consumption. Compared with other works, the proposed decoder can achieve lower power and average decoding cycles with similar error performance.
+
+## First-Then-Second Extrema Selection
+
+- **Status**: ✅
+- **Reason**: 두 최솟값 정렬기 HW 아키텍처 — min-sum LDPC 디코더에 이식 가능, 바이너리 LDPC 명시 (D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9048989
+- **Type**: conference
+- **Published**: 3-6 Nov. 2
+- **Authors**: Ali Chamas Al Ghouwayel, Hassan Harb, Emmanuel Boutillon
+- **PDF**: https://ieeexplore.ieee.org/document/9048989
+- **Abstract**: High speed and low cost sorting architectures are highly desired in many signal processing applications. Recently, the specific sorter that outputs only the first two minimum/maximum values received specific attention due to its major role in iterative channel decoders. In this paper, a high speed and low cost architecture for the selection of the first two smallest values is proposed. A detailed analysis of the elementary sorting units, computational complexity and structural modularity are addressed. Compared to existing architectures, the proposed architecture offers the highest throughput and, when synthesized on 28-nm TSMC technologies, achieves up to 50 % area reduction and up to 30 % critical path reduction. Consequently, the area efficiency, defined as the number of sorted symbols per second per µm2, is increased by a factor ranging from 1.17 to 2. The proposed architecture is suitable for binary and non-binary LDPC decoders as well as for any other application requiring a two-minimum sorting function.
+
+## High throughput multi-code LDPC encoder for CCSDS standard
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 인코더 병렬 RCE FPGA 구현, HW 아키텍처(D) 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:8983513
+- **Type**: conference
+- **Published**: 29 Oct.-1 
+- **Authors**: Jinfou Xie, Shixian Li, Yun Chen +2
+- **PDF**: https://ieeexplore.ieee.org/document/8983513
+- **Abstract**: A high throughput encoder based on Recursive Convolutional Encoder (RCE) circuits is designed for multi-code Quasi-Cyclic Low-Density Parity-Check (QC-LDPC) codes of CCSDS standard. The use of system registers is reduced by employing a parallel RCE circuit structure; by configuring these parallel RCE circuit structures, the encoder can support multiple patterns and code rates. The FPGA implementation results show that the design method can be implemented based on the Xilinx VC690T chip, and its normalized registers and LUTs are reduced by 39.4% and 24.4%, respectively, compared with the existing solutions.
+
+## Decoding Latency of LDPC Codes in 5G NR
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC 디코딩 지연 분석으로 디코더 설계 가이드(HW), 애매하여 보존 — Phase 3 재검토
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9077972
+- **Type**: conference
+- **Published**: 27-29 Nov.
+- **Authors**: Hao Wu, Huayong Wang
+- **PDF**: https://ieeexplore.ieee.org/document/9077972
+- **Abstract**: Fifth generation (5G) new radio (NR) is the next generation of mobile network beyond the fourth generation (4G) long term evolution (LTE). In order to meet high throughput and low latency requirements, low-density parity-check (LDPC) codes are adopted by the 5G NR standard for data channels. In 5G NR, the decoder provided to implement the peak throughput requirement may not be able to decode transport blocks over the same radio resources in the same time duration. In this paper, we analyze the decoding latency of LDPC codes in a typical scenario from a system point of view. The analysis can be used to guide the design of the decoder.
+
+## UTW-OFDM-based 5G New Radio with Low Out-of-band Emission
+
+- **Status**: ✅
+- **Reason**: C: UTW-OFDM에서 LDPC 디코딩 LLR 계산 보정법 제안 — LLR 양자화/계산 개선은 NAND LDPC 디코더로 이식 검토 가치(애매하나 살림)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9096103
+- **Type**: conference
+- **Published**: 24-27 Nov.
+- **Authors**: Riichi Yokoyama, Keiichi Mizutani, Takeshi Matsumura +1
+- **PDF**: https://ieeexplore.ieee.org/document/9096103
+- **Abstract**: For the 5G and beyond, the UTW-OFDM has been proposed as one of the new-waveforms which can strongly suppress out-of-band emission (OOBE) and has high compatibility with the CP-OFDM-based system currently used for the LTE. In the UTW-OFDM system, interference generated by windowing is suppressed by using channel coding, and the practicality of UTW-OFDM has been shown for the IEEE 802.11af system using the convolutional coding and the LTE system using the turbo coding Meanwhile, to our best knowledge, the UTW-OFDM-based 5G system using low-density paritycheck (LDPC) coding has not been presented. In this paper, the authors describe how the UTW-OFDM can be applied to 5G new radio (NR). Firstly, the authors point out that common calculation methods of the log-likelihood ratio (LLR) in the decoding process of the LDPC coding degrade the communication quality, especially in a high SNR environment. Then, an adjustment method of the LLR is proposed to mitigate the degradation of the communication quality and demonstrate that the proposed method strongly suppresses OOBE with maintaining the communication quality when applying the UTW-OFDM to the 5G NR.
+
+## On the Error Floor of the Code-Candidate for CCSDS Standard
+
+- **Status**: ✅
+- **Reason**: FPGA LDPC 인코더/디코더 시뮬레이션 시스템 + error floor 분석으로 2250개 (128,256) 바이너리 LDPC 비교·우수 코드 탐색 — error floor·코드설계(E)·HW(D) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9030539
+- **Type**: conference
+- **Published**: 20-21 Nov.
+- **Authors**: Luiza R. Medova, Pavel S. Rybin, Ivan V. Filatov
+- **PDF**: https://ieeexplore.ieee.org/document/9030539
+- **Abstract**: In this paper we propose a simulation system for LDPC codes implemented on a field-programmable gate array device. The presented system includes an LDPC encoder, Gaussian noise generator and an LDPC decoder. An LDPC encoder and decoder are fully flexible and support different constructions of LDPC codes. It makes possible to obtain performance curves of a large number of LDPC codes and analyse their properties. We have found that the LDPC code proposed in [1] has an error floor higher than the LDPC code proposed by the experimental specification CCSDS 231.1-O-l. We have evaluated the performance of 2250 (128,256) LDPC codes with our simulation system and have found an LDPC code that outperforms the LDPC code from the experimental specification CCSDS 231.1-O-l.
+
+## Improving the Burst Error Tolerance of Irregular LDPC by Optimizing the Parity-Check Matrix Column Arrangement for 50G-PON Upstream Transmission
+
+- **Status**: ✅
+- **Reason**: 불규칙 LDPC 패리티검사행렬 열 재배치로 버스트오류 내성 개선+FPGA 실측, 바이너리 코드설계(E)/HW(D) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8989725
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Mingwei Yang, Linlin Li, Xiang Liu +2
+- **PDF**: https://ieeexplore.ieee.org/document/8989725
+- **Abstract**: We demonstrate a novel technique to improve the burst-error-correction performance of the irregular LDPC code used for 50G-PON upstream transmission by optimally rearranging the parity-check matrix columns. FPGA-based real-time measurements show over 0.2 dB gains.
+
+## VaLLR: Threshold Voltage Distribution Aware LLR Optimization to Improve LDPC Decoding Performance for 3D TLC NAND Flash
+
+- **Status**: ✅
+- **Reason**: 3D TLC NAND LDPC LLR 양자화 최적화(VaLLR), layer min-sum 디코더 대상 — NAND 직접(A)+이식 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8988667
+- **Type**: conference
+- **Published**: 17-20 Nov.
+- **Authors**: Lanlan Cui, Fei Wu, Xiaojian Liu +2
+- **PDF**: https://ieeexplore.ieee.org/document/8988667
+- **Abstract**: Low-density parity-check (LDPC) codes have been widely adopted in NAND flash in recent years to improve data reliability. However, their error-correction capability degrades due to inaccurate log-likelihood ratio (LLR). To improve LLR accuracy of LDPC decoding, this paper proposes a threshold voltage distribution aware LLR optimization scheme, called VaLLR. Firstly, we build a threshold voltage distribution model for 3D triple-level cell (TLC) NAND flash. Then, by exploiting the model, we introduce the VaLLR scheme to quantize LLR during soft-decision decoding. And by amplifying a portion of small LLRs, which is essential in the layer minsum decoder, more precise LLR can be obtained. Finally, we study the influence of the reference voltage arrangement on LLR calculation and apply the VaLLR scheme during decoding. The simulation shows that the proposed approach can improve the FER performance for several orders of magnitude.
+
+## Lowering the error floor of LDPC codes based on bit-rectification strategy
+
+- **Status**: ✅
+- **Reason**: LDPC error floor 저감 bit-rectification + trapping set 처리 (E/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9136635
+- **Type**: conference
+- **Published**: 15-17 Nov.
+- **Authors**: Hui Xue, Lijun Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/9136635
+- **Abstract**: This paper proposes a bit-rectification strategy to lower error floor of Low-density parity-check codes. Most erroneous bits are located by bit-searching algorithm and obtain more reliable message over parallel concatenated decoder. The negative effect of erroneous bits along with corresponding trapping sets will be avoided.
+
+## An efficient decoding implementation of PCGC with lower error floor
+
+- **Status**: ✅
+- **Reason**: Parallel Concatenated Gallager(LDPC) 직렬 디코딩으로 error floor 저감, 컴포넌트 LDPC 디코더 기법 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9136636
+- **Type**: conference
+- **Published**: 15-17 Nov.
+- **Authors**: Hui Xue, Lijun Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/9136636
+- **Abstract**: Parallel Concatenated Gallager codes usually has error floor phenomenon due to insufficient use of extrinsic information. We propose an effective serial decoding scheme to lower error floor of component LDPC codes through mutual coordination of component decoders. Simulation results show that it outperforms PEG-LDPC codes.
+
+## A Reconfigurable Decoder for Standard-Compatible LDPC Codes and Polar Codes
+
+- **Status**: ✅
+- **Reason**: 5G용 LDPC+polar 통합 디코더; merged BP 알고리즘과 파이프라인 HW 아키텍처가 바이너리 LDPC BP/HW에 이식 가능(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8953182
+- **Type**: conference
+- **Published**: 11-14 Nov.
+- **Authors**: Ting Lin, Shan Cao, Shunqing Zhang +2
+- **PDF**: https://ieeexplore.ieee.org/document/8953182
+- **Abstract**: With the raised requirements by 5G wireless communications, a reconfigurable decoder supporting both LDPC codes (for data plane) and polar codes (for control plane) is required. Due to the inherent structure differences between LDPC codes and polar codes, an straightforward combination of existing decoders is generally difficult. In this paper, we propose a joint decoding algorithm by analyzing the standard-compatible coding structure and re-investigating the merged BP algorithm. Based on that, we implement the joint decoding scheme using a pipelined hardware architecture and show that the proposed approach achieves higher hardware efficiency than traditional schemes. Decoding performance loss is negligible if compared with existing stand-alone LDPC or polar decoder.
+
+## High Performance LDPC Decoder design using FPGA
+
+- **Status**: ✅
+- **Reason**: min-sum 기반 저복잡도 LDPC 디코더 FPGA 구현(CNU/VNU, 멀티플렉스 저장) — 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9092008
+- **Type**: conference
+- **Published**: 1-2 Nov. 2
+- **Authors**: Shraddha Pawankar, Nilesh Mohota
+- **PDF**: https://ieeexplore.ieee.org/document/9092008
+- **Abstract**: LDPC codes are an important aspect of 5G communication systems. This paper presents high performance design of Low-density parity-check decoder on reconfigurable FPGA. LDPC codes are one of the most efficient error correcting codes for implementation on FPGA. The main aim is to implement a low complexity architecture of the LDPC decoder on the FPGA (Field Programmable Gate Array). The two main components of LDPC are VNU and CNU. Our efficient decoding structure will reduce the complexity with the help of check node unit (CNU) and the variable node unit (VNU) using min-sum algorithm for getting fewer slice resources. Here, we have used multiplexed storage structure for storing nod message to get the result in minimum FPGA resources. LDPC is quite an integral part in deep space communications and its potential utilization in the area which is highly explored. In space data systems it is quite important to have a LDPC decoder which has both low complexity and high performance architecture. Therefore the low-complexity method becomes an efficient method to achieve the requirements put in future by many wired and wireless communication system.

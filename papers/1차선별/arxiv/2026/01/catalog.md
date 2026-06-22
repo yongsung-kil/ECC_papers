@@ -1,0 +1,86 @@
+# arXiv — 2026-01 (1차선별 통과)
+
+
+## 5G LDPC Codes as Root LDPC Codes via Diversity Alignment
+
+- **Status**: ✅
+- **Reason**: QC-LDPC protograph diversity evolution 분석/블록매핑 — 무선 block-fading 특이적이나 protograph 코드설계 기법 떼어낼 여지, 애매하여 살림(Phase3 재검토)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.22470v1
+- **Type**: preprint
+- **Published**: 2026-01-30
+- **Authors**: Hyuntae Ahn, Inki Kim, Hee-Youl Kwak +3
+- **PDF**: https://arxiv.org/pdf/2601.22470v1
+- **Abstract**: This paper studies the diversity of protographbased quasi-cyclic low-density parity-check (QC-LDPC) codes over nonergodic block-fading channels under iterative beliefpropagation decoding. We introduce diversity evolution (DivE), a Boolean-function-based analysis method that tracks how the fading dependence of belief-propagation messages evolves across decoding iterations. Under a Boolean approximation of block fading, DivE derives a Boolean fading function for each variable node (VN) output (i.e., the a-posteriori reliability after iterative decoding), from which the VN diversity order can be directly determined. Building on this insight, we develop a greedy blockmapping search that assigns protograph VNs to fading blocks so that all information VNs achieve full diversity, while including the minimum additional parity VNs when full diversity is infeasible at the nominal rate. Numerical results on the 5G New Radio LDPC codes show that the proposed search finds block mappings that guarantee full diversity for all information bits without modifying the base-graph structure, yielding a markedly steeper high-SNR slope and lower BLER than random mappings.
+
+## On Existence of Girth-8 QC-LDPC Code with Large Column Weight: Combining Mirror-sequence with Classification Modulo Ten
+
+- **Status**: ✅
+- **Reason**: girth-8 QC-LDPC 대표적 코드 설계 기법(E) — 짧은 길이·large column weight 구성, NAND LDPC 부호 설계에 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.10170v1
+- **Type**: preprint
+- **Published**: 2026-01-15
+- **Authors**: Guohua Zhang, Xiangya Liu, Jianhua Zhang +1
+- **PDF**: https://arxiv.org/pdf/2601.10170v1
+- **Abstract**: Quasi-cyclic (QC) LDPC codes with large girths play a crucial role in several research and application fields, including channel coding, compressed sensing and distributed storage systems. A major challenge in respect of the code construction is how to obtain such codes with the shortest possible length (or equivalently, the smallest possible circulant size) using algebraic methods instead of search methods. The greatest-common-divisor (GCD) framework we previously proposed has algebraically constructed QC-LDPC codes with column weights of 5 and 6, very short lengths, and a girth of 8. By introducing the concept of a mirror sequence and adopting a new row-regrouping scheme, QC-LDPC codes with column weights of 7 and 8, very short lengths, and a girth of 8 are proposed for arbitrary row weights in this article via an algebraic manner under the GCD framework. Thanks to these novel algebraic methods, the lower bounds (for column weights 7 and 8) on consecutive circulant sizes are both improved by asymptotically about 20%, compared with the existing benchmarks. Furthermore, these new constructions can also offer circulant sizes asymptotically about 25% smaller than the novel bounds.
+
+## Counting and Entropy Bounds for Structure-Avoiding Spatially-Coupled LDPC Constructions
+
+- **Status**: ✅
+- **Reason**: QC-SC-LDPC error floor 낮추는 구조회피(짧은 사이클 제거) 설계론(E) — NAND LDPC 코드 설계에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.09674v2
+- **Type**: preprint
+- **Published**: 2026-01-14
+- **Authors**: Lei Huang
+- **PDF**: https://arxiv.org/pdf/2601.09674v2
+- **Abstract**: Designing large coupling memory quasi-cyclic spatially-coupled LDPC (QC-SC-LDPC) codes with low error floors requires eliminating specific harmful substructures (e.g., short cycles) induced by edge spreading and lifting. Building on our work~\cite{r15} that introduced a Clique Lovász Local Lemma (CLLL)-based design principle and a Moser--Tardos (MT)-type constructive approach, this work quantifies the size and structure of the feasible design space. Using the quantitative CLLL, we derive explicit lower bounds on the number of feasible edge-spreading and lifting assignments satisfying a given family of structure-avoidance constraints, and further obtain bounds on the number of non-equivalent solutions under row/column permutations. Moreover, via Rényi entropy bounds for the MT distribution, we provide a computable lower bound on the number of distinct solutions that the MT algorithm can output, giving a concrete diversity guarantee for randomized constructions. Specializations for eliminating 4-cycles yield closed-form bounds as functions of system parameters, offering a principled way to select the memory and lifting degree and to estimate the remaining search space.
+
+## Two-dimensional Entanglement-assisted Quantum Quasi-cyclic Low-density Parity-check Codes
+
+- **Status**: ✅
+- **Reason**: 2-D 고전 QC-LDPC girth>4/>6 구성 기법(E)이 핵심 — 최종 EA-QLDPC 도출이나 기반 고전 부호설계 떼어낼 수 있어 애매시 포함
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.08927v2
+- **Type**: preprint
+- **Published**: 2026-01-13
+- **Authors**: Pavan Kumar, Shayan Srinivasa Garani
+- **PDF**: https://arxiv.org/pdf/2601.08927v2
+- **Abstract**: For any positive integer $g \ge 2$, we derive general condition for the existence of a $2g$-cycle in the Tanner graph of two-dimensional ($2$-D) classical quasi-cyclic (QC) low-density parity-check (LDPC) codes. Depending on whether $p$ is an odd prime or a composite number, we construct two distinct families of $2$-D classical QC-LDPC codes with girth $>4$ by stacking $p \times p \times p$ tensors. Furthermore, using generalized Behrend sequences, we propose an additional family of $2$-D classical QC-LDPC codes with girth $>6$, constructed via a similar tensor-stacking approach. All the proposed $2\text{-D}$ classical QC-LDPC codes exhibit an erasure correction capability of at least $p \times p$. Based on the constructed $2\text{-D}$ classical QC-LDPC codes, we derive two families of $2\text{-D}$ entanglement-assisted (EA) quantum low-density parity-check (QLDPC) codes. The first family of $2\text{-D}$ EA-QLDPC codes is obtained from a pair of $2\text{-D}$ classical QC-LDPC codes and is designed such that the unassisted part of the Tanner graph of the resulting EA-QLDPC code is free of $4$-cycles, while requiring only a single ebit to be shared across the quantum transceiver. The second family is constructed from a single $2\text{-D}$ classical QC-LDPC code whose Tanner graph is free from $4$-cycles. Moreover, the constructed EA-QLDPC codes inherit an erasure correction capability of $p \times p$, as the underlying classical codes possess the same erasure correction property.
+
+## Quantum CSS LDPC Codes based on Dyadic Matrices for Belief Propagation-based Decoding
+
+- **Status**: ✅
+- **Reason**: dyadic 행렬 기반 고전 binary QC-LDPC(girth 6) 구성을 우선 제시 후 CSS 확장 — 기반 고전 부호설계(E) 이식 가능, 애매시 포함
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.08636v1
+- **Type**: preprint
+- **Published**: 2026-01-13
+- **Authors**: Alessio Baldelli, Massimo Battaglioni, Jonathan Mandelbaum +2
+- **PDF**: https://arxiv.org/pdf/2601.08636v1
+- **Abstract**: Quantum low-density parity-check (QLDPC) codes provide a practical balance between error-correction capability and implementation complexity in quantum error correction (QEC). In this paper, we propose an algebraic construction based on dyadic matrices for designing both classical and quantum LDPC codes. The method first generates classical binary quasi-dyadic LDPC codes whose Tanner graphs have girth 6. It is then extended to the Calderbank-Shor-Steane (CSS) framework, where the two component parity-check matrices are built to satisfy the compatibility condition required by the recently introduced CAMEL-ensemble quaternary belief propagation decoder. This compatibility condition ensures that all unavoidable cycles of length 4 are assembled in a single variable node, allowing the mitigation of their detrimental effects by decimating that variable node.
+
+## Study of Adaptive Reliability-Driven Conditional Innovation Decoding for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: AR-CID LDPC 디코딩 알고리즘(residual BP 개선, 빠른 수렴·저지연)(C) — NAND LDPC 디코더에 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.06732v1
+- **Type**: preprint
+- **Published**: 2026-01-11
+- **Authors**: Hassan Touati, Rodrigo C. de Lamare
+- **PDF**: https://arxiv.org/pdf/2601.06732v1
+- **Abstract**: In this work, we present an adaptive reliability-driven conditional innovation (AR-CID) decoding algorithm for low-density parity check (LDPC) codes. The proposed AR-CID decoding algorithm consists of one stage of message quality checking and another stage of message passing refinement, which are incorporated into a residual belief propagation decoding strategy. An analysis of the AR-CID decoding algorithm is carried out along with a study of its computational complexity and latency characteristics. Simulation results for several examples of LDPC codes, including short and medium-length codes over an extended range of channel conditions, indicate that the proposed AR-CID decoding algorithm outperforms competing decoding techniques and has an extremely fast convergence, making it particularly suitable for low-delay applications.
+
+## The Number of Cycles of Bi-regular Tanner Graphs in Terms of the Eigenvalues of the Adjacency Matrix
+
+- **Status**: ✅
+- **Reason**: QC-LDPC Tanner 그래프의 사이클/girth를 고유값으로 계산하는 코드설계 기법(E) — error floor·girth 최적화에 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2601.05340v1
+- **Type**: preprint
+- **Published**: 2026-01-08
+- **Authors**: Roxana Smarandache, David G. M. Mitchell
+- **PDF**: https://arxiv.org/pdf/2601.05340v1
+- **Abstract**: In this paper, we explore new connections between the cycles in the graph of low-density parity-check (LDPC) codes and the eigenvalues of the corresponding adjacency matrix. The resulting observations are used to derive fast, simple, recursive formulas for the number of cycles $N_{2k}$ of length $2k$, $k<g$, in a bi-regular graph of girth $g$. Moreover, we derive explicit formulas for $N_{2k}$, $k\leq 7$, in terms of the nonzero eigenvalues of the adjacency matrix. Throughout, we focus on the practically interesting class of bi-regular quasi-cyclic LDPC (QC-LDPC) codes, for which the eigenvalues can be obtained efficiently by applying techniques used for block-circulant matrices.

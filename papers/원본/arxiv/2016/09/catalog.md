@@ -1,0 +1,46 @@
+# arXiv — 2016-09
+
+
+## Reduced-Complexity SCL Decoding of Multi-CRC-Aided Polar Codes
+
+- **Status**: ❌
+- **Reason**: CRC-aided 폴라 코드 SCL 디코딩 복잡도 감소, 비-LDPC이고 LDPC BP에 이식 불가
+- **ID**: arxiv:1609.08813v1
+- **Type**: preprint
+- **Published**: 2016-09-28
+- **Authors**: Mao-Ching Chiu, Wei-De Wu
+- **PDF**: https://arxiv.org/pdf/1609.08813v1
+- **Abstract**: Cyclic redundancy check (CRC) aided polar codes are capable of achieving better performance than low-density parity-check (LDPC) codes under the successive cancelation list (SCL) decoding scheme. However, the SCL decoding scheme suffers from very high space and time complexities. Especially, the high space complexity is a major concern for adopting polar codes in modern mobile communication standards. In this paper, we propose a novel reduced-complexity successive cancelation list (R-SCL) decoding scheme which is effective to reduce the space complexity. Simulation results show that, with a (2048, 1024) CRC-aided polar code, the R-SCL decoders with 25% reduction of space complexity and 8% reduction of time complexity can still achieve almost the same performance levels as those decoded by SCL decoders. To further reduce the complexity, we propose a multi-CRC coding scheme for polar codes. Simulation results show that, with a (16384, 8192) multi-CRC-aided polar code, a R-SCL decoder with about 85% reduction of space complexity and 20% reduction of time complexity results in a worst performance loss of only 0.04dB.
+
+## Performance Comparison of Short-Length Error-Correcting Codes
+
+- **Status**: ❌
+- **Reason**: 단/중 길이 부호 성능 비교(범용 ML/OSD 디코더로 부호만 비교), 신규 디코더·구성 기여 없는 비교 연구
+- **ID**: arxiv:1609.07907v3
+- **Type**: preprint
+- **Published**: 2016-09-26
+- **Authors**: J. Van Wonterghem, A. Alloum, J. J. Boutros +1
+- **PDF**: https://arxiv.org/pdf/1609.07907v3
+- **Abstract**: We compare the performance of short-length linear binary codes on the binary erasure channel and the binary-input Gaussian channel. We use a universal decoder that can decode any linear binary block code: Gaussian-elimination based Maximum-Likelihood decoder on the erasure channel and probabilistic Ordered Statistics Decoder on the Gaussian channel. As such we compare codes and not decoders. The word error rate versus the channel parameter is found for LDPC, Reed-Muller, Polar, and BCH codes at length 256 bits. BCH codes outperform other codes in absence of cyclic redundancy check. Under joint decoding, the concatenation of a cyclic redundancy check makes all codes perform very close to optimal lower bounds.
+
+## On locality of Generalized Reed-Muller codes over the broadcast erasure channel
+
+- **Status**: ❌
+- **Reason**: 5G 브로드캐스트 응용 Generalized Reed-Muller 지역성, 비-LDPC이고 NAND 이식 기법 없음
+- **ID**: arxiv:1609.03173v1
+- **Type**: preprint
+- **Published**: 2016-09-11
+- **Authors**: Amira Alloum, Sian-Jheng Lin, Tareq Y. Al-Naffouri
+- **PDF**: https://arxiv.org/pdf/1609.03173v1
+- **Abstract**: One to Many communications are expected to be among the killer applications for the currently discussed 5G standard. The usage of coding mechanisms is impacting broadcasting standard quality, as coding is involved at several levels of the stack, and more specifically at the application layer where Rateless, LDPC, Reed Solomon codes and network coding schemes have been extensively studied, optimized and standardized in the past. Beyond reusing, extending or adapting existing application layer packet coding mechanisms based on previous schemes and designed for the foregoing LTE or other broadcasting standards; our purpose is to investigate the use of Generalized Reed Muller codes and the value of their locality property in their progressive decoding for Broadcast/Multicast communication schemes with real time video delivery. Our results are meant to bring insight into the use of locally decodable codes in Broadcasting.
+
+## OpenCL/CUDA algorithms for parallel decoding of any irregular LDPC code using GPU
+
+- **Status**: ✅
+- **Reason**: GPU/FPGA용 임의 비정칙 LDPC 병렬 디코더 OpenCL/CUDA 구현, 노드차수 제한 없는 병렬화+신드롬 병렬계산은 이식 가능 HW 아키텍처(D)
+- **ID**: arxiv:1609.01567v2
+- **Type**: preprint
+- **Published**: 2016-09-06
+- **Authors**: Jan Broulim, Alexander Ayriyan, Vjaceslav Georgiev +1
+- **PDF**: https://arxiv.org/pdf/1609.01567v2
+- **Abstract**: The development of multicore architectures supporting parallel data processing has led to a paradigm shift, which affects communication systems significantly. This article provides a scalable parallel approach of an iterative LDPC decoder, presented in a tutorial-based style. It is suitable for decoding any irregular LDPC code without the limitation of the maximum node degree, and it includes a parallel calculation of the syndrome. This is the main difference from algorithms presented so far. The proposed approach can be implemented in applications supporting massive parallel computing, such as GPU or FPGA devices. The implementation of the LDPC decoder with the use the OpenCL and CUDA frameworks is discussed and the performance evaluation is given at the end of this contribution.

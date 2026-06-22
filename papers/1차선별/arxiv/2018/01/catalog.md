@@ -1,0 +1,38 @@
+# arXiv — 2018-01 (1차선별 통과)
+
+
+## Constructing LDPC Codes from Partition and Latin-Style Splicing
+
+- **Status**: ✅
+- **Reason**: Latin square 기반 QC-LDPC 신규 구성법으로 girth 보장·확장, 바이너리 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1801.08811v1
+- **Type**: preprint
+- **Published**: 2018-01-26
+- **Authors**: Guohua Zhang, Yulin Hu, Qinwei He
+- **PDF**: https://arxiv.org/pdf/1801.08811v1
+- **Abstract**: A novel method guaranteeing nondecreasing girth is presented for constructing longer low-density parity-check (LDPC) codes from shorter ones. The parity-check matrix of a shorter base code is decomposed into N (N>=2) non-overlapping components with the same size. Then, these components are combined together to form the parity-check matrix of a longer code, according to a given N*N Latin square. To illustrate this method, longer quasi-cyclic (QC) LDPC codes are obtained with girth at least eight and satisfactory performance, via shorter QC-LDPC codes with girth eight but poor performance. The proposed method naturally includes several well-known methods as special cases, but is much more general compared with these existing approaches.
+
+## LDPC Codes with Local and Global Decoding
+
+- **Status**: ✅
+- **Reason**: 스토리지 응용 동기의 바이너리 LDPC(LDPCL) 신규 코드설계: local/global 두 보호레벨, 유한길이 ML 분석 — E 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1801.03951v2
+- **Type**: preprint
+- **Published**: 2018-01-11
+- **Authors**: Eshed Ram, Yuval Cassuto
+- **PDF**: https://arxiv.org/pdf/1801.03951v2
+- **Abstract**: This paper presents a theoretical study of a new type of LDPC codes motivated by practical storage applications. LDPCL codes (suffix L represents locality) are LDPC codes that can be decoded either as usual over the full code block, or locally when a smaller sub-block is accessed (to reduce latency). LDPCL codes are designed to maximize the error-correction performance vs. rate in the usual (global) mode, while at the same time providing a certain performance in the local mode. We develop a theoretical framework for the design of LDPCL codes. Our results include a design tool to construct an LDPC code with two data-protection levels: local and global. We derive theoretical results supporting this tool and we show how to achieve capacity with it. A trade-off between the gap to capacity and the number of full-block accesses is studied, and a finite-length analysis of ML decoding is performed to exemplify a trade-off between the locality capability and the full-block error-correcting capability.
+
+## Characterization and Efficient Search of Non-Elementary Trapping Sets of LDPC Codes with Applications to Stopping Sets
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC trapping set/stopping set 특성화·탐색 알고리즘 — error floor 관련 코드설계(E)로 NAND 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1801.02028v1
+- **Type**: preprint
+- **Published**: 2018-01-06
+- **Authors**: Yoones Hashemi, Amir H. Banihashemi
+- **PDF**: https://arxiv.org/pdf/1801.02028v1
+- **Abstract**: In this paper, we propose a characterization for non-elementary trapping sets (NETSs) of low-density parity-check (LDPC) codes. The characterization is based on viewing a NETS as a hierarchy of embedded graphs starting from an ETS. The characterization corresponds to an efficient search algorithm that under certain conditions is exhaustive. As an application of the proposed characterization/search, we obtain lower and upper bounds on the stopping distance $s_{min}$ of LDPC codes.   We examine a large number of regular and irregular LDPC codes, and demonstrate the efficiency and versatility of our technique in finding lower and upper bounds on, and in many cases the exact value of, $s_{min}$. Finding $s_{min}$, or establishing search-based lower or upper bounds, for many of the examined codes are out of the reach of any existing algorithm.

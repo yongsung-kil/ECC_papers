@@ -1,0 +1,134 @@
+# IEEE Xplore — 2016-02 (1차선별 통과)
+
+
+## Finite-Length Algebraic Spatially-Coupled Quasi-Cyclic LDPC Codes
+
+- **Status**: ✅
+- **Reason**: SC-QC-LDPC R&M 구성(코드설계 E)—nonbinary 시연이나 R&M이 matrix unwrapping 일반화라 바이너리 이식 여지, Phase3 재검토
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7347352
+- **Type**: journal
+- **Published**: Feb. 2016
+- **Authors**: Keke Liu, Mostafa El-Khamy, Jungwon Lee
+- **PDF**: https://ieeexplore.ieee.org/document/7347352
+- **Abstract**: The replicate-and-mask (R&M) construction of finite-length spatially-coupled (SC) LDPC codes is proposed in this paper. The proposed R&M construction generalizes the conventional matrix unwrapping construction and contains it as a special case. The R&M construction of a class of algebraic spatially coupled (SC) quasi-cyclic (QC) LDPC codes over arbitrary finite fields is demonstrated. The girth, rank, and time-varying periodicity of the proposed R&M SC QC LDPC codes are analyzed. The error rate performance of finite-length nonbinary algebraic SC QC LDPC codes is investigated with window decoding. Compared to the conventional unwrapping construction, it is found through numerical simulations that the R&M construction resulted in SC QC LDPC codes with better block error rate performance and lower error floors. With a flooding schedule decoder, it is shown that the proposed R&M algebraic SC QC LDPC codes have better error performance than the corresponding LDPC block codes and random SC codes. The R&M construction of irregular SC QC LDPC codes is demonstrated. It is shown that low-complexity regular puncturing schemes can be deployed on these codes to construct families of rate-compatible irregular SC QC LDPC codes with good performance.
+
+## Randomly Punctured LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 랜덤 펑처링 LDPC 부호 앙상블 BP 임계값 분석+protograph/SC-LDPC 구성 - 바이너리 LDPC 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7353121
+- **Type**: journal
+- **Published**: Feb. 2016
+- **Authors**: David G. M. Mitchell, Michael Lentmaier, Ali E. Pusane +1
+- **PDF**: https://ieeexplore.ieee.org/document/7353121
+- **Abstract**: In this paper, we present a random puncturing analysis of low-density parity-check (LDPC) code ensembles. We derive a simple analytic expression for the iterative belief propagation (BP) decoding threshold of a randomly punctured LDPC code ensemble on the binary erasure channel (BEC) and show that, with respect to the BP threshold, the strength and suitability of an LDPC code ensemble for random puncturing is completely determined by a single constant that depends only on the rate and the BP threshold of the mother code ensemble. We then provide an efficient way to accurately predict BP thresholds of randomly punctured LDPC code ensembles on the binary-input additive white Gaussian noise channel (BI-AWGNC), given only the BP threshold of the mother code ensemble on the BEC and the design rate, and we show how the prediction can be improved with knowledge of the BI-AWGNC threshold. We also perform an asymptotic minimum distance analysis of randomly punctured code ensembles and present simulation results that confirm the robust decoding performance promised by the asymptotic results. Protograph-based LDPC block code and spatially coupled LDPC code ensembles are used throughout as examples to demonstrate the results.
+
+## Protograph-Based LDPC Code Design for Shaped Bit-Metric Decoding
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 기반 LDPC 코드설계(노드차수+BICM 매핑 공동최적화); 바이너리 LDPC 구성 기법 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7339431
+- **Type**: journal
+- **Published**: Feb. 2016
+- **Authors**: Fabian Steiner, Georg Böcherer, Gianluigi Liva
+- **PDF**: https://ieeexplore.ieee.org/document/7339431
+- **Abstract**: A protograph-based low-density parity-check (LDPC) code design technique for bandwidth-efficient coded modulation with probabilistic shaping is presented. The approach jointly optimizes the LDPC code node degrees and the mapping of the coded bits to the bit-interleaved coded modulation (BICM) bit-channels. For BICM with uniform inputs and for BICM with probabilistic shaping, binary-input symmetric-output surrogate channels for the code design are used. The constructed codes for uniform inputs perform as good as the multi-edge type codes of Zhang and Kschischang (2013). For 8-ASK and 64-ASK with probabilistic shaping, codes of rates 2/3 and 5/6 with blocklength 64800 are designed, which operate within 0.63 and 0.69 dB of $\frac{1}{2}\,\log_2(1+\text{SNR})$ for a target frame error rate of $10^{-3}$ at spectral efficiencies of 1.38 and 4.25 bits/channel use, respectively.
+
+## Message Passing-Based Decoding of Convolutional Codes: Performance and Complexity Analysis
+
+- **Status**: ✅
+- **Reason**: 컨볼루션 부호에 메시지패싱 디코딩 적용 - 부호 비의존적 메시지패싱 복잡도 절감 기법, 바이너리 LDPC BP에 이식 가능성(C, 애매하여 살림)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7355317
+- **Type**: journal
+- **Published**: Feb. 2016
+- **Authors**: Hossein Mani, Hamid Saeedi
+- **PDF**: https://ieeexplore.ieee.org/document/7355317
+- **Abstract**: In this letter, we propose to apply message passing algorithms to decode standard convolutional codes and assess the resulting performance and the required complexity compared to conventional decoding algorithms for convolutional codes by concentrating on the Viterbi algorithm (VA). We show that, in contrast to the VA for which the decoding complexity increases exponentially with $m$, the number of memory blocks for the proposed framework, such an increase, is only linear in $m$. This suggests that applying message passing algorithms can provide considerable savings in the required computational power if it can also exhibit a comparable bit-error-rate performance to that of the VA. In this letter, we show via simulations that this is in fact the case for convolutional codes.
+
+## On the Waterfall Performance of Finite-Length SC-LDPC Codes Constructed From Protographs
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 기반 SC-LDPC 유한길이 워터폴 스케일링 분석·구조 비교(카테고리 E, 바이너리 LDPC 코드설계)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7339427
+- **Type**: journal
+- **Published**: Feb. 2016
+- **Authors**: Markus Stinner, Pablo M. Olmos
+- **PDF**: https://ieeexplore.ieee.org/document/7339427
+- **Abstract**: An analysis of spatially coupled low-density parity-check (SC-LDPC) codes constructed from protographs is proposed. Given the protograph used to generate the SC-LDPC code ensemble, a set of scaling parameters to characterize the average finite-length performance in the waterfall region is computed. The error performance of structured SC-LDPC code ensembles is shown to follow a scaling law similar to that of unstructured randomly constructed SC-LDPC codes. Under a finite-length perspective, some of the most relevant SC-LDPC protograph structures proposed to date are compared. The analysis reveals significant differences in their finite-length scaling behavior, which is corroborated by simulation. Spatially coupled repeat-accumulate codes present excellent finite-length performance, as they outperform in the waterfall region SC-LDPC codes of the same rate and better asymptotic thresholds.
+
+## Globally coupled LDPC codes
+
+- **Status**: ✅
+- **Reason**: globally coupled LDPC 신규 구성+2-phase local/global 반복 디코딩, 바이너리 채널 코드설계+디코더(E/C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7888167
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Juane Li, Shu Lin, Khaled Abdel-Ghaffar +2
+- **PDF**: https://ieeexplore.ieee.org/document/7888167
+- **Abstract**: This paper presents a special type of LDPC codes with a structure related to but different from that of the spatially coupled LDPC codes. For an LDPC code of this type, its Tanner graph is composed of a set of small disjoint Tanner graphs which are connected together by a group of overall check-nodes, called global check-nodes. Codes of this type are called globally coupled LDPC codes and they perform well over both the additive Gaussian white noise and the binary-erasure channels. Furthermore, they are very effective at correcting erasures clustered in bursts. Two algebraic methods are presented for constructing these codes. A two-phase local/global iterative scheme for decoding these codes is presented. This decoding scheme allows correction of local random and global errors and/or erasures in two phases.
+
+## Some results on spatially coupled protograph LDPC codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 프로토그래프 신규 설계+RCA threshold 분석(바이너리 채널), 이식 가능 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7888150
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Sudarsan V. S. Ranganathan, Kasra Vakilinia, Lara Dolecek +2
+- **PDF**: https://ieeexplore.ieee.org/document/7888150
+- **Abstract**: Spatially coupled low-density parity-check block codes (SC-LDPC-BCs) are a class of LDPC codes in which certain ensembles achieve capacity under iterative belief propagation decoding. Prior work has considered these codes mostly from a protograph perspective. Following this viewpoint, our work presents new protographs for the design of protograph-based SC-LDPC-BCs. A reciprocal channel approximation (RCA) analysis of the terminated protographs yields the asymptotic performance limits of the ensembles in terms of their iterative decoding thresholds. Our protographs possess the properties of linear minimum distance growth rate and excellent thresholds. We consider the following channels in our work: binary-input additive white Gaussian noise channel (BI-AWGNC), binary erasure channel (BEC), and binary symmetric channel (BSC). Our work focuses on obtaining good designs, with two classes of ensembles being asymptotically regular, for all the three channels while minimizing rate loss.
+
+## Approaching maximum likelihood performance of LDPC codes by stochastic resonance in noisy iterative decoders
+
+- **Status**: ✅
+- **Reason**: noisy iterative decoder의 stochastic resonance로 ML 성능 접근, error-floor 탈출 신규 디코딩 통찰=이식 가능 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7888185
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Bane Vasić, Predrag Ivaniš, David Declercq +1
+- **PDF**: https://ieeexplore.ieee.org/document/7888185
+- **Abstract**: In the 1960s-70s, Taylor and Kuznetsov obtained a remarkable result that information can be reliably retrieved from a noisy channel even if a decoder is made of noisy components. The results of Vasic and Chilappagari presented at the ITA Workshop ten years ago have revived the interest in decoders made of noisy hardware and since then a number of improvements of the iterative decoders have been made to bring their performance closer to that of their perfect counterparts. However, a common mantra has been that noisy decoders cannot be better than their perfect counterparts. In this talk we report an unexpected phenomenon we have recently discovered - noise can actually improve the error correction process by reducing the probability of decoding error, in some cases by more that two orders of magnitude. This new form of stochastic resonance enables us to use logic gate errors to correct channel errors. This novelty recognizes that the decoder - essentially an iterative minimization of the Bethe free energy on the code graph - can get trapped in local minima, and random perturbations help the decoder to escape from these minima and converge to a correct code-word. In the spirit of Marcus Tullius Cicero's “Clavus clavo eicitur,” (“one nail drives out another”) they operate on the principle: Error errore eicitur” - “one error drives out another.” Crucially, such useful random perturbations require neither additional hardware nor energy, as they are built into the low-powered, noisy hardware itself.
+
+## Message-aggregation enhanced iterative hard-decision decoders
+
+- **Status**: ✅
+- **Reason**: message-aggregation으로 trapping set 제거하는 신규 hard-decision 디코더(error-floor 개선)=이식 가능 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7888184
+- **Type**: conference
+- **Published**: 31 Jan.-5 
+- **Authors**: Srdan Brkic, Predrag Ivanis, Bane Vasić +1
+- **PDF**: https://ieeexplore.ieee.org/document/7888184
+- **Abstract**: We present an iterative decoding algorithm for annihilating trapping sets in low-density parity-check codes. In addition to classic messages, subsets of variable nodes communicate directly. We show that by allowing variable nodes to collect information from a larger part of a graph, significant improvement can be achieved in the error-floor region, compared to the classic hard decision decoders. We also propose a new hybrid hard-decision decoding algorithm which employs described strategy and the Gallager B decoders as its components. Our decoder outperforms all known hard-decision decoders of same or higher complexity.
+
+## Modified PEG algorithm for large girth Quasi-cyclic protograph LDPC codes
+
+- **Status**: ✅
+- **Reason**: 수정 PEG 알고리즘으로 QC protograph LDPC large girth 구성+permutation shift 최적화 — 바이너리 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7440704
+- **Type**: conference
+- **Published**: 15-18 Feb.
+- **Authors**: Xue-Qin Jiang, Moon Ho Lee, Hui-Ming Wang +2
+- **PDF**: https://ieeexplore.ieee.org/document/7440704
+- **Abstract**: For a given base graph, the protograph can be obtained by a copy-and-permute procedure. If the permutation is cyclic, the protograph corresponds to a quasi-cyclic (QC) protograph LDPC code. The girth of the QC protograph LDPC code is determined by the girth of the base graph and the permutation shifts. Progressive edge-growth (PEG) construction builds up a Tanner graph, or equivalently a parity-check matrix, for an LDPC code by maximizing the local girth at symbol nodes in a greedy algorithm. In this paper, we introduce a modified version of the PEG algorithm which can construct large girth base graph and determine the optimal permutation shifts, simultaneously, for QC protograph LDPC codes. Simulation results show that the QC protograph LDPC codes constructed by the proposed modified PEG algorithm have good frame error rate (FER) performance over the AWGN channel.
+
+## Optimization of codes for the joint Viterbi detector decoder (JVDD)
+
+- **Status**: ✅
+- **Reason**: JVDD용 LDPC 코드 4종 신규 설계(고정/비례 행·열 가중치) — 바이너리 LDPC 코드설계 기여(E), DOE 최적화
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7440607
+- **Type**: conference
+- **Published**: 15-18 Feb.
+- **Authors**: Sari Shafidah Bte Shafiee, Chan Kheong Sann, Goh Wang Ling
+- **PDF**: https://ieeexplore.ieee.org/document/7440607
+- **Abstract**: The joint Viterbi detector decoder (JVDD) was recently proposed as an alternative to iterative detector/decoder systems (also known as turbo equalizers) used in communication applications today. Despite being conditionally optimal over coded additive white Gaussian noise (AWGN)/inter-symbol interference (ISI) channels, the JVDD suffers from an exponential growth in the number of survivors when used with existing codes such as random low-density parity check (LDPC) codes. This paper proposes a class of JVDD codes designed for the JVDD which mitigate this undesirable trait. This class of codes consists of 4 code designs — 1) fixed row weight, 2) fixed column weight, 3) proportionate row weight and 4) proportionate column weight. While the proposed JVDD codes do effectively bring about a reduction in complexity and enhance the performance of the JVDD, the design parameters of these codes require optimization. In this paper, a design of experiment (DOE) technique that employs the response surface methodology (RSM) is used as a tool to optimize the parameters of each of the proposed codes.

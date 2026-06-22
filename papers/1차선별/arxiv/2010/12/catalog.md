@@ -1,0 +1,14 @@
+# arXiv — 2010-12 (1차선별 통과)
+
+
+## Cyclic and Quasi-Cyclic LDPC Codes on Row and Column Constrained Parity-Check Matrices and Their Trapping Sets
+
+- **Status**: ✅
+- **Reason**: 순환/준순환 LDPC 구성+trapping set/error-floor 구조분석(E) — 바이너리 cyclic/QC-LDPC 신규 구성 및 trapping set 분석, NAND 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1012.3201v1
+- **Type**: preprint
+- **Published**: 2010-12-15
+- **Authors**: Qin Huang, Qiuju Diao, Shu Lin +1
+- **PDF**: https://arxiv.org/pdf/1012.3201v1
+- **Abstract**: This paper is concerned with construction and structural analysis of both cyclic and quasi-cyclic codes, particularly LDPC codes. It consists of three parts. The first part shows that a cyclic code given by a parity-check matrix in circulant form can be decomposed into descendant cyclic and quasi-cyclic codes of various lengths and rates. Some fundamental structural properties of these descendant codes are developed, including the characterizations of the roots of the generator polynomial of a cyclic descendant code. The second part of the paper shows that cyclic and quasi-cyclic descendant LDPC codes can be derived from cyclic finite geometry LDPC codes using the results developed in first part of the paper. This enlarges the repertoire of cyclic LDPC codes. The third part of the paper analyzes the trapping sets of regular LDPC codes whose parity-check matrices satisfy a certain constraint on their rows and columns. Several classes of finite geometry and finite field cyclic and quasi-cyclic LDPC codes with large minimum weights are shown to have no harmful trapping sets with size smaller than their minimum weights. Consequently, their performance error-floors are dominated by their minimum weights.

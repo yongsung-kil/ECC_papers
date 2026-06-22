@@ -1,0 +1,50 @@
+# arXiv — 2024-06 (1차선별 통과)
+
+
+## Recent Advances in Deep Learning for Channel Coding: A Survey
+
+- **Status**: ✅
+- **Reason**: 딥러닝 채널코딩 서베이로 LDPC 코드설계·신경망 디코더 기법 정리 — 이식 가능 디코더/코드설계 참조(C/E), 애매하면 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2406.19664v1
+- **Type**: preprint
+- **Published**: 2024-06-28
+- **Authors**: Toshiki Matsumine, Hideki Ochiai
+- **PDF**: https://arxiv.org/pdf/2406.19664v1
+- **Abstract**: This paper provides a comprehensive survey on recent advances in deep learning (DL) techniques for the channel coding problems. Inspired by the recent successes of DL in a variety of research domains, its applications to the physical layer technologies have been extensively studied in recent years, and are expected to be a potential breakthrough in supporting the emerging use cases of the next generation wireless communication systems such as 6G. In this paper, we focus exclusively on the channel coding problems and review existing approaches that incorporate advanced DL techniques into code design and channel decoding. After briefly introducing the background of recent DL techniques, we categorize and summarize a variety of approaches, including model-free and mode-based DL, for the design and decoding of modern error-correcting codes, such as low-density parity check (LDPC) codes and polar codes, to highlight their potential advantages and challenges. Finally, the paper concludes with a discussion of open issues and future research directions in channel coding.
+
+## Factor Graph Optimization of Error-Correcting Codes for Belief Propagation Decoding
+
+- **Status**: ✅
+- **Reason**: BP 디코딩 대상 factor graph를 gradient 기반으로 최적화하는 새 코드설계 기법 — 바이너리 LDPC 단블록 설계에 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2406.12900v2
+- **Type**: preprint
+- **Published**: 2024-06-09
+- **Authors**: Yoni Choukroun, Lior Wolf
+- **PDF**: https://arxiv.org/pdf/2406.12900v2
+- **Abstract**: The design of optimal linear block codes capable of being efficiently decoded is of major concern, especially for short block lengths. As near capacity-approaching codes, Low-Density Parity-Check (LDPC) codes possess several advantages over other families of codes, the most notable being its efficient decoding via Belief Propagation. While many LDPC code design methods exist, the development of efficient sparse codes that meet the constraints of modern short code lengths and accommodate new channel models remains a challenge. In this work, we propose for the first time a gradient-based data-driven approach for the design of sparse codes. We develop locally optimal codes with respect to Belief Propagation decoding via the learning of the Factor graph under channel noise simulations. This is performed via a novel complete graph tensor representation of the Belief Propagation algorithm, optimized over finite fields via backpropagation and coupled with an efficient line-search method. The proposed approach is shown to outperform the decoding performance of existing popular codes by orders of magnitude and demonstrates the power of data-driven approaches for code design.
+
+## Improved Generalized Automorphism Belief Propagation Decoding
+
+- **Status**: ✅
+- **Reason**: Generalized automorphism ensemble BP 디코더 개선(전처리 단계를 Tanner 그래프에 병합) — 바이너리 LDPC BP 디코더 신규 기여로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2406.02012v2
+- **Type**: preprint
+- **Published**: 2024-06-04
+- **Authors**: Jonathan Mandelbaum, Sisi Miao, Nils Albert Schwendemann +2
+- **PDF**: https://arxiv.org/pdf/2406.02012v2
+- **Abstract**: With the increasing demands on future wireless systems, new design objectives become eminent. Low-density parity-check codes together with belief propagation (BP) decoding have outstanding performance for large block lengths. Yet, for future wireless systems, good decoding performance for short block lengths is mandatory, a regime in which BP decoding typically shows a significant gap to maximum likelihood decoding. Automorphism ensemble decoding (AED) is known to reduce this gap effectively and, in addition, enables an easy trade-off between latency, throughput, and complexity. Recently, generalized AED (GAED) was proposed to increase the set of feasible automorphisms suitable for ensemble decoding. By construction, GAED requires a preprocessing step within its constituent paths that results in information loss and potentially limits the gains of GAED. In this work, we show that the preprocessing step can be merged with the Tanner graph of BP decoding, thereby improving the performance of the constituent paths. Finally, we show that the improvement of the individual paths also enhances the overall performance of the ensemble.
+
+## High Throughput Polar Code Decoders with Information Bottleneck Quantization
+
+- **Status**: ✅
+- **Reason**: Information Bottleneck 기반 비균일 양자화 — LLR 비트폭 절감 기법으로 LDPC 디코더에 직접 활용, 본문이 polar 구현이나 양자화 기법은 NAND LLR 양자화로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:2406.01426v1
+- **Type**: preprint
+- **Published**: 2024-06-03
+- **Authors**: Claus Kestel, Lucas Johannsen, Norbert Wehn
+- **PDF**: https://arxiv.org/pdf/2406.01426v1
+- **Abstract**: In digital baseband processing, the forward error correction (FEC) unit belongs to the most demanding components in terms of computational complexity and power consumption. Hence, efficient implementation of FEC decoders is crucial for next generation mobile broadband standards and an ongoing research topic. Quantization has a significant impact on the decoder area, power consumption and throughput. Thus, lower bit-widths are preferred for efficient implementations but degrade the error-correction capability. To address this issue, a non-uniform quantization based on the Information Bottleneck (IB) method was proposed that enables a low bit width while maintaining the essential information. Many investigations on the use of IB method for Low-density parity-check code (LDPC) decoders exist and have shown its advantages from an implementation perspective. However, for polar code decoder implementations, there exists only one publication that is not based on the state-of-the-art Fast-SSC decoding algorithm, and only synthesis implementation results without energy estimation are shown. In contrast, our paper presents several optimized Fast Simplified Successive-Cancellation (Fast-SSC) polar code decoder implementations using IB-based quantization with placement&routing results in an advanced 12 nm FinFET technology. Gains of up to 16% in area and 13% in energy efficiency are achieved with IB-based quantization at a Frame Error Rate (FER) of 10-7 and a Polar Code of N = 1024, R = 0.5 compared to state-of-the-art decoders.

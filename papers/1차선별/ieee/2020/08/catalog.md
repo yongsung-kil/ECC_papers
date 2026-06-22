@@ -1,0 +1,98 @@
+# IEEE Xplore — 2020-08 (1차선별 통과)
+
+
+## Two Effective Scheduling Schemes for Layered Belief Propagation of 5G LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 5G LDPC용 layered BP 스케줄링(LPHD, residual-based RB-LBP) — 디코더 수렴/복잡도 개선 기법으로 NAND LDPC 디코더에 이식 가능(C).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9082643
+- **Type**: journal
+- **Published**: Aug. 2020
+- **Authors**: Bingbing Wang, Yan Zhu, Jing Kang
+- **PDF**: https://ieeexplore.ieee.org/document/9082643
+- **Abstract**: Low-density parity-check (LDPC) codes have been chosen for the fifth-generation (5G) new radio (NR) enhanced Mobile Broad Band (eMBB) data channel. Since NR LDPC codes puncture the first two block columns of the parity-check matrix, the decoding complexity is reduced, but it slows down the convergence rate. In this letter, we propose a fixed schedule that decodes the layers with the least-punctured edges and those with the highest-degree (LPHD), which has much faster convergence speed than conventional schemes. The fixed scheduling schemes cannot take full advantage of the dynamic changes of decoding messages. As a result, the residual-based layered belief propagation (RB-LBP) is proposed to rearrange the layers dynamically among different iterations. Compared with some informed dynamic scheduling (IDS) strategies, RB-LBP reduces the decoding complexity with slight performance loss.
+
+## Analysis of the Error Correction Capability of LDPC and MDPC Codes Under Parallel Bit-Flipping Decoding and Application to Cryptography
+
+- **Status**: ✅
+- **Reason**: 병렬 비트플리핑 디코더의 오류정정 능력에 대한 이론적 타이트 바운드 제시 — small girth 코드 대상 디코더 분석 기법(E/C)으로 이식 여지. 암호 응용은 부수적.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9067006
+- **Type**: journal
+- **Published**: Aug. 2020
+- **Authors**: Paolo Santini, Massimo Battaglioni, Marco Baldi +1
+- **PDF**: https://ieeexplore.ieee.org/document/9067006
+- **Abstract**: Iterative decoders used for decoding low-density parity-check (LDPC) and moderate-density parity-check (MDPC) codes are not characterized by a deterministic decoding radius and their error rate performance is usually assessed through intensive Monte Carlo simulations. However, several applications, like code-based cryptography, need guaranteed low values of the error rate, which are infeasible to assess through simulations, thus requiring the development of theoretical models for the error rate of these codes. Some models of this type already exist, but become computationally intractable for parameters of practical interest. Other approaches approximate the code ensemble behaviour through assumptions, which may not hold true for a specific code. We propose a theoretical analysis of the error correction capability of LDPC and MDPC codes that allows deriving tight bounds on the error rate at the output of parallel bit-flipping decoders. Special attention is devoted to the case of codes with small girth. Single-iteration decoding is investigated through a rigorous approach, which does not require any assumption and results in a guaranteed error correction capability for any single code. We show an example of application of the new bound to the context of code-based cryptography, where guaranteed error rates are needed to achieve strong security levels.
+
+## Refined Belief Propagation Decoding of Sparse-Graph Quantum Codes
+
+- **Status**: ✅
+- **Reason**: 양자 스파스 그래프 BP 디코더지만, single-valued 메시지 정규화·serial schedule로 short-cycle/error-floor 개선 기법은 고전 바이너리 BP에서 유래·이식 가능 → 예외 포함(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9146916
+- **Type**: journal
+- **Published**: Aug. 2020
+- **Authors**: Kao-Yueh Kuo, Ching-Yi Lai
+- **PDF**: https://ieeexplore.ieee.org/document/9146916
+- **Abstract**: Quantum stabilizer codes constructed from sparse matrices have good performance and can be efficiently decoded by belief propagation (BP). A conventional BP decoding algorithm treats binary stabilizer codes as additive codes over GF(4). This algorithm has a relatively complex process of handling check-node messages, which incurs higher decoding complexity. Moreover, BP decoding of a stabilizer code usually suffers a performance loss due to the many short cycles in the underlying Tanner graph. In this paper, we propose a refined BP decoding algorithm for quantum codes with complexity roughly the same as binary BP. For a given error syndrome, this algorithm decodes to the same output as the conventional quaternary BP but the passed node-to-node messages are single-valued, unlike the quaternary BP, where multivalued node-to-node messages are required. Furthermore, the techniques of message strength normalization can naturally be applied to these single-valued messages to improve the performance. Another observation is that the message-update schedule affects the performance of BP decoding against short cycles. We show that running BP with message strength normalization according to a serial schedule (or other schedules) may significantly improve the decoding performance and error floor in computer simulation.
+
+## A Channel-Aware Combinatorial Approach to Design High Performance Spatially-Coupled Codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 코드 설계 OO-CPO(error floor·detrimental object 저감), Flash 채널 언급 — 이식 가능 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9032092
+- **Type**: journal
+- **Published**: Aug. 2020
+- **Authors**: Ahmed Hareedy, Ruiyi Wu, Lara Dolecek
+- **PDF**: https://ieeexplore.ieee.org/document/9032092
+- **Abstract**: Because of their capacity-approaching performance and their complexity/latency advantages, spatially-coupled (SC) codes are among the most attractive error-correcting codes for use in modern dense data storage systems. SC codes are constructed by partitioning an underlying block code and coupling the partitioned components. Here, we focus on circulant-based SC codes. Recently, the optimal overlap (OO), circulant power optimizer (CPO) approach was introduced to construct high performance SC codes for additive white Gaussian noise (AWGN) and Flash channels. The OO stage operates on the protograph of the SC code to derive the optimal partitioning that minimizes the number of graphical objects that undermine the performance of SC codes under iterative decoding. Then, the CPO optimizes the circulant powers to further reduce this number. Since the nature of detrimental objects in the graph of a code critically depends on the characteristics of the channel of interest, extending the OO-CPO approach to construct SC codes for channels with intrinsic memory is not a straightforward task. In this paper, we tackle one relevant extension; we construct high performance SC codes for practical 1-D magnetic recording channels, i.e., partial-response (PR) channels. Via combinatorial techniques, we carefully build and solve the optimization problem of the OO partitioning, focusing on the objects of interest in the case of PR channels. Then, we customize the CPO to further reduce the number of these objects in the graph of the code. SC codes designed using the proposed OO-CPO approach for PR channels outperform prior state-of-the-art SC codes by up to around 3 orders of magnitude in frame error rate (FER) and 1.1 dB in signal-to-noise ratio (SNR). More intriguingly, our SC codes outperform structured block codes of the same length and rate by up to around 1.8 orders of magnitude in FER and 0.4 dB in SNR. The performance advantage of SC codes designed using the devised OO-CPO approach over block codes of the same parameters is not only pronounced in the error floor region, but also in the waterfall region.
+
+## Learning to Denoise and Decode: A Novel Residual Neural Network Decoder for Polar Codes
+
+- **Status**: ✅
+- **Reason**: 잔차신경망 디코더(RNND)+denoiser, 멀티태스크 학습; LDPC 코드로의 확장성도 언급 — 신경망 디코더 기법(C)으로 NAND LDPC에 이식 가능.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9109744
+- **Type**: journal
+- **Published**: Aug. 2020
+- **Authors**: Hongfei Zhu, Zhiwei Cao, Yuping Zhao +1
+- **PDF**: https://ieeexplore.ieee.org/document/9109744
+- **Abstract**: Polar codes are known as the first capacity-achievable codes with low encoding and decoding complexity. The sequential decoding nature of traditional polar decoding algorithms such as successive cancellation (SC) results in high decoding latency, which is not suitable for services that require high reliability and low latency. Deep learning for decoding, referred to as neural network decoder (NND), has shown strong competitiveness because of its non-iterative and full-parallel feature. Whereas, the bit-error-rate (BER) performance of NND is still not satisfactory. In this paper, we first propose a residual learning denoiser (RLD) for polar codes. The RLD can remarkably improve the signal-to-noise ratio (SNR) and reduce the symbol-error-rate (SER) of received symbols. In order to decode polar codes more efficiently, we subsequently propose a residual neural network decoder (RNND) for polar codes. Different from the traditional pure-NND (PNND) which directly uses neural network for decoding received symbols, the proposed RNND concatenates a RLD used for denoising and a NND used for decoding. We provide a novel multi-task learning (MTL) strategy to jointly optimize the denoiser and decoder, and find that the denoising gain of Joint-RLD is more significant than the Independent-RLD. Numerical results show that the proposed RNND outperforms its counterpart PNND with regard to the BER performance. In addition, the optimal RNND(MLP-MLP) approaches the traditional SC decoding performance, while saving more than one hundred times of computation time. Eventually, scalability of the RNND to longer polar codes as well as LDPC codes further demonstrates the superiority of our proposed scheme.
+
+## A Reduced-Complexity Projection Algorithm for ADMM-Based LP Decoding
+
+- **Status**: ✅
+- **Reason**: ADMM-LP 디코딩 parity polytope projection 저복잡도 알고리즘(정렬 제거, HW/SW 효율) — 이식 가능 디코더(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9050709
+- **Type**: journal
+- **Published**: Aug. 2020
+- **Authors**: Florian Gensheimer, Tobias Dietz, Kira Kraft +2
+- **PDF**: https://ieeexplore.ieee.org/document/9050709
+- **Abstract**: The alternating direction method of multipliers has recently been adapted for linear programming decoding of low-density parity-check codes. The computation of the projection onto the parity polytope is the core of this algorithm and usually involves a sorting operation, which is the main effort of the projection. In this paper, we present an algorithm with low complexity to compute this projection. The algorithm relies on new findings in the recursive structure of the parity polytope and iteratively fixes selected components. As shown in our realistic simulation setup, it requires up to 37% less arithmetical operations compared with state-of-the-art projections. Additionally, it does not involve a sorting operation, which is needed in all exact state-of-the-art projection algorithms. These two benefits make it appealing for efficient hardware and software implementations.
+
+## A Parallel and Memory-Efficient Decoding for Spatially-Coupled LDPC Codes
+
+- **Status**: ✅
+- **Reason**: SC-LDPC 병렬·메모리효율 windowed 디코딩 — 이식 가능 디코더/HW 기법(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9238855
+- **Type**: conference
+- **Published**: 9-11 Aug. 
+- **Authors**: Qihao Wu, Lihong Lv, Yanjun Yao +1
+- **PDF**: https://ieeexplore.ieee.org/document/9238855
+- **Abstract**: In this paper, we propose a parallel and memory-efficient decoding for spatially-coupled low-density parity-check (SC LDPC) codes. The new decoding was obtained by applying parallel architecture and efficient memory management to the windowed decoding. Simulation results show that the new decoding greatly reduces decoding latency and requires less memory, and there is no performance degradation. The advantage of the proposed decoding make it appealing in practical applications, especially in low latency scenario.
+
+## A Low Complexity Decoding Algorithm Design Based on Quasi-Cyclic LDPC Codes
+
+- **Status**: ✅
+- **Reason**: E/C: layered dynamic normalized min-sum on QC-LDPC with correction factors + inter-layer deletion thresholds, transplantable decoder/HW
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9231083
+- **Type**: conference
+- **Published**: 17-18 Aug.
+- **Authors**: Cai Honghao, Yang Yingkun, Qu Yi
+- **PDF**: https://ieeexplore.ieee.org/document/9231083
+- **Abstract**: Entering the 5G era, the hardware design of low-density parity-check (LDPC) codes under the new standard has increasingly higher requirements on throughput. According to the geometric characteristics of the check matrices of the quasi-cyclicQC) LDCP codes under the CCSDS standard, this paper designs a layered dynamic normalized minimum sum algorithm(LDNMSA) under the pre-termination decoding based on de-layering scheme. The check matrix structure of this code is easy for hardware design and the storage resource consumption is low. The approximate replacement of the minimum sum algorithm(MSA) reduces the computational complexity of the check node update process. The determination of correction factors and inter-layer deletion thresholds through computer simulation improves the decoding performance and the speed of a single iteration, and adopt the layered scheduling scheme with optimized update order reduces the number of iterations required for decoding. Experimental results show that when the bit error rate(BER) is 10-5, the designed algorithm has a gain of approximately 0.5 dB compared to the MSA. The speed and calculation amounts to a single iteration are much lower than the log-likelihood-ratio(LLR) belief propagation(BP) algorithm and the performance is only less than 0.1dB.

@@ -1,0 +1,326 @@
+# IEEE Xplore — 2015-11 (1차선별 통과)
+
+
+## Protograph-Based Quasi-Cyclic LDPC Coding for Ultrahigh Density Magnetic Recording Channels
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 기반 QC-LDPC 구성+병렬 디코더 구조 — 바이너리 코드설계/HW 기법(D/E), QC 인코더·병렬 디코더 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7117421
+- **Type**: journal
+- **Published**: Nov. 2015
+- **Authors**: Lingjun Kong, Liwen He, Pingping Chen +2
+- **PDF**: https://ieeexplore.ieee.org/document/7117421
+- **Abstract**: In this paper, protograph-based quasi-cyclic (QC) low-density parity-check (LDPC) codes are proposed for the efficient structure coding of LDPC codes in 2-D intersymbol interference (ISI) ultrahigh density magnetic recording channels, such as bit-patterned magnetic recording and 2-D magnetic recording, where a reduced-complexity 2-D detector based on the iterative row–column soft detection feedback with Gaussian approximation is employed instead of the full 2-D Bahl–Cocke–Jelinek–Raviv detector. The proposed protograph-based codes, whose base matrices are constructed according to the degree sequences for 2-D-ISI channels, have a low-complexity QC encoder structure with a readily parallelizable protograph decoder structure. Simulation results show that the proposed protograph-based QC-LDPC codes outperform the random LDPC codes optimized for additive white Gaussian noise channels. Furthermore, the performance of the QC codes is similar to that exhibited by ISI-optimized random LDPC codes designed for 2-D-ISI channels, while retaining the implementational benefits.
+
+## A Soft Decodable Concatenated LDPC Code
+
+- **Status**: ✅
+- **Reason**: 연접 LDPC(내부 LDPC+외부 SPC) 소프트 반복 디코딩 구조 — 바이너리 LDPC 기반 코드설계/디코딩 기법(C/E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7117410
+- **Type**: journal
+- **Published**: Nov. 2015
+- **Authors**: Shaohua Yang, Yang Han, Xuebin Wu +2
+- **PDF**: https://ieeexplore.ieee.org/document/7117410
+- **Abstract**: In this paper, a concatenated low-density-parity-check (LDPC) coding scheme that is suitable for iterative soft decoding is introduced for magnetic recording systems. The concatenated code is constructed as the product of two linear codes, in which a conventional 4 kB LDPC code is used as the inner code and a single-parity check code serves as the outer code. The outer code in this concatenated construction spans many sectors, possibly an entire track, and the code rate and the block size can be flexibly configured. While individual sectors can be read and decoded independently, the full decoding power of the concatenated code can only be achieved by reading all the data sectors that are involved in the outer code. The concatenated code produces significant signal-to-noise gain over the baseline 4 kB LDPC. The soft decoding for the single-parity check code is very simple compared with the 4 kB LDPC code, and the concatenated code has a similar decoding complexity as the baseline 4 kB LDPC code. When the individual sectors within the outer code are updated in place, a read-modify-write procedure must be employed.
+
+## The Design of Protograph LDPC Codes for 2-D Magnetic Recording Channels
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 LDPC 코드 설계(EXIT/가중분포 기반) — 바이너리 코드설계 기법(E), NAND LDPC에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7112505
+- **Type**: journal
+- **Published**: Nov. 2015
+- **Authors**: Pingping Chen, Lingjun Kong, Yi Fang +1
+- **PDF**: https://ieeexplore.ieee.org/document/7112505
+- **Abstract**: This paper investigates the performance of the protograph-based low-density parity-check (LDPC) codes for 2-D intersymbol interference (ISI) channels with magnetic recording density. The protograph LDPC codes have been shown to possess simple hardware implementation and excellent error performance over additive white Gaussian noise channels and over partial response channels. We propose a design scheme and construct two new protograph LDPC codes for 2-D ISI channel, with the help of extrinsic information transfer chart analysis and asymptotic ensemble weight distribution analysis. The theoretical analyses and simulated results show that the proposed codes outperform the previously optimized irregular LDPC code in both low- and high-SNR regions. Thus, the proposed codes are good alternatives compared with other error-correction codes for the use in magnetic recording systems.
+
+## Dynamic Weighted Bit-Flipping Decoding Algorithms for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 새 weighted bit-flipping 디코더(FF/FBS/스케줄링) 제안 — 이식 가능 바이너리 LDPC 디코더 알고리즘(C).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7208838
+- **Type**: journal
+- **Published**: Nov. 2015
+- **Authors**: Tofar C.-Y. Chang, Yu T. Su
+- **PDF**: https://ieeexplore.ieee.org/document/7208838
+- **Abstract**: Bit-flipping (BF) decoding of low-density parity-check codes is of low complexity but gives inferior performance in general. To improve performance and provide new BF decoder options for complexity-performance tradeoffs, we propose new designs for the flipping function (FF), the flipped bit selection (FBS) rule and the checksum weight updating schedule. The new FF adjusts the checksum weights in every iteration while our FBS rules take more information into account. These two modifications represent efforts to track more closely the evolutions of both check and variable nodes' reliabilities. Two selective update schedules are proposed to offer more performance and complexity tradeoffs. The combinations of the new FBS rule and known FFs result in new BF decoders with improved performance and a modest complexity increase. On the other hand, combining the new FF and FBS rule gives a new decoder with performance comparable to that of the normalized min-sum algorithm while if we use a much simpler FBS rule instead, the decoder suffers little performance loss with reduced complexity. We also present a simple decision-theoretical argument to justify the new checksum weight formula and a time-expanded factor graph model to explain the proposed selective weight-updating schedules.
+
+## High-Throughput LDPC Decoder on Low-Power Embedded Processors
+
+- **Status**: ✅
+- **Reason**: ARM 임베디드 프로세서용 고처리량 layered LDPC 디코더 구현 — 이식 가능 HW/디코더 아키텍처(C/D).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7244167
+- **Type**: journal
+- **Published**: Nov. 2015
+- **Authors**: Bertrand Le Gal, Christophe Jego
+- **PDF**: https://ieeexplore.ieee.org/document/7244167
+- **Abstract**: Real-time efficient implementations of LDPC decoders have long been considered exclusively reachable using dedicated hardware architectures. Attempts to implement LDPC decoders on CPU and GPU devices have lead to high power consumptions as well as high processing latencies that are incompatible with most embedded and mobile transmission systems. In this letter, we propose ARM-based decoders that go from 50 to 100 Mbps while executing 10 layered-decoding iterations. We hereby demonstrate that efficient LDPC decoders can be implemented on a low-power programmable architecture. The proposed decoders are competitive with recent GPU related works. Therefore, software LDPC decoders constitute a response to software defined radio constraints.
+
+## An energy efficient 18Gbps LDPC decoding processor for 802.11ad in 28nm CMOS
+
+- **Status**: ✅
+- **Reason**: 18Gbps LDPC 디코더 ASIP, half-layer 병렬 아키텍처/에너지효율 실리콘 — 이식 가능 HW 아키텍처(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7387473
+- **Type**: conference
+- **Published**: 9-11 Nov. 
+- **Authors**: Meng Li, Jan-Willem Weijers, Veerle Derudder +8
+- **PDF**: https://ieeexplore.ieee.org/document/7387473
+- **Abstract**: The design of multi-Gbps LDPC decoder has become a hot topic in recent years as the demand of transformation towards 5G. An energy efficient 18Gbps LDPC decoder based on LDPC ASIP with half layer paralleled architecture is proposed. The feasibility of the design is proven by its demonstrator silicon in 28nm CMOS technology, with a record energy efficiency of 18.4 pJ/decoded bit and area efficiency of 23.8 Gbps/mm2 for the ½ coding rate working at 18.4Gbps. With frequency, voltage scaling and multi-core management, the decoder supports a wide range of throughput, from 1.8Gbps to 18.4Gbps. The measurement results show the ASIP based design not only provides an energy efficient high speed solution but also be competitive with published ASIC solution at low and medium throughput scenarios.
+
+## A 934MHz 9Gb/s 3.2pJ/b/iteration charge-recovery LDPC decoder with in-package inductors
+
+- **Status**: ✅
+- **Reason**: D: 576-bit LDPC 디코더 VLSI 구현(charge-recovery, energy/throughput) - 이식 가능 HW 아키텍처
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7387474
+- **Type**: conference
+- **Published**: 9-11 Nov. 
+- **Authors**: Tai-Chuan Ou, Zhengya Zhang, Marios C. Papaefthymiou
+- **PDF**: https://ieeexplore.ieee.org/document/7387474
+- **Abstract**: A 576-bit LDPC decoder is designed using a charge-recovery logic family and in-package inductors. The decoder testchip is fabricated in a 65nm CMOS flip-chip process. Unlike all previously published high-performance charge-recovery chips, which use on-chip inductors to recover charge from parasitic capacitance, this charge-recovery design uses in-package inductors, avoiding the area overheads of on-chip inductors and achieving higher quality factors. Specifically, charge recovery is performed using 16 high-quality inductors that have been embedded in a custom-designed 6-layer FC-BGA package, significantly improving the area efficiency and energy consumption of the design compared to alternative implementations with on-chip inductors. When operating at 934MHz, the decoder consumes 3.2pJ/b/iteration to deliver a throughput of 9Gb/s at 10 decoding iterations.
+
+## A 3.52 Gb/s mmWave baseband with delayed decision feedback sequence estimation in 40 nm
+
+- **Status**: ✅
+- **Reason**: 60GHz baseband ASIC backend에 LDPC 디코더 포함, 40nm 구현 — HW 아키텍처(D) 이식 여지, 애매하므로 살림
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7387455
+- **Type**: conference
+- **Published**: 9-11 Nov. 
+- **Authors**: Nicholas Preyss, Christian Senning, Andreas Burg +3
+- **PDF**: https://ieeexplore.ieee.org/document/7387455
+- **Abstract**: We present a digital baseband ASIC for 60 GHz single-carrier (SC) transmission that is optimized for communication scenarios in which most of the energy is concentrated in the first few channel taps. Such scenarios occur for example in office environments with strong reflections. Our circuit targets close-to-optimum maximum-likelihood performance under such conditions. To this end, we show for the first time how a reduced-state-sequence-estimation algorithm can be realized for the 1760 MHz bandwidth of the IEEE 802.11ad standard. The equalizer is complemented in the frontend by a synchronization unit for frequency offset compensation as well as a Golay-sequence based channel estimator and in the backend by an low density parity check (LDPC) decoder. In 40nm CMOS we achieve a measured data rate of up to 3.52 Gb/s using QPSK modulation.
+
+## Trapping sets in stochastic LDPC decoders
+
+- **Status**: ✅
+- **Reason**: C/E — stochastic LDPC 디코더의 trapping set 분석, error floor 낮추는 코드구조 설계 가이드, 바이너리 LDPC 직접 관련
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7421418
+- **Type**: conference
+- **Published**: 8-11 Nov. 
+- **Authors**: Kuo-Lun Huang, Vincent C. Gaudet, Masoud Salehi
+- **PDF**: https://ieeexplore.ieee.org/document/7421418
+- **Abstract**: Stochastic decoding is a hardware and energy-efficient approach to implement iterative Low-Density Parity-Check (LDPC) decoders. However, stochastic decoding often has a performance loss compared to the sum-product algorithm and suffers from additional trapping sets, which limit the performance of LDPC codes in the error floor region. In this paper, we investigate the error characteristics of stochastic LDPC decoding. We also report stochastic-decoding-specific trapping sets for the (1056,528) LDPC code from the WiMAX standard. This observation has a potential to guide code structure designs that lower the error floor in stochastic decoding.
+
+## The impact of faulty memory bit cells on the decoding of spatially-coupled LDPC codes
+
+- **Status**: ✅
+- **Reason**: 디코더 메모리 비트셀 고장 완화(MSB 보호·self-correction) + SC-LDPC — NAND HW 신뢰성·디코더 기법 이식 가능(C/D/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7421423
+- **Type**: conference
+- **Published**: 8-11 Nov. 
+- **Authors**: Jiandong Mu, Aida Vosoughi, Joao Andrade +6
+- **PDF**: https://ieeexplore.ieee.org/document/7421423
+- **Abstract**: In this paper, we investigate the decoding performance of spatially-coupled LDPC codes in the case of faulty memory bit-cells within the storage modules of the decoder. Our study characterizes error resilience, by measuring the BER degradation from such errors and we focus on the application of error mitigation techniques that further aid the inherent error resilience. In particular, we propose mitigation strategies based on the use of methods that consider the algorithmic significance of each bit-cell fault, such as MSB protection and self-correction of messages.
+
+## Quantized message passing for LDPC codes
+
+- **Status**: ✅
+- **Reason**: 양자화 LUT 기반 min-sum 변형 디코더, 3비트 저해상도 메시지 — NAND LDPC LLR 양자화/디코더에 직접 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7421419
+- **Type**: conference
+- **Published**: 8-11 Nov. 
+- **Authors**: Michael Meidlinger, Alexios Balatsoukas-Stimming, Andreas Burg +1
+- **PDF**: https://ieeexplore.ieee.org/document/7421419
+- **Abstract**: We propose a quantized decoding algorithm for low- density parity-check codes where the variable node update rule of the standard min-sum algorithm is replaced with a look-up table (LUT) that is designed using an information-theoretic criterion. We show that even with message resolutions as low as 3 bits, the proposed algorithm can achieve better error rates than a floating-point min-sum decoder. Moreover, we study in detail the effect of different decoder design parameters, like the design SNR and the LUT tree structure on the performance of our decoder, and we propose some complexity reduction techniques, such as LUT re-use and message alphabet downsizing.
+
+## A software LDPC decoder implemented on a many-core array of programmable processors
+
+- **Status**: ✅
+- **Reason**: D — many-core 프로세서 어레이상 SW LDPC 디코더 병렬화/메모리 최적화, 이식 가능 HW/아키텍처
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7421111
+- **Type**: conference
+- **Published**: 8-11 Nov. 
+- **Authors**: Brent Bohnenstiehl, Bevan Baas
+- **PDF**: https://ieeexplore.ieee.org/document/7421111
+- **Abstract**: This paper presents the design and implementation of a software Low Density Parity Check (LDPC) decoder on the AsAP2 platform, which contains a 2D mesh of 164 programmable processors designed for general DSP applications. A software decoding algorithm is described which requires low memory overhead, and scalable methods are provided for parallelizing the computational workload across many cores. LDPC codes of length 4095 and 16129 are implemented, respectively using 152 or 156 processors, achieving 21.3 or 13.4 Mbps of throughput, and using 131 or 188 nJ per decoded bit over four decoding iterations.
+
+## Hardware based projection onto the parity polytope and probability simplex
+
+- **Status**: ✅
+- **Reason**: C/D — parity polytope/probability simplex 투영의 HW 적응(FPGA), LP 디코딩 계열 LDPC 디코더 HW에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7421292
+- **Type**: conference
+- **Published**: 8-11 Nov. 
+- **Authors**: Mitchell Wasson, Stark C. Draper
+- **PDF**: https://ieeexplore.ieee.org/document/7421292
+- **Abstract**: This paper is concerned with the adaptation to hardware of methods for Euclidean norm projections onto the parity polytope and probability simplex. We first refine recent efforts to develop efficient methods of projection onto the parity polytope. Our resulting algorithm can be configured to have either average computational complexity O (d) or worst case complexity O (d log d) on a serial processor where d is the dimension of projection space. We show how to adapt our projection routine to hardware. Our projection method uses a sub-routine that involves another Euclidean projection; onto the probability simplex. We therefore explain how to adapt to hardware a well know simplex projection algorithm. The hardware implementations of both projection algorithms achieve area scalings of O(d (log d)2) at a delay of O ((log d)2). Finally, we present numerical results in which we evaluate the fixed-point accuracy and resource scaling of these algorithms when targeting a modern FPGA.
+
+## Spatial coupling for distributed storage and diversity applications
+
+- **Status**: ✅
+- **Reason**: erasure 채널용 Root-LDPC에 패리티 비트 spatial coupling 적용한 신규 구성; B/E 카테고리 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7566624
+- **Type**: conference
+- **Published**: 4-7 Nov. 2
+- **Authors**: F. Jardel, J.J. Boutros, V. Dedeoglu +2
+- **PDF**: https://ieeexplore.ieee.org/document/7566624
+- **Abstract**: Low-density parity-check codes are considered for erasure channels, mainly Root-LDPC codes that include a special type of checknodes. Spatial coupling is applied on parity bits of a Root-LDPC ensemble designed for a channel with 4 block-erasure states and a maximal design rate of 3/4 attaining double diversity. The advantage of spatial coupling is shown in the erasure plane as an improvement of a threshold boundary, under independent erasures. The spatial coupling maintains the double diversity because it connects parity bits only. The drawback of this partial coupling is a weak saturation of the threshold boundary towards the capacity boundary.
+
+## Design of energy efficient LDPC decoders with low-voltage strategy
+
+- **Status**: ✅
+- **Reason**: LDPC 디코더 VLSI 저전압·병렬화·early-stopping 기법, NAND LDPC HW에 이식 가능(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7517202
+- **Type**: conference
+- **Published**: 3-6 Nov. 2
+- **Authors**: Jianing Su, Jun Han
+- **PDF**: https://ieeexplore.ieee.org/document/7517202
+- **Abstract**: This paper investigates the VLSI architectures for energy efficient low-density parity check (LDPC) decoders with low voltage strategies, which is the most recognized and fundamental way to reduce decoder power dissipations. By carefully optimizing the decoder parallelism under the assumption of a prescribed minimum data throughput, a selected CCSDS LDPC decoder is implemented on FPGA and experiments are made with voltage supplies from 3.0v down to 0.9v. Power reports show that the increased parallelism permits the decoder to benefit from a lower supply voltage with constant data throughput and greatly decreased power consumption. In addition, some stopping iteration scheme is explored to detect the un-decodable blocks at early stages and hence reduce the dynamic power consumption of the LDPC decoders.
+
+## A full layer parallel QC-LDPC decoder for WiMAX and Wi-Fi
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 디코더 HW: reusable CNU, permutation network, TDMP-NMS min-sum 변형 — D/C 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7517004
+- **Type**: conference
+- **Published**: 3-6 Nov. 2
+- **Authors**: Wenchao Zhang, Song Chen, Xuefei Bai +1
+- **PDF**: https://ieeexplore.ieee.org/document/7517004
+- **Abstract**: This paper presents a full layer parallel quasi-cyclic low density parity check (QC-LDPC) code decoder for IEEE 802.16e (WiMAX) and IEEE 802.11n (Wi-Fi). By adopting three techniques including reusable fully parallel check node unit (CNU) structure, path rerouting network (PRN) and reusable permutation network (PN), the proposed decoder gets Gbps level throughput and could support two standards and most code modes of them with low hardware cost. By using turbo-decoding message-passing normalized min-sum (TDMP-NMS) decoding strategy, the bit error rate (BER) of the proposed decoder is decreasing fast to 10−5 at 2.2 dB. It only takes 30∼40/30∼60 clock cycles in each decoding iteration for WiMAX/Wi-Fi. Using SMIC 40nm low leakage HS RVT CMOS process and 7-bit quantization, the proposed decoder attains 789∼2227/470∼1879 Mbps for WiMAX/Wi-Fi at 290 MHz, 10 iterations, and only occupies 2.26 mm2 area.
+
+## A new LDPC decoder hardware implementation with improved error rates
+
+- **Status**: ✅
+- **Reason**: augmented BP 기반 신규 LDPC 디코더 + 28nm ASIC 구현, 단블록 BP 개선(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7360541
+- **Type**: conference
+- **Published**: 3-5 Nov. 2
+- **Authors**: P. Schläfer, S. Scholl, E. Leonardi +1
+- **PDF**: https://ieeexplore.ieee.org/document/7360541
+- **Abstract**: LDPC codes are commonly decoded by conventional belief propagation algorithms like the min-sum algorithm. However especially for small block lengths belief propagation performs poorly in comparison to maximum likelihood decoding. In this paper we propose a new decoding algorithm, that is inspired by augmented belief propagation from literature and present hardware architectures and implementations for 28nm ASIC technology. The new decoder has a much higher complexity, but provides a gain of up to 1.2 dB signal-to-noise ratio compared to conventional belief propagation decoding.
+
+## Fully parallel FPGA decoder for irregular LDPC codes
+
+- **Status**: ✅
+- **Reason**: D — irregular LDPC용 fully parallel FPGA 디코더 아키텍처, NAND LDPC HW로 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7377471
+- **Type**: conference
+- **Published**: 24-26 Nov.
+- **Authors**: Jan Broulím, Pavel Broulím, Jan Moldaschl +2
+- **PDF**: https://ieeexplore.ieee.org/document/7377471
+- **Abstract**: One of the most significant current discussions in error correction coding is on the replacement of state-of-the-art codes by new innovative solutions. We propose a scalable parallel FPGA architecture for LDPC decoding. Regular and irregular codes are supported by the presented architecture. The architecture can be easily utilized in hardware applications. The performance of synthetized decoders is presented.
+
+## Efficient architectures for parity check matrix generation
+
+- **Status**: ✅
+- **Reason**: D — 패리티검사 행렬 저장/생성 HW 아키텍처(면적 5배 절감), LDPC 포함하므로 HW 기법 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7377472
+- **Type**: conference
+- **Published**: 24-26 Nov.
+- **Authors**: Stefan Scholl, Norbert When
+- **PDF**: https://ieeexplore.ieee.org/document/7377472
+- **Abstract**: New advanced decoding algorithms for error correction systems can improve the frame error rate over commonly used systems. However, they also pose new challenges for their hardware implementations. One part, which consumes a considerable amount of hardware resources, is the storage of the parity check matrix. This problem has not been addressed in literature since it is not yet required by today's typically applied decoding algorithms. In this paper we investigate sophisticated hardware architectures for storing and generating parity check matrices of BCH, Reed-Solomon and LDPC codes, that exploit the matrix structures. It is shown that these new architectures largely simplify the hardware and require up to five times less area compared to state-of-the-art implementations.
+
+## LDPC (512,480) genetic design as alternative to CRC in implementation of AODV routing protocol stack
+
+- **Status**: ✅
+- **Reason**: E — Tanner graph mutation 기반 유전 알고리즘 LDPC 코드 설계, 짧은 패리티로 검출/정정 최적화 구성 기법 이식 가능(애매시 살림)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7377549
+- **Type**: conference
+- **Published**: 24-26 Nov.
+- **Authors**: Radek Salom, Jan Broulim
+- **PDF**: https://ieeexplore.ieee.org/document/7377549
+- **Abstract**: This paper presents a design of LDPC (Low Density Parity Check) code. Algorithm deals with code optimization based on Tanner graph mutations. The LDPC code was designed to replace CRC (Cyclic Redundancy Check) code in the application of a tiny AODV routing protocol stack. Own AODV routing protocol stack was previously designed especially for wireless sensor networks with constrained resources and it is intended for usage in wireless mesh network formed by Intelligent firemen suits. Link layer of target platform uses 64B long packet with 4B for LDPC parity. The code was designed to provide the most optimal detection and correction capability with the lowest possible parity bites.
+
+## Memory efficient FPGA implementation for flooded LDPC decoder
+
+- **Status**: ✅
+- **Reason**: D — QC-LDPC flooded 디코더 FPGA, 메모리 word size 축소로 BRAM 절감하는 신규 HW 기법 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7377516
+- **Type**: conference
+- **Published**: 24-26 Nov.
+- **Authors**: Alexandru Amaricai, Oana Boncalo, Ioana Mot
+- **PDF**: https://ieeexplore.ieee.org/document/7377516
+- **Abstract**: This paper proposes an FPGA based flooded architecture for quasi-cyclic (QC) LDPC decoder. The message computation for both check and variable node update is done using a parallel scheme of a number of processing units equal to the expansion factor of the QC matrix. The proposed architecture performs serial processing of the messages by dedicated check node and variable node processing units. This way, a reduced memory word size is used, which lead to a reduction of the BRAM blocks. Multiple frame decoding is used in order to both increase the throughput and to increase the BRAM usage. Implementation results for the WiMAX (1152, 2304) QC irregular LDPC code indicate that the proposed architecture has up to 4x less slices resource utilization and up to 1 order of magnitude less BRAM blocks with respect to other flooded architectures, while maintaining a throughput of several hundreds of Mbps.
+
+## Hybrid construction of LDPC codes of code length within 2,000 with (14, 8) extended Hamming code
+
+- **Status**: ✅
+- **Reason**: (14,8) 확장 해밍 기반 신규 바이너리 LDPC 하이브리드 구성 — 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7453886
+- **Type**: conference
+- **Published**: 20-23 Nov.
+- **Authors**: Huan Ma, Yangwen Yu, Lijun Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/7453886
+- **Abstract**: Based on a (14, 8) extended Hamming code constructed via column splitting of the (7, 4) Hamming code, a method for constructing LDPC codes of code length within 2,000 and of column weight 3 is presented. By using the (14, 8) code and hybrid construction, it is effortless to generate an LDPC code with code rate generally higher than 0.9 by mapping the this code to component of the parity-check matrix. Simulation results show that compared with hybrid construction of Gallager codes and (14, 8) code, that of PEG codes and (14, 8) code performs better and the capacity of it is only a difference of 1.5 dB around to the Shannon limit with sum-product algorithm decoding.
+
+## Hamming-GLDPC codes in BEC and AWGN channel
+
+- **Status**: ✅
+- **Reason**: Hamming-GLDPC 신규 구성 및 EXIT/AWGN 성능 분석, 바이너리 — 코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7453885
+- **Type**: conference
+- **Published**: 20-23 Nov.
+- **Authors**: Yangwen Yu, Ya'nan Han, Lijun Zhang
+- **PDF**: https://ieeexplore.ieee.org/document/7453885
+- **Abstract**: Hamming codes are used as component codes to construct generalized low-density parity-check (GLDPC) codes. In BEC channel, the convergence behavior of the Hamming-GLDPC codes is theoretically analyzed with EXIT chart. The duality property of Hamming codes and simplex codes helps to get the EXIT chart of Hamming code with the bridge of the EXIT of simplex codes. The analysis shows that the advantage of convergence for Hamming-GLDPC codes is obvious over the duplicate standard LDPC codes. In AWGN channel, simulation results of the GLDPC code with Hamming (7, 4) code as component code also indicate the powerful decoding performance of Hamming-GLDPC codes. Up to 1.5 dB coding gain can be obtained for GLDPC code in comparison with the counterpart standard LDPC code at BER of 10-3.
+
+## Area efficient half row pipelined layered LDPC decoder for gigabit wireless communications
+
+- **Status**: ✅
+- **Reason**: layered LDPC 디코더의 half-row 파이프라인 병렬 HW 아키텍처 — 무선 응용이나 D(이식 가능 HW) 기법 존재
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7401700
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Sabooh Ajaz, Hanho Lee
+- **PDF**: https://ieeexplore.ieee.org/document/7401700
+- **Abstract**: This work presents an area efficient half row partially parallel pipelined LDPC decoder architecture for IEEE 802.11ad standard. It provides better area and throughput tradeoff by overcoming the low throughput bottleneck in conventional half row decoders and high complexity bottleneck in fully parallel decoders. The proposed architecture is implemented using 40-nm CMOS technology. The proposed half-row pipelined decoder achieves the maximum required throughput of 8.4 Gb/s for IEEE 802.11ad standard and shows superior area efficiency compared to previous works.
+
+## Flooding and node-wise RBP sequentially concatenated decoder for LDPC codes
+
+- **Status**: ✅
+- **Reason**: flooding과 NW-RBP를 순차 결합한 신규 BP 스케줄링 디코더로 지연 감소 — 바이너리 LDPC BP 개선(C), NAND 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7448671
+- **Type**: conference
+- **Published**: 2-4 Nov. 2
+- **Authors**: Hua Zhou, Peng Li, Jiao Feng +1
+- **PDF**: https://ieeexplore.ieee.org/document/7448671
+- **Abstract**: A new strategy of belief propagation (BP) decoder for LDPC codes is presented by sequentially concatenating the scheduling algorithms of flooding and node-wise residual belief propagation (NW RBP) without increasing the complexity of hardware implementation. Compared to NW RBP, the concatenated BP decoder significantly decreases the decoding latency caused by computing and sorting the residual of each message in the factor graph of an LDPC code. As the signal-to-noise ratio (SNR) increases, the decoding performance of the concatenated BP decoder outperforms that of purely applying flooding or NW RBP, and the average number of decoding iterations required for the concatenated decoder decreases and tends to be approximately the same as the other two.
+
+## Timing error analysis of flooded LDPC decoders
+
+- **Status**: ✅
+- **Reason**: Min-Sum/SCMS/FAID LDPC 디코더의 타이밍오류 내성·오버클럭 분석 — 이식 가능 디코더·HW 견고성 기법(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7360460
+- **Type**: conference
+- **Published**: 2-4 Nov. 2
+- **Authors**: Alexandru Amaricai, Valentin Savin, Oana Boncalo +3
+- **PDF**: https://ieeexplore.ieee.org/document/7360460
+- **Abstract**: In this paper we perform a fault tolerance assessment of flooded Low Density Parity Code (LDPC) decoders affected by probabilistic timing errors, characteristic to sub-powered CMOS circuits. We investigate the error correction capability - in terms of Frame Error Rate (FER) - of faulty flooded Min-Sum (MS) and Self-Corrected Min-Sum (SCMS) LDPC architectures for both Binary Input Additive White Gaussian Noise (BIAWGN) and Binary Symmetric Channel (BSC) channel models and flooded FAID architectures for BSC channel model. The analysis is performed using a multi-level fault injection methodology, which accurately captures the probabilistic error profile of each combinational and memory blocks' output, according to the different clock constraints. The analysis indicates that the LDPC decoders are capable to correct errors affecting the internal data-path, not only those which appear in the transmission channel. Furthermore, the decoder potential to increase throughput by means of overclocking has been estimated to be between 77% and 150%, while preserving the nominal error correction performance.
+
+## Novel reliability evaluation method for NAND flash memory
+
+- **Status**: ✅
+- **Reason**: NAND 플래시 ECC 평가법/LDPC 코드율 제안 - 카테고리 A 직접 해당
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7372718
+- **Type**: conference
+- **Published**: 1-4 Nov. 2
+- **Authors**: Jiang Xiao-bo, Tan Xue-qing, Huang Wei-pei
+- **PDF**: https://ieeexplore.ieee.org/document/7372718
+- **Abstract**: The evaluation of error correction code (ECC) for NAND flash memory is increasingly complicated by the increasing bit error rate in memory. The concept of error-free information capacity is proposed to evaluate the performance ECC of NAND flash memory. The new method simultaneously considers the capacity and reliability of NAND flash memory. Low-density parity-check (LDPC) codes with a medium code rate can improve the integrated performance of NAND flash memory in order of magnitudes. Observations provide guides for the development of ECC schemes in NAND flash memory in future.

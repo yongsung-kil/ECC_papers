@@ -1,0 +1,57 @@
+# arXiv — 2014-03
+
+
+## Column Weight Two and Three LDPC Codes with High Rates and Large Girths
+
+- **Status**: ✅
+- **Reason**: 열2/3 고율·대girth(girth-12) 바이너리 LDPC 신규 구성, 인코딩/디코딩 복잡도 감소—이식 가능 코드 설계(E)
+- **ID**: arxiv:1403.6090v1
+- **Type**: preprint
+- **Published**: 2014-03-24
+- **Authors**: Mohammad Gholami, Ghaffar Raeisi
+- **PDF**: https://arxiv.org/pdf/1403.6090v1
+- **Abstract**: In this paper, the concept of the {\it broken diagonal pair} in the chess-like square board is used to define some well-structured block designs whose incidence matrices can be considered as the parity-check matrices of some high rate cycle codes with girth 12. The structure of the proposed parity-check matrices significantly reduces the complexity of encoding and decoding. Interestingly, the constructed regular cycle codes with row-weights $t$, $3\leq t \leq 20$, $t\neq 7, 15, 16$, have the best lengths among the known regular girth-12 cycle codes. In addition, the proposed cycle codes can be easily extended to some high rate column weight-3 LDPC codes with girth 6. Simulation results show that the constructed codes achieve excellent performances, specially the constructed column weight 3 LDPC codes outperform LDPC codes based on Steiner triple systems (STS).
+
+## Absorbing Set Analysis and Design of LDPC Codes from Transversal Designs over the AWGN Channel
+
+- **Status**: ✅
+- **Reason**: transversal design 기반 바이너리 LDPC의 absorbing set 분류·제거로 error-floor 최적화—이식 가능 코드 설계(E)
+- **ID**: arxiv:1403.4405v1
+- **Type**: preprint
+- **Published**: 2014-03-18
+- **Authors**: Alexander Gruner, Michael Huber
+- **PDF**: https://arxiv.org/pdf/1403.4405v1
+- **Abstract**: In this paper we construct low-density parity-check (LDPC) codes from transversal designs with low error-floors over the additive white Gaussian noise (AWGN) channel. The constructed codes are based on transversal designs that arise from sets of mutually orthogonal Latin squares (MOLS) with cyclic structure. For lowering the error-floors, our approach is twofold: First, we give an exhaustive classification of so-called absorbing sets that may occur in the factor graphs of the given codes. These purely combinatorial substructures are known to be the main cause of decoding errors in the error-floor region over the AWGN channel by decoding with the standard sum-product algorithm (SPA). Second, based on this classification, we exploit the specific structure of the presented codes to eliminate the most harmful absorbing sets and derive powerful constraints for the proper choice of code parameters in order to obtain codes with an optimized error-floor performance.
+
+## The Effect of Saturation on Belief Propagation Decoding of LDPC Codes
+
+- **Status**: ✅
+- **Reason**: LLR 포화(saturation)가 BP 디코딩 error-floor에 미치는 영향 분석; LLR 양자화는 NAND ECC 직결 기법(C)
+- **ID**: arxiv:1403.3678v1
+- **Type**: preprint
+- **Published**: 2014-03-14
+- **Authors**: Shrinivas Kudekar, Tom Richardson, Aravind Iyengar
+- **PDF**: https://arxiv.org/pdf/1403.3678v1
+- **Abstract**: We consider the effect of LLR saturation on belief propagation decoding of low-density parity-check codes. Saturation occurs universally in practice and is known to have a significant effect on error floor performance. Our focus is on threshold analysis and stability of density evolution.   We analyze the decoder for certain low-density parity-check code ensembles and show that belief propagation decoding generally degrades gracefully with saturation. Stability of density evolution is, on the other hand, rather strongly affected by saturation and the asymptotic qualitative effect of saturation is similar to reduction of variable node degree by one.
+
+## Knowledge-Aided Reweighted Belief Propagation LDPC Decoding using Regular and Irregular Designs
+
+- **Status**: ✅
+- **Reason**: 짧은 사이클 지식 활용 reweighted BP(VFAP-BP) 신규 메시지패싱 알고리즘, 반복수 감소—이식 가능 디코더(C)
+- **ID**: arxiv:1403.0847v2
+- **Type**: preprint
+- **Published**: 2014-03-04
+- **Authors**: J. Li, R. C. de Lamare
+- **PDF**: https://arxiv.org/pdf/1403.0847v2
+- **Abstract**: In this paper a new message passing algorithm, which takes advantage of both tree-based re-parameterization and the knowledge of short cycles, is introduced for the purpose of decoding LDPC codes with short block lengths. The proposed algorithm is called variable factor appearance probability belief propagation (VFAP-BP) algorithm and is suitable for wireless communications applications, where both good decoding performance and low-latency are expected. Our simulation results show that the VFAP-BP algorithm outperforms the standard BP algorithm and requires a significantly smaller number of iterations than existing algorithms when decoding both regular and irregular LDPC codes.
+
+## Locally-Optimized Reweighted Belief Propagation for Decoding LDPC Codes with Finite-Length
+
+- **Status**: ✅
+- **Reason**: 유한길이 LDPC용 locally-optimized reweighted BP 신규 디코더, 그래프 분할·국소 최적화—이식 가능 디코더(C)
+- **ID**: arxiv:1403.0836v1
+- **Type**: preprint
+- **Published**: 2014-03-04
+- **Authors**: J. Li, R. C. de Lamare, H. Wymeersch
+- **PDF**: https://arxiv.org/pdf/1403.0836v1
+- **Abstract**: In practice, LDPC codes are decoded using message passing methods. These methods offer good performance but tend to converge slowly and sometimes fail to converge and to decode the desired codewords correctly. Recently, tree-reweighted message passing methods have been modified to improve the convergence speed at little or no additional complexity cost. This paper extends this line of work and proposes a new class of locally optimized reweighting strategies, which are suitable for both regular and irregular LDPC codes. The proposed decoding algorithm first splits the factor graph into subgraphs and subsequently performs a local optimization of reweighting parameters. Simulations show that the proposed decoding algorithm significantly outperforms the standard message passing and existing reweighting techniques.

@@ -1,0 +1,14 @@
+# arXiv — 2012-10 (1차선별 통과)
+
+
+## New Generalizations of the Bethe Approximation via Asymptotic Expansion
+
+- **Status**: ✅
+- **Reason**: Bethe근사/BP 일반화 — 부호비의존 BP 개선 가능성, 바이너리 LDPC BP에 이식 검토(C, 애매하면 in)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1210.2592v2
+- **Type**: preprint
+- **Published**: 2012-10-09
+- **Authors**: Ryuhei Mori, Toshiyuki Tanaka
+- **PDF**: https://arxiv.org/pdf/1210.2592v2
+- **Abstract**: The Bethe approximation, discovered in statistical physics, gives an efficient algorithm called belief propagation (BP) for approximating a partition function. BP empirically gives an accurate approximation for many problems, e.g., low-density parity-check codes, compressed sensing, etc. Recently, Vontobel gives a novel characterization of the Bethe approximation using graph cover. In this paper, a new approximation based on the Bethe approximation is proposed. The new approximation is derived from Vontobel's characterization using graph cover, and expressed by using the edge zeta function, which is related with the Hessian of the Bethe free energy as shown by Watanabe and Fukumizu. On some conditions, it is proved that the new approximation is asymptotically better than the Bethe approximation.

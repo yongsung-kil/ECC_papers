@@ -1,0 +1,122 @@
+# IEEE Xplore — 2024-03 (1차선별 통과)
+
+
+## Hard-Decision Decoding Algorithms for LDPC Codes Based on Matching Pursuit
+
+- **Status**: ✅
+- **Reason**: 하드디시전 LDPC용 신규 BMP(binary matching pursuit) 디코딩 알고리즘 제안, BF/WBF 능가 — 이식 가능 디코더 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10348556
+- **Type**: journal
+- **Published**: March 2024
+- **Authors**: Jianzhong Guo, Ruoxi Li, Yuan Zhang +3
+- **PDF**: https://ieeexplore.ieee.org/document/10348556
+- **Abstract**: This letter presents a novel binary matching pursuit (BMP) algorithm for the decoding of hard-decision low-density parity-check (LDPC) codes. The traditional matching pursuit algorithm over GF(2) is susceptible to mismatching and cause a chain of errors. To overcome this problem, two strategies are proposed, one is to introduce a kind of new matching reliability, and the other is to adopt a scheme of multiple decoding modules. Simulation results show that the proposed algorithm not only greatly outperforms the bit-flipping (BF) algorithm, but also outperforms the hybrid soft-decision algorithm such as weighted BF algorithm in error performance, and has the advantage of low complexity.
+
+## PEAR: Unbalanced Inter-Page Errors Aware Read Scheme for Latency-Efficient 3-D NAND Flash
+
+- **Status**: ✅
+- **Reason**: A: 3D NAND flash 직접 - LDPC hard/soft decoding iteration·read level 감소를 위한 read 전략, RBER 최적화
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10371374
+- **Type**: journal
+- **Published**: March 2024
+- **Authors**: Meng Zhang, Fei Wu, Qin Yu +1
+- **PDF**: https://ieeexplore.ieee.org/document/10371374
+- **Abstract**: Although three-dimensional (3D) NAND flash memory has demonstrated impressive benefits including high capacity and storage density, data reliability is now a major worry because of long-term storage and ongoing cell wear-out. Low-density parity-check (LDPC) codes are frequently utilized in flash storage systems because of their superior error correcting capabilities to guarantee data reliability. LDPC codes can be hard-decoded or soft-decoded with significant differences depending on the raw bit error rate (RBER). By using fine-grained memory sensing operations, high RBER leads to increased decoding iterations for hard-decoding and more read levels for soft-decoding. In order to reduce the number of decoding iterations and read levels by lowering the RBER, this paper proposes an unbalanced inter-page errors aware read strategy for 3D NAND flash memory, called PEAR. A preliminary experiment is initially carried out to demonstrate that high RBER causes an increase in the number of decoding iterations and read levels. The substantial RBER fluctuation between pages is next analyzed from the viewpoint of the threshold voltage shift. Finally, PEAR properly places the read voltages between the two states with the most and second-most electrons in accordance with the phenomenon of threshold voltage drift, enabling the employment of hard-decoding with low read levels and successfully avoiding soft-decoding procedures with larger RBER. According to simulation results, PEAR can dramatically reduce RBER, decoding iterations, read levels, and read latency.
+
+## ADMM and Reproducing Sum-Product Decoding Algorithm Applied to QC-MDPC Code-Based McEliece Cryptosystems
+
+- **Status**: ✅
+- **Reason**: ADMM 기반 디코딩 + RSPA(SPA 출력 재사용) 신규 디코더 제안; QC-MDPC/McEliece 암호 도메인이나 바이너리 LDPC 디코더 기법으로 NAND에 이식 가능 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10231144
+- **Type**: journal
+- **Published**: March 2024
+- **Authors**: Kohtaro Watanabe, Motonari Ohtsuka, Yuta Tsukie
+- **PDF**: https://ieeexplore.ieee.org/document/10231144
+- **Abstract**: QC-MDPC (quasi cyclic moderate density parity check) code-based McEliece cryptosystems are considered to be one of the candidates for post-quantum cryptography. Decreasing DFR (decoding failure rate) is one of important factor for their security, since recent attacks to these cryptosystems effectively use DFR information. In this paper, we pursue the possibility of optimization-base decoding, concretely we examine ADMM (alternating direction method of multipliers) based method, a recent developing method in optimization theory. Further, RSPA (reproducing sum-product algorithm), which efficiently reuse outputs of SPA (sum-product algorithm) is proposed for further reduction of DFR. By numerical simulations, we show that the proposing scheme shows considerable decrement in DFR compared to the conventional decoding methods such as BF (bit-flipping algorithm) or SPA.
+
+## CDS: Coupled Data Storage to Enhance Read Performance of 3D TLC NAND Flash Memory
+
+- **Status**: ✅
+- **Reason**: 3D TLC NAND 플래시 read 성능 개선(CDS), LDPC 디코딩 지연/RBER 직접 다룸 — NAND/플래시 직접 (A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10348024
+- **Type**: journal
+- **Published**: March 2024
+- **Authors**: Wan-Ling Wu, Jen-Wei Hsieh, Hao-Yu Ku
+- **PDF**: https://ieeexplore.ieee.org/document/10348024
+- **Abstract**: Due to the strong demand of massive storage capacity, the density of flash memory has been improved in terms of technology node scaling, multi-bit per cell technique, and 3D stacking. However, these techniques also degrade read performance and reliability. The long read latency comes from increased data sensing time and time-consuming ECC decoding time. Storing multiple bits per cell results in more read reference voltages and increased latency of identifying appropriate threshold voltages. To deal with error correction, LDPC is widely used in flash memory to provide stronger ECC capability. However, LDPC incurs a long decoding latency when bit errors are numerous. In this work, we propose coupled data storage (CDS) to improve the read performance of 3D NAND flash-memory storage devices. CDS supports two modes to improve read latency: The high read-speed mode is designed to improve data sensing time with reduced voltage states, while the data correction mode is designed to mitigate bit errors and LDPC overhead. Experiment results showed that CDS could reduce 50$\sim$∼66.6% read latency and 25.7$\sim$∼27.5% write latency under the high read-speed mode. For the data correction mode, RBER could be decreased by 37$\sim$∼52% and the lifetime could be prolonged to 1.6 to 3 times.
+
+## Non-Iterative MSNN Decoder for Image Transmission over AWGN Channel using LDPC
+
+- **Status**: ✅
+- **Reason**: 비반복 MSNN 신경망 LDPC 디코더 — 이식 가능한 신경망 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10510111
+- **Type**: conference
+- **Published**: 27-29 Marc
+- **Authors**: Harshawardhan Ahire, Sushama Wagh
+- **PDF**: https://ieeexplore.ieee.org/document/10510111
+- **Abstract**: The iterative nature of existing Low-Density Parity-Check (LDPC) decoding algorithms poses a significant obstacle to achieving fast reconstruction of received images with a low error rate. These decoders rely on probabilistic values, which necessitates an iterative approach. In this study, a novel approach to decoding LDPC codes that involves using a multilayer shallow neural network (MSNN) is proposed. By leveraging machine learning algorithms, the MSNN decoder avoids the iterative nature of existing decoders. LDPC construction Mackay Neel (MN) LDPC construction and Quasi Cyclic (QC) has been adopted to transmit the image over Additive White Gaussian Noise (AWGN). The performance of MSNN decoder against existing algorithms such as Bit-Flipping (BF), Belief Propagation (BP), and Sum-Product Algorithm (SPA) has compared. The experiments demonstrate that the MSNN decoder outperforms existing decoders by approximately 102 at 3 dB Signal-to-Noise Ratio (SNR). Evaluated the reconstructed image using Peak Signal-to-Noise Ratio (PSNR) and Entropy for both SPA and MSNN decoders. The results show that the MSNN decoder performs exceptionally well, even under qualitative analysis of the reconstructed image. Overall, the findings suggest that the proposed MSNN decoder offers a promising solution for fast and accurate reconstruction of received images with low error rates.
+
+## Software for Analyzing Cycles in QC LDPC Code Protographs
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 프로토그래프 사이클 분석 SW(계산·메모리 개선) — 코드설계 도구(E)로 이식 가능, 애매하면 in
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10510122
+- **Type**: conference
+- **Published**: 27-29 Marc
+- **Authors**: Aleksei Kharin, Aleksei Ovinnikov, Konstantin Zavertkin +1
+- **PDF**: https://ieeexplore.ieee.org/document/10510122
+- **Abstract**: The paper is devoted to an overview of the designed software that allows you to adjust the presence of cycles with certain parameters in Tanner graphs. The key indicator in the analysis of cycles is the number of unique block checks, the presence of which is determined by the route in the protograph. To verify the correctness of the created modification of the developed specialized software, a set of programs has been prepared that solve the problem of analyzing and classifying the cycles available in the Tanner graph. The method of detecting routes in protographs of quasi-cyclic LDPC codes has also been improved both in terms of computational costs and memory used.
+
+## Small Elementary Trapping Sets Elimination of Girth-8 QC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: girth-8 QC-LDPC의 소형 elementary trapping set 제거 설계 기법 — 코드설계(E) 새 기여, 바이너리
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10510143
+- **Type**: conference
+- **Published**: 27-29 Marc
+- **Authors**: Aleksei Ovinnikov, Aleksei Kharin, Konstantin Zavertkin +2
+- **PDF**: https://ieeexplore.ieee.org/document/10510143
+- **Abstract**: In this letter, we supplement a known technique to design quasi-cyclic low-density parity-check (QC-LDPC) codes with girth 8 and variable node degrees 4. Using the technique of combining cycles of length 4 in the code's Tanner graph small trapping sets are avoided. The simulation results are presented to demonstrate the superiority of the developed codes in comparison with similar codes in the literature by the criterion of minimum length with a slight loss in energy efficiency
+
+## Mixed Integer Linear Programming Method for Energy-Based Model Trapping Sets Enumerating
+
+- **Status**: ✅
+- **Reason**: MILP 기반 LDPC trapping set 열거 기법(고속·완전 탐색) — error floor 분석에 이식 가능한 코드설계 도구(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10510058
+- **Type**: conference
+- **Published**: 27-29 Marc
+- **Authors**: Vasiliy S. Usatyuk, Sergey I. Egorov
+- **PDF**: https://ieeexplore.ieee.org/document/10510058
+- **Abstract**: The paper introduces an efficient method for identifying trapping sets in codes on the graphs, employing a mixed linear programming approach. The method guarantees a comprehensive search, essential for nonlinear channels in communication systems, energy-based models, natural language processing DNN, metric learning and other intricate dynamic systems. An in-depth analysis of symmetry and asymmetry properties of dynamic systems, represented by trapping sets TS(a, 0)-codewords and TS(a, b)-pseudocodewords respectively, offers a thorough understanding of their dynamics. Implemented in Python, the proposed method is publicly available on GitHub and supports both the Community Edition version, with restrictions on the number of conditions, and the Commercial Edition CPLEX. The technique involves solving a mixed integer linear programming problem using a predefined list of variable nodes participating in the shortest (short) cycles with small Extrinsic Message Degree values within the code graph. These cycles, akin to topological invariants, represent multidimensional voids formed by code and pseudo-code words. Consequently, the method can be viewed as an approach for constructing topological complexes and calculating topological invariants. The method was applied to search for trapping sets in LDPC codes, utilizing the mathematical linear programming package IBM CPLEX Optimization Studio version 22.1.0.0 The computations ran on a 16-core AMD Ryzen 3950X processor with 128GB KF3200 DDR4 RAM, utilizing 32 threads. In the Margulis code (2640, 1320), the proposed method identified the trapping set TS(6,6) in just 0.29 seconds. Notably, compared to the Velasquez-Subramani method, the proposed method achieved a speedup of 15082 times. Leveraging its high speed and thorough search capabilities, the method successfully identified trapping sets TS(62,16) and TS(52,14) for the first time in the Margulis code (4896, 2474). Finally, employing the proposed method with CPLEX Community Edition version 22.1.1.0, we discovered trapping sets, specifically $TS(102,2)$ and $TS(108,4)$, within the Mackay LDPC code (408,204). These findings necessitated a brute-force trapping set search, demanding more than 10101operations.
+
+## Iteration-Dependent Scaled Min-Sum Decoding for Low-Complexity Key Reconciliation in CV-QKD
+
+- **Status**: ✅
+- **Reason**: iteration-dependent scaled min-sum 디코딩 제안(저복잡도 LDPC HW) — CV-QKD 응용이나 고전 바이너리 LDPC min-sum 변형으로 이식 가능(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10526566
+- **Type**: conference
+- **Published**: 24-28 Marc
+- **Authors**: Erdem Eray Cil, Laurent Schmalen
+- **PDF**: https://ieeexplore.ieee.org/document/10526566
+- **Abstract**: We introduce an iteration-dependent scaled min-sum decoding for low-rate LDPC codes in CV-QKD, achieving near-sum product algorithm performance with reduced complexity, and facilitating CV-QKD hardware implementation.
+
+## Log-Log Domain Sum-Product Algorithm for Information Reconciliation in Continuous-Variable Quantum Key Distribution
+
+- **Status**: ✅
+- **Reason**: log-log 도메인 SPA로 메시지 비트폭/메모리 축소 + 고정소수점 산술 — 양자 비의존, 바이너리 LDPC 디코더 알고리즘으로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10480187
+- **Type**: conference
+- **Published**: 13-15 Marc
+- **Authors**: Erdem Eray Cil, Laurent Schmalen
+- **PDF**: https://ieeexplore.ieee.org/document/10480187
+- **Abstract**: In this paper, we present a novel log-log domain sum-product algorithm (SPA) for decoding low-density parity-check (LDPC) codes in continuous-variable quantum key distribution (CV-QKD) systems. This algorithm reduces the fractional bit width of decoder messages, leading to a smaller memory footprint and a lower resource consumption in hardware implementation. We also provide practical insights for fixed-point arithmetic and compare our algorithm with the conventional SPA in terms of performance and complexity. Our results show that our algorithm achieves comparable or better decoding accuracy than the conventional SPA while saving at least 25% of the fractional bit width.

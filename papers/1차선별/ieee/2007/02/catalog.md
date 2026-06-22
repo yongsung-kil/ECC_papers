@@ -1,0 +1,134 @@
+# IEEE Xplore — 2007-02 (1차선별 통과)
+
+
+## LDPC Codes Based on Latin Squares: Cycle Structure, Stopping Set, and Trapping Set Analysis
+
+- **Status**: ✅
+- **Reason**: Latin square 기반 LDPC의 cycle/stopping/trapping set 분석으로 사이클·error floor 제거 코드설계(E) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4100904
+- **Type**: journal
+- **Published**: Feb. 2007
+- **Authors**: Stefan Laendner, Olgica Milenkovic
+- **PDF**: https://ieeexplore.ieee.org/document/4100904
+- **Abstract**: It is well known that certain combinatorial structures in the Tanner graph of a low-density parity-check (LDPC) code exhibit a strong influence on its performance under iterative decoding. These structures include cycles, stopping/trapping sets, and parameters such as the diameter of the code. In general, it is very hard to find a complete characterization of such configurations in an arbitrary code, and even harder to understand the intricate relationships that exist between these entities. It is, therefore, of interest to identify a simple setting in which all the described combinatorial structures can be enumerated and studied within a joint framework. One such setting is developed in this paper, for the purpose of analyzing the distribution of short cycles and the structure of stopping and trapping sets in Tanner graphs of LDPC codes based on idempotent and symmetric Latin squares. The parity-check matrices of LDPC codes based on Latin squares have a special form that allows for connecting combinatorial parameters of the codes with the number of certain subrectangles in the Latin squares. Subrectangles of interest can be easily identified, and in certain instances, completely enumerated. This study can be extended in several different directions, one of which is concerned with modifying the code design process in order to eliminate or reduce the number of configurations bearing a negative influence on the performance of the code. Another application of the results includes determining to which extent a configuration governs the behavior of the bit-error rate curve in the waterfall and error-floor regions
+
+## Evaluation of Low-Density Parity-Check Codes on Perpendicular Magnetic Recording Model
+
+- **Status**: ✅
+- **Reason**: 구조화 LDPC 코드를 FPGA로 인코더/디코더 구현, SOVA+LDPC를 BER 10^-12까지 평가 - 이식 가능 HW(D)/스토리지 ECC(B)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4069025
+- **Type**: journal
+- **Published**: Feb. 2007
+- **Authors**: Xinde Hu, B. V. K Vijaya Kumar
+- **PDF**: https://ieeexplore.ieee.org/document/4069025
+- **Abstract**: Low-density parity-check (LDPC) codes have shown superior error-correcting performance in a variety of data storage system studies, including traditional longitudinal magnetic recording systems. However, perpendicular magnetic recording systems (of increasing interest) exhibit impairments different from longitudinal magnetic recording systems, and thus present new challenges for error-correcting codes. In this effort, we evaluate a structured LDPC code using a perpendicular magnetic recording channel model that includes impairments such as transition noise, nonlinear transition shift, transition percolation, and baseline wander (BLW). The channel model, as well as the LDPC encoder and the decoder are implemented in field-programmable gate array (FPGA) hardware. The LDPC coded system is evaluated down to bit error rate (BER) of 10 $^{-12}$ and frame error rate (FER) of 10 $^{-8}$. The impact of individual impairments on coding performance is studied separately. The soft output Viterbi algorithm (SOVA) $+$ LDPC system maintains its superior error-correcting performance under the perpendicular recording channel.
+
+## Results on Punctured Low-Density Parity-Check Codes and Improved Iterative Decoding Techniques
+
+- **Status**: ✅
+- **Reason**: 천공(punctured) LDPC용 개선 반복 디코딩 알고리즘과 광범위 부호율 설계법 제시 - 이식 가능 디코더(C)/코드설계(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4069155
+- **Type**: journal
+- **Published**: Feb. 2007
+- **Authors**: Hossein Pishro-Nik, Faramarz Fekri
+- **PDF**: https://ieeexplore.ieee.org/document/4069155
+- **Abstract**: This paper first introduces an improved decoding algorithm for low-density parity-check (LDPC) codes over binary-input-output-symmetric memoryless channels. Then some fundamental properties of punctured LDPC codes are presented. It is proved that for any ensemble of LDPC codes, there exists a puncturing threshold. It is then proved that for any rates R1 and R2 satisfying 0<R1<R 2<1, there exists an ensemble of LDPC codes with the following property. The ensemble can be punctured from rate R1 to R2 resulting in asymptotically good codes for all rates R1lesRlesR2. Specifically, this implies that rates arbitrarily close to one are achievable via puncturing. Bounds on the performance of punctured LDPC codes are also presented. It is also shown that punctured LDPC codes are as good as ordinary LDPC codes. For BEC and arbitrary positive numbers R1<R2<1, the existence of the sequences of punctured LDPC codes that are capacity-achieving for all rates R1 lesRlesR2 is shown. Based on the above observations, a method is proposed to design good punctured LDPC codes over a broad range of rates. Finally, it is shown that the results of this paper may be used for the proof of the existence of the capacity-achieving LDPC codes over binary-input-output-symmetric memoryless channels
+
+## Hybrid Hard-Decision Iterative Decoding of Irregular Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: 불규칙 LDPC용 하이브리드 하드디시전 메시지패싱 디코더 신규 알고리즘으로 디코더(C) 이식 가능, 바이너리
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4100917
+- **Type**: journal
+- **Published**: Feb. 2007
+- **Authors**: Pirouz Zarrinkhat, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/4100917
+- **Abstract**: Time-invariant hybrid (HscrTI) decoding of irregular low-density parity-check (LDPC) codes is studied. Focusing on HscrTI algorithms with majority-based (MB) binary message-passing constituents, we use density evolution (DE) and finite-length simulation to analyze the performance and the convergence properties of these algorithms over (memoryless) binary symmetric channels. To apply DE, we generalize degree distributions to have the irregularity of both the code and the decoding algorithm embedded in them. A tight upper bound on the threshold of MB HscrTI algorithms is derived, and it is proven that the asymptotic error probability for these algorithms tends to zero, at least exponentially, with the number of iterations. We devise optimal MB HscrTI algorithms for irregular LDPC codes, and show that these algorithms outperform Gallager's algorithm A applied to optimized irregular LDPC codes. We also show that compared to switch-type algorithms, such as Gallager's algorithm B, where a comparable improvement is obtained by switching between different MB algorithms, MB HscrTI algorithms are more robust and can better cope with unknown channel conditions, and thus can be practically more attractive.
+
+## VLSI Architectures for Turbo Decoding Message Passing Using Min-Sum for Rate-Compatible Array LDPC Codes
+
+- **Status**: ✅
+- **Reason**: C/D - offset min-sum TDMP layered 디코더 VLSI/FPGA/ASIC, value-reuse·메모리 절감 기법 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4147126
+- **Type**: conference
+- **Published**: 5-7 Feb. 2
+- **Authors**: Kiran Gunnam, Weihuang Wang, Gwan Choi +1
+- **PDF**: https://ieeexplore.ieee.org/document/4147126
+- **Abstract**: In the recent literature, turbo decoding message passing (TDMP) or layered decoding has been proposed for the decoding of low-density parity-check (LDPC) codes using a trellis-based BCJR algorithm in check node units (CNU). We present a new architecture for supporting rate compatible array LDPC codes that uses an offset-based min-sum decoding algorithm instead of the BCJR. The proposed architecture utilizes the value-reuse properties of min-sum and block-serial scheduling of computations, along with TDMP. This novel architecture has the following features: removal of memory needed to store the sum of the variable node messages and the channel values, removal of memory needed to store the variable node messages, 40%-72% savings in storage of extrinsic messages depending on rate of the codes, reduction of routers by 50%, and increase of throughput up to 2times. Implementations on our test-bed FPGA achieve decoded throughputs up to 1.36 Gbps and 2.27 Gbps for each iteration for (5,k) and (3,k) array LDPC codes, respectively. ASIC implementation achieve decoded throughputs up to 5.9 Gbps for each iteration for (5,k) array LDPC codes.
+
+## Design and Analysis of Low-Density Parity-Check Codes for Block-Fading Channels
+
+- **Status**: ✅
+- **Reason**: block-fading용 full-diversity LDPC 신규 코드 패밀리 설계(E), 바이너리 LDPC 구성 기법 이식 가능성 있어 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4357562
+- **Type**: conference
+- **Published**: 29 Jan.-2 
+- **Authors**: Joseph J. Boutros, Albert Guillen i Fabregas, Ezio Biglieri +1
+- **PDF**: https://ieeexplore.ieee.org/document/4357562
+- **Abstract**: We solve the problem of designing powerful low-density parity-check (LDPC) codes with iterative decoding for the block-fading channel. We present a new family of full-diversity LDPC codes that exhibit near outage limit performance. This family competes with multiplexed parallel turbo codes suitable for non-ergodic channels and recently reported in the literature.
+
+## A Comparison of ARA- and Protograph-Based LDPC Block and Convolutional Codes
+
+- **Status**: ✅
+- **Reason**: ARA/protograph LDPC block·convolutional 코드 구성과 파이프라인 디코더 구현(처리기/메모리/지연) 비교, 코드설계+HW 기법 이식 가능(D/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4357569
+- **Type**: conference
+- **Published**: 29 Jan.-2 
+- **Authors**: Daniel J. Costello, Ali Emre Pusane, Christopher R. Jones +1
+- **PDF**: https://ieeexplore.ieee.org/document/4357569
+- **Abstract**: ARA- and protograph-based LDPC codes are capable of achieving error performance similar to randomly constructed codes while enjoying several implementation advantages as a result of their structure. LDPC convolutional codes can be derived from these codes through an unwrapping process. In this paper, we review the unwrapping process as well as the pipeline decoder that allows continuous decoding of LDPC convolutional codes. Computer simulations are then used to demonstrate that the unwrapped convolutional codes achieve a "convolutional gain" in error performance. We conjecture that this is due to the concatenation of many constraint lengths worth of received symbols in the pipeline decoding process. The consequences of this improved performance are examined in terms of factors related to decoder implementation: processor size, memory requirements, and decoding delay (latency). Finally, given identical protograph kernels, we compare derived block and convolutional codes based on the above measures.
+
+## Flexible hardware encoding schemes for extended quasi-cyclic low-density parity-check codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 확장기법으로 고율 모부호에서 저율 코드 생성+유연 HW 인코딩(D/E), 바이너리 QC-LDPC HW에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4555571
+- **Type**: conference
+- **Published**: 12-15 Feb.
+- **Authors**: Liang Chen, Shijun Yan, Xiumin Shi +4
+- **PDF**: https://ieeexplore.ieee.org/document/4555571
+- **Abstract**: In this paper, extending technique is employed to quasi-cyclic low-density parity-check (QC-LDPC) codes to construct lower-rate codes from a higher-rate mother code since quasi-cyclic codes can be encoded with simple shift registers, with linear complexity based on their generators. We also present the fitting flexible hardware encoding schemes designed for extended QC-LDPC codes. In the serial-input case and parallel-input parallel-output case, the required maximum encoding circuits which are demanded at the lowest rate are adopted as practical encoder implementation for all of the extended QC-LDPC codes in a sequence and part of hardware units is disabled during higher-rate encoding to reduce power consumption, whereas the hardware circuits are the simplest and totally invariable for a sequence of extended QC-LDPC codes in the parallel-input serial-output case.
+
+## A high-performance architecture for irregular LDPC decoding algorithm using input-multiplexing method
+
+- **Status**: ✅
+- **Reason**: 비정칙 LDPC 메시지패싱 디코더의 bit/check 노드 조합지연 감소 HW 아키텍처(D), NAND 디코더 HW에 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:4555291
+- **Type**: conference
+- **Published**: 12-15 Feb.
+- **Authors**: O. Sarbishei, V. Mohtashami
+- **PDF**: https://ieeexplore.ieee.org/document/4555291
+- **Abstract**: A new high-performance architecture for decoding the irregular Low-Density Parity-Check (LDPC) codes with respect to the iterative message-passing decoding algorithm is explored. The proposed method is based on reducing the logic delays in the iterative processing of the bit nodes and check nodes leading to the increment of maximum possible frequency. The simulations show the efficiency of the proposed method in low/high-complexity graph matrices, though it is more effective in high-complexity ones. About 28% reduction of the combinational delay in the bit/check processors is explored without much impacting the area consumption.
+
+## Implementation of Multi-Rate Quasi-Cyclic Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: 멀티레이트 QC-LDPC 구성+단일 디코더/인코더 공유 HW 설계(D/E), 바이너리 QC-LDPC NAND 컨트롤러에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4195343
+- **Type**: conference
+- **Published**: 12-14 Feb.
+- **Authors**: Liang Chen, Shijun Yan, Ziyu Wu +4
+- **PDF**: https://ieeexplore.ieee.org/document/4195343
+- **Abstract**: This paper investigates the implementation of multi-rate low-density parity-check (QC-LDPC) codes. We propose a novel scheme to construct multi-rate QC-LDPC codes from the regular mother codes. These QC-LDPC codes can share a single particular decoder which is designed for the regular QC-LDPC code previously in spite of either irregularity or regularity. Based on this construction, encoding of the multi-rate QC-LDPC codes also can be implemented by a single particular encoder with simple shift registers at encoding speeds linearly proportional to the number of parity-check bits of a code for parallel encoding and to the length of information sequence of a code for serial encoding. The QC-LDPC codes at various rates possess different encoding speeds in a given hardware complexity which is determined by the mother code for parallel encoding and by the lowest-rate code for serial encoding.
+
+## LDPC Code Aided Phase Ambiguity Resolution
+
+- **Status**: ✅
+- **Reason**: 패리티검사 행렬을 수정해 local check node를 만드는 LDPC 부호 구조 변형 기법 - 코드설계(E)로 이식 가능성 있어 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:4252502
+- **Type**: conference
+- **Published**: 12-14 Feb.
+- **Authors**: Sridhar Karuppasami, William G. Cowley
+- **PDF**: https://ieeexplore.ieee.org/document/4252502
+- **Abstract**: Low-density parity-check codes (LDPC) are known to perform close to the Shannon limit as the block length increases. Residual frequency offsets make iterative decoding difficult for longer block lengths. Sub-block decoding techniques provide a practical, low-complexity approach to deal with residual frequency offsets. However they require phase ambiguity resolution (PAR) in every sub-block. This paper presents a new approach called 'localized decoding' to resolve the phase ambiguity over sub-blocks. The algorithm involves modifying the parity-check matrix of the existing LDPC code to create 'local check nodes' and operating on them to resolve phase ambiguity. Simulation results of this approach show a negligible loss for small residual frequency offsets.

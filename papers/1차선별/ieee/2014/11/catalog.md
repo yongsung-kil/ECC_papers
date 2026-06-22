@@ -1,0 +1,242 @@
+# IEEE Xplore — 2014-11 (1차선별 통과)
+
+
+## Overclocking NAND Flash Memory I/O Link in LDPC-Based SSDs
+
+- **Status**: ✅
+- **Reason**: Overclocking NAND Flash I/O in LDPC-based SSDs — direct NAND/SSD + LDPC decoding improvement (A).
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6882148
+- **Type**: journal
+- **Published**: Nov. 2014
+- **Authors**: Kai Zhao, Jiangpeng Li, Jun Ma +2
+- **PDF**: https://ieeexplore.ieee.org/document/6882148
+- **Abstract**: Due to the increasingly significant process variation and gradual Flash memory cell wear-out, the worst-case-oriented error correction code (ECC) in solid-state drives (SSDs) is mostly underutilized throughout the entire lifetime. Error-prone overclocking of Flash memory chip I/O links can trade such ECC underutilization for opportunistically improving SSD speed performance, and its effectiveness strongly depends on how well the ECC decoding can handle the overclocking-induced I/O link errors. As SSDs are quickly adopting low-density parity-check (LDPC) code, this brief concerns LPDC-based overclocked SSDs. Experiments with 20-nm NAND Flash memory chips reveal unique bit error characteristics of the overclocked I/O link, based upon which this brief develops solutions that can leverage the error characteristics to improve LDPC decoding performance. Results show that the developed techniques can reduce LDPC code decoding power consumption by 60% and reduce the decoding failure rate by over two orders of magnitude.
+
+## Improved Min-Sum Decoding for 2-D Intersymbol Interference Channels
+
+- **Status**: ✅
+- **Reason**: 2D ISI 채널용 2D NMS/OMS min-sum 변형 + density evolution 기반 계수 최적화, error floor 개선 — 이식 가능 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6971800
+- **Type**: journal
+- **Published**: Nov. 2014
+- **Authors**: Lingjun Kong, Yunxiang Jiang, Guojun Han +2
+- **PDF**: https://ieeexplore.ieee.org/document/6971800
+- **Abstract**: In this paper, 2-D normalized min-sum (NMS) algorithm and offset min-sum (OMS) algorithm are proposed for efficient decoding of low-density parity-check (LDPC) codes in 2-D intersymbol interference (ISI) ultra-high density magnetic recording channels, such as bit-patterned magnetic recording and 2-D magnetic recording, where a reduced-complexity 2-D detector based on the iterative row-column soft detection feedback with Gaussian approximation detector is employed instead of the full 2-D Bahl–Cocke–Jelinek–Raviv (BCJR) detector. The normalization and offset factors of the 2-D NMS and 2-D-OMS, are optimized based on the extended density evolution for LDPC coded 2-D ISI channel, respectively. Simulation results show the performance loss caused by the reduced-complexity LDPC decoder can be almost fully recovered by the proposed approaches, while retaining the benefit of low complexity in decoder compared with the belief propagation (BP) decoding. Furthermore, both the NMS and OMS exhibit a lower error floor than that of BP decoding in high signal-to-noise ratio region.
+
+## A Simple Proof of Maxwell Saturation for Coupled Scalar Recursions
+
+- **Status**: ✅
+- **Reason**: Threshold saturation proof for coupled scalar recursions incl. binary irregular/SC-LDPC density evolution; potential-function tool relevant to SC-LDPC code design analysis (E), keep for Phase 3.
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6887298
+- **Type**: journal
+- **Published**: Nov. 2014
+- **Authors**: Arvind Yedla, Yung-Yih Jian, Phong S. Nguyen +1
+- **PDF**: https://ieeexplore.ieee.org/document/6887298
+- **Abstract**: Low-density parity-check (LDPC) convolutional codes (or spatially coupled codes) were recently shown to approach capacity on the binary erasure channel (BEC) and binary-input memoryless symmetric channels. The mechanism behind this spectacular performance is now called threshold saturation via spatial coupling. This new phenomenon is characterized by the belief-propagation threshold of the spatially coupled ensemble increasing to an intrinsic noise threshold defined by the uncoupled system. In this paper, we present a simple proof of threshold saturation that applies to a wide class of coupled scalar recursions. Our approach is based on constructing potential functions for both the coupled and uncoupled recursions. Our results actually show that the fixed point of the coupled recursion is essentially determined by the minimum of the uncoupled potential function and we refer to this phenomenon as Maxwell saturation. A variety of examples are considered including the density-evolution equations for: irregular LDPC codes on the BEC, irregular low-density generator-matrix codes on the BEC, a class of generalized LDPC codes with BCH component codes, the joint iterative decoding of LDPC codes on intersymbol-interference channels with erasure noise, and the compressed sensing of random vectors with independent identically distributed components.
+
+## A Parallel Radix-Sort-Based VLSI Architecture for Finding the First  $W$ Maximum/Minimum Values
+
+- **Status**: ✅
+- **Reason**: Parallel radix-sort VLSI for first-W min/max — transferable HW min-finder/sorter component usable in min-sum LDPC decoder HW (D).
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:6881635
+- **Type**: journal
+- **Published**: Nov. 2014
+- **Authors**: Guoping Xiao, Maurizio Martina, Guido Masera +1
+- **PDF**: https://ieeexplore.ieee.org/document/6881635
+- **Abstract**: Very-large-scale integration (VLSI) architectures for finding the first  $W$   $(W>2)$ maximum (or minimum) values are required in the implementation of several applications such as nonbinary low-density-parity-check decoders, K-best multiple-input–multiple-output (MIMO) detectors, and turbo product codes. In this brief, a parallel radix-sort-based VLSI architecture for finding the first  $W$ maximum (or minimum) values is proposed. The described architecture, called Bit-Wise-And (BWA) architecture, relies on analyzing input data from the most significant bit to the least significant one, with very simple logic circuits. One key feature in the BWA architecture is its high level of scalability, which enables the adoption of this solution in a large spectrum of applications, corresponding to large ranges for both  $W$ and the size of the input data set. Experimental results, achieved by implementing the proposed architecture on a high-speed 90-nm CMOS standard-cell technology, show that BWA architecture requires significantly less area than other solutions available in the literature, i.e., less than or about 50% in all the considered cases and about 50% in the worst case. Moreover, the BWA architecture exhibits the lowest area–delay product among almost all considered cases.
+
+## A high throughput configurable partially-parallel decoder architecture for Quasi-Cyclic Low-Density Parity-Check Codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC partially-parallel FPGA 디코더 아키텍처 — 모듈러 고병렬 구조로 이식 가능 HW(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7035602
+- **Type**: conference
+- **Published**: 26-28 Nov.
+- **Authors**: Alaa Aldin Al Hariri, Fabrice Monteiro, Loïc Siéler +1
+- **PDF**: https://ieeexplore.ieee.org/document/7035602
+- **Abstract**: In this paper, we are proposing a new architecture for the fast decoding of Quasi-Cyclic Low-Density Parity Codes (QC-LDPC). QC-LDPC codes are becoming more and more popular in a wide range of applications, including data transmission (WiMAX, DVB-S2) in telecommunication systems, increasing the need for effective decoder architectures. In the present approach, support for a large subset of QC-LDPC codes is provided thanks to the configurability of the architecture at the synthesis level. High levels of parallelism can be reached and hence high throughput achieved, thanks to the modular decoder architecture that takes advantage of the highly regular structure of QC-LDPC parity check matrices. The architectural design has been validated through the implementation of different decoders related to DVB-T2 and DVB-S2 on FPGAs of the Altera Stratix II family. Very high data rates (up to 28.9 GB/s) have been achieved with still acceptable hardware consumption (about 32k logic elements) proving the effectiveness of the approach.
+
+## Asynchronous design for precision-scaleable energy-efficient LDPC decoder
+
+- **Status**: ✅
+- **Reason**: 정밀도 스케일러블·비동기 저전력 LDPC 디코더 HW(D) — NAND 디코더 전력 최적화 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7094413
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Jingwei Xu, Tiben Che, Ehsan Rohani +1
+- **PDF**: https://ieeexplore.ieee.org/document/7094413
+- **Abstract**: This paper presents a low-density parity-check (LDPC) decoder design that uses scalable-precision calculation (SPC) and asynchronous circuit techniques to reduce power consumption. The decoder configures the computation precision to minimize circuit-level switching necessary for given target biterror rate (FER). The asynchronous circuit approach guarantees the completion of each compute-and-forward phase at necessary voltage levels. The voltage level is scheduled to ensure completion of minimum necessary decoding iterations. The proposed scheme is studied for the specific application of IEEE 802.16e to reduce the power consumption at a given target FER. The proposed design is evaluated on Nangate 45nm library. The results show that the proposed asynchronous design results in 51% reduction in terms of power consumption compared with full-precision decoding mode.
+
+## Explicit constructions for type-1 QC-LDPC codes with girth at least ten
+
+- **Status**: ✅
+- **Reason**: Sidon 수열 기반 type-1 QC-LDPC girth≥10 명시적 구성 — 바이너리 QC-LDPC 코드설계 신규 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6970869
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Juhua Wang, Guohua Zhang, Quan Zhou +2
+- **PDF**: https://ieeexplore.ieee.org/document/6970869
+- **Abstract**: From Sidon sequence over ZP, two classes of type-1 (J = 3;L) QC-LDPC codes are explicitly proposed with block length L2P and with girth at least ten. For the first method, any Sidon sequence over ZP (P odd) with cardinality no smaller than L (L odd) corresponds to a class of type-1 (3, L) QC-LDPC codes with girth at least ten. For the second one, any Sidon sequence over ZP (P prime) with cardinality no smaller than L (L arbitrary) corresponds to a class of type-1 (3, L) QC-LDPC codes with girth at least ten. Compared with the method from 3-D lattices, which can also generate type-1 QC-LDPC codes with girth at least ten, the main advantage of the new methods is that the construction process is much simpler, and L is not necessarily a prime integer. Simulation results show that the new type-1 QC-LDPC codes outperform the girth-8 QC-LDPC codes constructed by Sidon sequence or the earliest sequence, and perform almost as well as Bocharova's shortest girth-12 QC-LDPC codes.
+
+## A reduced-complexity iterative scheme for decoding quasi-cyclic low-density parity-check codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 저복잡도 반복 디코딩 + HW 구조(섹션 순환구조 활용, 모자/펑처링)(C/D) — NAND 디코더 HW 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7094410
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Shu Lin, Keke Liu, Juane Li +1
+- **PDF**: https://ieeexplore.ieee.org/document/7094410
+- **Abstract**: This paper presents a reduced-complexity iterative decoding scheme for quasi-cyclic (QC) low-density parity-check (LDPC) codes which is devised based on the section-wise cyclic structure of their parity-check matrices. The decoding scheme significantly reduces the hardware implementation complexity of a QC-LDPC code decoder in terms of the number of message processing units and the number of wires required to connect the message processing units. A long high-rate high-performance QC-LDPC code is used to demonstrate the effectiveness of the proposed decoding scheme. Using this long code as the mother code, descendant QC-LDPC codes of various lengths and rates can be constructed by puncturing and masking the columns and rows of the parity-check matrix of the mother code. These descendant codes can be decoded by deactivating specific sets of message processing units of the mother decoder.
+
+## Optimization of graph based codes for belief propagation decoding
+
+- **Status**: ✅
+- **Reason**: 신규 Tanner 그래프 최적화로 BP 디코딩 임계 개선(E) — 이진 불규칙/multi-edge LDPC 설계 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6970873
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Sachini Jayasooriya, Sarah J. Johnson, Lawrence Ong +1
+- **PDF**: https://ieeexplore.ieee.org/document/6970873
+- **Abstract**: A low-density parity-check (LDPC) code is a linear block code described by a sparse parity-check matrix, which can be efficiently represented by a bipartite Tanner graph. The standard iterative decoding algorithm, known as belief propagation, passes messages along the edges of this Tanner graph. Density evolution is an efficient method to analyze the performance of the belief propagation decoding algorithm for a particular LDPC code ensemble, enabling the determination of a decoding threshold. The basic problem addressed in this work is how to optimize the Tanner graph so that the decoding threshold is as large as possible. We introduce a new code optimization technique which involves the search space range which can be thought of as minimizing randomness in differential evolution or limiting the search range in exhaustive search. This technique is applied to the design of good irregular LDPC codes and multi-edge type LDPC codes.
+
+## High-throughput DOCSIS upstream QC-LDPC decoder
+
+- **Status**: ✅
+- **Reason**: 고처리율 QC-LDPC FPGA 디코더 구현(D) — DOCSIS 응용이나 HW 아키텍처 NAND 이식 가능
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7094503
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Michael Wu, Bei Yin, Eric Miller +2
+- **PDF**: https://ieeexplore.ieee.org/document/7094503
+- **Abstract**: The newly released Data Over Cable Service Interface Specification (DOCSIS) 3.1 standard enables gigabit-speed broadband connection over cable television network. The main challenge at the upstream receiver is a computationally intensive LDPC decoder which need to achieve the 1Gbps throughput with low block error rates. In this paper, we present an implementation of the upstream LDPC decoder on Xilinx FPGA using the VIVADO high level synthesis tool. We show that the resulting design can achieve 1.43 Gbps throughput on a Xilinx Kintex7 XC7K480T FPGA at 204.8 MHz clock frequency with 24% device usage. To our knowledge, this paper presents the first hardware implementation of DOCSIS 3.1 upstream LDPC decoder on FPGA.
+
+## Decoder diversity architectures for finite alphabet iterative decoders
+
+- **Status**: ✅
+- **Reason**: FAID 다양성 디코더 — error floor 개선 신규 디코더+저복잡도 아키텍처(C/D), 이진 LDPC 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7094412
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Bane Vasic, David Declercq, Shiva Kumar Planjery
+- **PDF**: https://ieeexplore.ieee.org/document/7094412
+- **Abstract**: We present a finite alphabet iterative decoders (FAIDs), a new type of decoders for low-density parity check (LDPC) codes, which outperform much more complex belief-propagation-based counterparts in the error floor region. The FAID variable node update is a simple Boolean map, and we show that by varying this map one can achieve a class of decoders capable of correcting wide range of distinct error patterns uncorrectable by a single FAID. We call this concept decoding diversity, and present a low-complexity architecture and error performance analysis of the FAID diversity decoder for column-weight three LDPC codes on the binary symmetric channel.
+
+## On the performance of LDPC and turbo decoder architectures with unreliable memories
+
+- **Status**: ✅
+- **Reason**: 불신뢰 메모리 하 LDPC 디코더 내결함 완화 기법(C/D) — NAND 컨트롤러 메모리 결함 대응에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7094504
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Joao Andrade, Aida Vosoughi, Guohui Wang +5
+- **PDF**: https://ieeexplore.ieee.org/document/7094504
+- **Abstract**: In this paper, we investigate the impact of faulty memory bit-cells on the performance of LDPC and Turbo channel decoders based on realistic memory failure models. Our study investigates the inherent error resilience of such codes to potential memory faults affecting the decoding process. We develop two mitigation mechanisms that reduce the impact of memory faults rather than correcting every single error. We show how protection of only few bit-cells is sufficient to deal with high defect rates. In addition, we show how the use of repair-iterations specifically helps mitigating the impact of faults that occur inside the decoder itself.
+
+## Non-uniform spatial coupling
+
+- **Status**: ✅
+- **Reason**: 신규 비균일 SC-LDPC 구성 기법(E) — 이진 LDPC 앙상블 spatial coupling, NAND 코드설계 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6970871
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Fanny Jardel, Joseph J. Boutros
+- **PDF**: https://ieeexplore.ieee.org/document/6970871
+- **Abstract**: A new method for spatial coupling of low-density parity-check ensembles is proposed. The method is inspired from overlapped layered coding. Edges of local ensembles and those defining the spatial coupling are separately built. The new method allows the construction of non-uniform coupling chains with near-Shannon spatially-varying thresholds under iterative decoding. A direct application of non-uniform spatial coupling is unequal error protection of information.
+
+## Spatially-coupled counter braids
+
+- **Status**: ✅
+- **Reason**: spatial coupling을 counter braid에 적용해 iterative decoding threshold 개선 — SC 구성/임계 분석 기법이 SC-LDPC 설계에 이식 가능성 있어 애매하므로 살림(Phase3 재검토)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:6970818
+- **Type**: conference
+- **Published**: 2-5 Nov. 2
+- **Authors**: Eirik Rosnes
+- **PDF**: https://ieeexplore.ieee.org/document/6970818
+- **Abstract**: A counter braid (CB) is a novel counter architecture for per-flow measurements on high-speed links. CBs were introduced by Lu et al. in 2007 and they have an asymptotic compression rate (under optimal decoding) matching the entropy lower bound of the flow size distribution. A CB has a layered structure and compresses the flow sizes “on-the-fly” as new packets arrive. In this work, we apply spatial coupling to CBs and show numerically that spatially-coupled CBs (SC-CBs) exhibit improved iterative decoding thresholds. Furthermore, we show that single-layer SC-CBs, which are in fact compressed sensing schemes for nonnegative signals, have a superior undersampling-sparsity phase transition trajectory (under iterative decoding) in the sparse region compared to random Gaussian measurement matrices with ℓ1-norm minimization reconstruction.
+
+## Area-efficient check node unit architecture for single block-row quasi-cyclic LDPC codes
+
+- **Status**: ✅
+- **Reason**: QC-LDPC 체크노드유닛(CNU) 면적효율 아키텍처(2nd-min 탐색 개선)는 바이너리 LDPC 디코더 HW로 이식 가능(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7032811
+- **Type**: conference
+- **Published**: 17-20 Nov.
+- **Authors**: Chuan Zhang, Shenghui Weng, Xiaohu You +1
+- **PDF**: https://ieeexplore.ieee.org/document/7032811
+- **Abstract**: Single block-row quasi-cyclic low-density parity-check (QC-LDPC) codes are recently proposed. This kind of codes are favorable in applications because of their construction flexibility and good performance compared to PEG codes and array codes. However, the corresponding high row weight will increase the hardware complexity of the check node unit (CNU). In this paper, an area-efficient CNU architecture for single block-row QC-LDPC codes is proposed by refining the searching method for the 2nd minimum. Implementation results of the rate-0.9333 (2115, 1974) code have shown that compared with existing design approaches, the proposed method can achieve at least 15.2% hardware reduction while keeps the latency as the same.
+
+## Simplified forced convergence decoding algorithm for low power LDPC decoders
+
+- **Status**: ✅
+- **Reason**: forced-convergence 변형 SFC로 체크노드 연산 복잡도 감소, min-sum 기반 디코더 알고리즘 개선으로 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7032868
+- **Type**: conference
+- **Published**: 17-20 Nov.
+- **Authors**: Byung Jun Choi, Myung Hoon Sunwoo
+- **PDF**: https://ieeexplore.ieee.org/document/7032868
+- **Abstract**: This paper proposes a simplified forced-convergence (SFC) algorithm to reduce the computational complexity for low-density parity-check (LDPC) decoding. To reduce the computational complexity, the proposed algorithm uses the modified check node (CN) operation that does not use a condition for deactivating CNs. Therefore, the proposed SFC algorithm uses only one threshold value while the existing forced-convergence (FC) algorithm uses two threshold values. The simulation results show that SFC achieves a bit error rate (BER) performance close to min-sum (MS) algorithm. SFC can reduce the computational complexity of check node by approximately 22.21% compared to FC.
+
+## Multi-Gb/s multi-mode LDPC decoder architecture for IEEE 802.11ad standard
+
+- **Status**: ✅
+- **Reason**: 멀티모드 LDPC 디코더 VLSI 아키텍처(로컬 스위치, 1's-complement, 양자화 기법)는 NAND LDPC HW에 이식 가능(D)
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7032742
+- **Type**: conference
+- **Published**: 17-20 Nov.
+- **Authors**: Sabooh Ajaz, Hanho Lee
+- **PDF**: https://ieeexplore.ieee.org/document/7032742
+- **Abstract**: This paper presents an area-efficient multi-Gbps multi-mode LDPC decoder architecture for 60GHz wireless gigabit communications. A novel, low-complexity local switch is proposed to implement the multi-mode dynamic column-shifting scheme. Furthermore, the usage of a one's-complement instead of a two's-complement number system is explored. Moreover, an efficient quantization method is also presented to reduce the memory and area requirement of the decoder. The synthesis and layout is performed using TSMC 65-nm CMOS technology. Post layout results show that the proposed decoder requires only 0.575 mm2 of area to achieve a throughput of 9.25 Gb/s for all code rates defined under IEEE 802.11ad. The proposed architecture shows much better throughput, as well as better area- and energy-efficiency, compared to other multi-mode LDPC architectures.
+
+## Design and implementation of LDPC(Low Density Parity Check) coding technique on FPGA (Field Programmable Gate Array) for DVB-S2 (Digital Video Broadcasting-Satellite)
+
+- **Status**: ✅
+- **Reason**: DVB-S2용 LDPC FPGA 구현. HW 아키텍처(D)로 이식 여지 있어 살림. 표준 코드 단순 구현이면 Phase 3 제외 검토
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7024407
+- **Type**: conference
+- **Published**: 13-14 Nov.
+- **Authors**: Rita Purnamasari, Heroe Wijanto, Iswahyudi Hidayat
+- **PDF**: https://ieeexplore.ieee.org/document/7024407
+- **Abstract**: LDPC (Low Density Parity Check) is a channel coding technique is used to correct errors so that the validity of a data transmission on the noise transmission channel guaranteed for accuracy. LDPC is suitable for applications that require a large bandwidth, high reliability, and high noise channel like DVB-S2 (Digital Video Broadcast-Satellite) application. Despite the high level of complexity, LDPC coding technique is very possible to be implemented in line with the growing hardware capabilities. The purpose of this research later is to make DVB-S2 chips that can transmit digital video via satellite.
+
+## A 1–100Mb/s 0.5–9.9mW LDPC convolutional code decoder for body area network
+
+- **Status**: ✅
+- **Reason**: LDPC convolutional(SC-LDPC) 디코더의 shift/shared memory 저전력 HW 아키텍처 — 이식 가능 HW(D), 바이너리
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:7008902
+- **Type**: conference
+- **Published**: 10-12 Nov.
+- **Authors**: Chih-Lung Chen, Sheng-Jhan Wu, Hsie-Chia Chang +1
+- **PDF**: https://ieeexplore.ieee.org/document/7008902
+- **Abstract**: A low power LDPC convolutional code decoder is implemented in 90nm CMOS technology. The proposal demonstrates a novel FEC candidate based on shift/shared memory architecture for the IEEE 802.15.4g and 802.15.6 body area network applications. Measurement shows the decoder achieves (1) 1~100Mb/s with power consumption of 0.5~9.9mW under 0.6V supply voltage (2) better error correcting performance compared with Viterbi decoder under same silicon area.
+
+## Dynamic decoding algorithms of LDPC codes based on simulated annealing
+
+- **Status**: ✅
+- **Reason**: LDPC 동적 스케줄링 디코딩에 simulated annealing 도입한 신규 BP 스케줄링 알고리즘 — 디코더(C) 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:7000229
+- **Type**: conference
+- **Published**: 1-3 Nov. 2
+- **Authors**: Ru Cui, Xingcheng Liu
+- **PDF**: https://ieeexplore.ieee.org/document/7000229
+- **Abstract**: The dynamic scheduling (DS) strategy based decoding algorithm for low-density parity-check (LDPC) codes is explored from a novel point of view. In the view of dynamic selection strategies, intelligent search algorithms are taken into consideration. As is known, the dynamic decoding algorithm is a greedy one, where the message with the maximal-residual is always propagated, which causes unfairness in decoding scheduling when updating messages. To cope with the problem, the simulated annealing (SA) method is first introduced to provide assistance in dynamic scheduling-based decoding. Then, a more accurate dynamic selection strategy is presented based on the SA-assisted dynamic scheduling strategy, SA-DS. When the Metroplis acceptance criterion is satisfied, the SA-DS algorithm can select the most unreliable node accurately and give a priority to update it. Simulation results demonstrate that the proposed algorithm behaves better than any other algorithm of interests.

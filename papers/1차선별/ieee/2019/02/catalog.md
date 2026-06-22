@@ -1,0 +1,98 @@
+# IEEE Xplore — 2019-02 (1차선별 통과)
+
+
+## More Accurate Analysis of Sum-Product Decoding of LDPC Codes Using a Gaussian Approximation
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC sum-product 디코딩의 가우시안 근사 밀도진화 분석 개선(φ 함수 tighter bound)으로 코드설계 분석에 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8572793
+- **Type**: journal
+- **Published**: Feb. 2019
+- **Authors**: Francesca Vatta, Alessandro Soranzo, Fulvio Babich
+- **PDF**: https://ieeexplore.ieee.org/document/8572793
+- **Abstract**: This letter presents a more accurate mathematical analysis, with respect to the one performed in Chung et al.'s 2001 paper, of belief-propagation decoding for low-density parity-check (LDPC) codes on memoryless binary input-additive white Gaussian noise channels, when considering a Gaussian approximation (GA) for message densities under density evolution. The recurrent sequence, defined in Chung et al.'s 2001 paper, describing the message passing between variable and check nodes follows from the GA approach and involves the function φ(x), therein defined, and its inverse. The analysis of this function is here resumed and studied in depth to obtain tighter upper and lower bounds on it. Moreover, unlike the upper bound given in the above cited paper, the tighter upper bound on φ(x) is invertible. This allows a more accurate evaluation of the asymptotical performance of sum-product decoding of LDPC codes when a GA is assumed.
+
+## Characterization and Efficient Search of Non-Elementary Trapping Sets of LDPC Codes With Applications to Stopping Sets
+
+- **Status**: ✅
+- **Reason**: 바이너리 LDPC trapping set/stopping set 특성화·탐색 알고리즘 — error floor·코드설계(E)에 직접 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8434325
+- **Type**: journal
+- **Published**: Feb. 2019
+- **Authors**: Yoones Hashemi, Amir H. Banihashemi
+- **PDF**: https://ieeexplore.ieee.org/document/8434325
+- **Abstract**: In this paper, we propose a characterization for nonelementary trapping sets (NETSs) of low-density parity-check (LDPC) codes. The characterization is based on viewing an NETS as a hierarchy of embedded graphs starting from an ETS. The characterization corresponds to an efficient search algorithm that under certain conditions is exhaustive. As an application of the proposed characterization/search, we obtain lower and upper bounds on the stopping distance smin of LDPC codes. We examine a large number of regular and irregular LDPC codes and demonstrate the efficiency and versatility of our technique in finding lower and upper bounds on, and in many cases the exact value of, smin. Finding smin, or establishing search-based lower or upper bounds, for many of the examined codes are out of the reach of any existing algorithm. For a constant degree distribution and range of search, the worst case computational complexity of the proposed search algorithms for finding NETSs and stopping sets is linear in the code's block length n. The average search complexity for stopping sets, however, is constant in n, if the simple cycles required as input to the search algorithm are available.
+
+## A Two-Bit Precision Decoding Algorithm for LDPC Codes Over the Binary Symmetric Channel
+
+- **Status**: ✅
+- **Reason**: BSC용 2비트 정밀도 min-sum 디코딩 알고리즘 (syndrome weight 적응형), 이식 가능 디코더(C)·저정밀 양자화로 NAND LDPC HW에 직접 관련
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8421051
+- **Type**: journal
+- **Published**: Feb. 2019
+- **Authors**: Sunghye Cho, Kyeongcheol Yang
+- **PDF**: https://ieeexplore.ieee.org/document/8421051
+- **Abstract**: The min-sum algorithm as an approximation of the sum-product algorithm (SPA) for decoding of LDPC codes has much lower computational complexity, but slightly worse performance than the SPA. However, severe performance degradation might occur when it is realized in hardware due to the finite precision effect, especially in two-bit precision. In order to overcome this problem, we propose a two-bit precision decoding algorithm. The proposed algorithm employs one of several decoders adaptively, based on the syndrome weight of the estimated decoder output every iteration. Numerical results show that it has similar performance to the SPA over the binary symmetric channel.
+
+## An Unequal Error Protection of Quasi-Cyclic Low Density Parity Check (QC-LDPC) Codes Based on Combinatorial Designs
+
+- **Status**: ✅
+- **Reason**: 조합설계 기반 UEP QC-LDPC 신규 구성(distinct difference circulant) — 바이너리 QC-LDPC 코드설계 기법(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8821723
+- **Type**: conference
+- **Published**: 23-25 Feb.
+- **Authors**: Bijaya Paudel, Sina Vafi
+- **PDF**: https://ieeexplore.ieee.org/document/8821723
+- **Abstract**: This paper presents a novel method for constructing high performance unequal error protection (UEP) quasicyclic low-density parity-check (QC-LDPC) codes. These codes are highly efficient and designed with flexible rates, lengths and number of protection levels. The given QC-LDPC codes are based on the combinatorial design. Each circulant constituting the parity check matrix of the UEP code is determined from subsets with the distinct difference between elements. Simulation results indicate that proposed UEP codes have equivalent performance to UEP codes constructed with the higher girth and lower rate, while achieving superior performance than the codes constructed by conventional equal error protection (EEP) techniques.
+
+## Generalized Two-Magnitude Check Node Updating with Self Correction for 5G LDPC Codes Decoding
+
+- **Status**: ✅
+- **Reason**: 새 CN 갱신 알고리즘 ga-min(MS/a-min 일반화)+self-correction, LLR mismatch 강건 — 부호 비의존 디코더 개선, NAND BP에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8661344
+- **Type**: conference
+- **Published**: 11-14 Feb.
+- **Authors**: Wei Zhou, Michael Lentmaier
+- **PDF**: https://ieeexplore.ieee.org/document/8661344
+- **Abstract**: The min-sum (MS) and approximate-min (a-min) algorithms are alternatives of the belief propagation (BP) algorithm for decoding low-density parity-check (LDPC) codes. To lower the BP decoding complexity, both algorithms compute two magnitudes at each check node (CN) and pass them to the neighboring variable nodes (VNs). In this work we propose a new algorithm, ga-min, that generalizes the MS and a-min in terms of number of incoming messages to a CN. We analyze and demonstrate a condition to improve the performance when applying self-correction to the ga-min. Simulations on 5G LDPC codes show that the proposed decoding algorithm yields comparable performance to the a-min with a significant reduction in complexity, and it is robust against LLR mismatch.c
+
+## Static Layered Schedules and Core-Only Parity Check for the 5G New Radio LDPC Codes
+
+- **Status**: ✅
+- **Reason**: CN degree 기반 정적 layered 스케줄+COPC로 수렴 가속 — 부호 비의존 디코더 스케줄 기법, NAND LDPC에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8661345
+- **Type**: conference
+- **Published**: 11-14 Feb.
+- **Authors**: Janik Frenzel, Stefan Mueller-Weinfurtner, Johannes B. Huber +1
+- **PDF**: https://ieeexplore.ieee.org/document/8661345
+- **Abstract**: We analyze static update schedules for high-speed decoding of the Low-Density Parity-Check (LDPC) codes used in 5G New Radio (NR). Motivated by the fact that updates of Check Nodes (CNs) with smaller degrees result in larger mutual-information (MI) gains, we propose a schedule based on the ascending order of CN degrees. Furthermore, we examine the individual bit-error rates throughout the codeword and present a Core-Only Parity Check (COPC) strategy to accelerate the decoder convergence. These two simple concepts reduce the number of iterations until convergence by up to 15% compared to a Top-to-Bottom (TtB) schedule with the full parity check.
+
+## Channel-Optimized Information Bottleneck Design for Signal Forwarding and Discrete Decoding in Cloud-RAN
+
+- **Status**: ✅
+- **Reason**: 정보병목(IB) 기반 이산 메시지패싱 LDPC 디코더 — LUT 기반 양자화 디코더로 NAND LLR 양자화에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8661338
+- **Type**: conference
+- **Published**: 11-14 Feb.
+- **Authors**: Tobias Monsees, Dirk Wuebben, Armin Dekorsy
+- **PDF**: https://ieeexplore.ieee.org/document/8661338
+- **Abstract**: We consider the single user uplink of a Cloud Radio Access Network where a single radio access point forwards quantized received signals to the central unit. The focus of our investigation is on the quantization step in the radio access point and the decoding in the central unit. First, we investigate the impact of different quantizer approaches on the performance of the belief propagation decoder applied for low-density party check codes. Second, we investigate the performance of discrete message passing decoders which are optimized via the Information Bottleneck method in order to process quantized samples. The resulting decoder has a low bit representation for each variable and all internal decoder functions are determined by lookup tables. For the investigated scenario the discrete message passing decoder performs close to the floating point implementation of the belief propagation decoder processing real valued log-likelihood ratios.
+
+## Protograph-Based LDPC Code Design for Ternary Message Passing Decoding
+
+- **Status**: ✅
+- **Reason**: Ternary message passing 디코더+protograph 코드설계; 메시지가 3진이나 바이너리 LDPC의 quantized BP/밀도진화 코드설계 기법으로 이식 가능성 있어 살림(C/E, Phase3 재검토)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:8661301
+- **Type**: conference
+- **Published**: 11-14 Feb.
+- **Authors**: Emna Ben Yacoub, Fabian Steiner, Balazs Matuz +1
+- **PDF**: https://ieeexplore.ieee.org/document/8661301
+- **Abstract**: A ternary message passing (TMP) decoding algorithm for low-density parity-check codes is developed. All messages exchanged between variable and check nodes have a ternary alphabet, and the variable nodes exploit soft information from the channel. A density evolution analysis is developed for unstructured and protograph-based ensembles. For unstructured ensembles the stability condition is derived. Optimized ensembles for TMP decoding show asymptotic gains of up to 0.6 dB with respect to ensembles optimized for binary message passing decoding. Finite length simulations of codes from TMP-optimized ensembles show gains of up to 0.5 dB under TMP as compared to protograph-based codes designed for unquantized belief propagation decoding.

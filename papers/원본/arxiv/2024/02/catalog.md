@@ -1,0 +1,112 @@
+# arXiv — 2024-02
+
+
+## Block-MDS QC-LDPC Codes for Information Reconciliation in Key Distribution
+
+- **Status**: ❌
+- **Reason**: QKD 정보조정(IR)용 Block-MDS QC-LDPC, 보안/IR 특화로 사전정의 full-rank 부분행렬 요구 — 채널 ECC 이식성 낮음 (원칙 제외)
+- **ID**: arxiv:2403.00192v1
+- **Type**: preprint
+- **Published**: 2024-02-29
+- **Authors**: Lev Tauz, Debarnab Mitra, Jayanth Shreekumar +3
+- **PDF**: https://arxiv.org/pdf/2403.00192v1
+- **Abstract**: Quantum key distribution (QKD) is a popular protocol that provides information theoretically secure keys to multiple parties. Two important post-processing steps of QKD are 1) the information reconciliation (IR) step, where parties reconcile mismatches in generated keys through classical communication, and 2) the privacy amplification (PA) step, where parties distill their common key into a new secure key that the adversary has little to no information about. In general, these two steps have been abstracted as two distinct problems. In this work, we consider a new technique of performing the IR and PA steps jointly through sampling that relaxes the requirement on the IR step, allowing for more success in key creation. We provide a novel LDPC code construction known as Block-MDS QC-LDPC codes that can utilize the relaxed requirement by creating LDPC codes with pre-defined sub-matrices of full-rank. We demonstrate through simulations that our technique of sampling can provide notable gains in successfully creating secret keys.
+
+## The Physics of (good) LDPC Codes II. Product constructions
+
+- **Status**: ❌
+- **Reason**: 양자/고전 LDPC의 물리학적 product 구성 이론(fracton/SPT 상), 새 바이너리 NAND 코드설계 이식 기법 아님
+- **ID**: arxiv:2402.16831v1
+- **Type**: preprint
+- **Published**: 2024-02-26
+- **Authors**: Tibor Rakovszky, Vedika Khemani
+- **PDF**: https://arxiv.org/pdf/2402.16831v1
+- **Abstract**: We continue the study of classical and quantum low-density parity check (LDPC) codes from a physical perspective. We focus on constructive approaches and formulate a general framework for systematically constructing codes with various features on generic Euclidean and non-Euclidean graphs. These codes can serve as fixed-point limits for phases of matter. To build our machinery, we unpack various product constructions from the coding literature in terms of physical principles such as symmetries and redundancies, introduce a new cubic product, and combine these products with the ideas of gauging and Higgsing introduced in Part I. We illustrate the usefulness of this approach in finite Euclidean dimensions by showing that using the one-dimensional Ising model as a starting point, we can systematically produce a very large zoo of classical and quantum phases of matter, including type I and type II fractons and SPT phases with generalized symmetries. We also use the balanced product to construct new Euclidean models, including one with topological order enriched by translation symmetry, and another exotic fracton model whose excitations are formed by combining those of a fractal spin liquid with those of a toric code, resulting in exotic mobility constraints. Moving beyond Euclidean models, we give a review of existing constructions of good qLDPC codes and classical locally testable codes and elaborate on the relationship between quantum code distance and classical energy barriers, discussed in Part I, from the perspective of product constructions.
+
+## Random Staircase Generator Matrix Codes: Performance Analysis and Construction
+
+- **Status**: ✅
+- **Reason**: SGMC + LC-ROSD: GE 병렬화로 OSD 디코딩 지연 저감, 바이너리 채널 ECC 디코더 기법 — NAND LDPC OSD에 이식 가능(C)
+- **ID**: arxiv:2402.16245v2
+- **Type**: preprint
+- **Published**: 2024-02-26
+- **Authors**: Qianfan Wang, Yiwen Wang, Yixin Wang +2
+- **PDF**: https://arxiv.org/pdf/2402.16245v2
+- **Abstract**: In this paper, we propose a class of codes, referred to as random staircase generator matrix codes (SGMCs), which have staircase-like generator matrices. In the infinite-length region, we prove that the random SGMC is capacity-achieving over binary-input output-symmetric (BIOS) channels. In the finite-length region, we present the representative ordered statistics decoding with local constraints (LC-ROSD) algorithm for the SGMCs. The most distinguished feature of the SGMCs with LC-ROSD is that the staircase-like matrices enable parallel implementation of the Gaussian elimination (GE), avoiding the serial GE of conventional OSD and supporting a potential low decoding latency, as implied from simulations. To analyze the performance of random SGMCs in the finite-length region, we derive the ensemble weight spectrum and invoke the conventional union bound. We also derive a partially random coding union (RCU) bound, which is tighter than the conventional one and is used as a criterion to design the SGMCs. Staircase-like generator matrices allow us to derive a series of (tighter and tighter) lower bounds based on the second-order Bonferroni inequality with the incremental number of codewords. The numerical results show that the decoding performance can match well with the proposed partially RCU bound for different code rates and different profiles. The numerical results also show that the tailored SGMCs with the LC-ROSD algorithm can approach the finite-length performance bound, outperforming the 5G low-density parity-check (LDPC) codes, 5G polar codes, and Reed-Muller (RM) codes.
+
+## Improving threshold for fault-tolerant color code quantum computing by flagged weight optimization
+
+- **Status**: ❌
+- **Reason**: color code 양자 QEC, flag qubit 기반 가중치 최적화는 양자 전용 — 고전 바이너리 LDPC 이식성 없음
+- **ID**: arxiv:2402.13958v2
+- **Type**: preprint
+- **Published**: 2024-02-21
+- **Authors**: Yugo Takada, Keisuke Fujii
+- **PDF**: https://arxiv.org/pdf/2402.13958v2
+- **Abstract**: Color codes are promising quantum error correction (QEC) codes because they have an advantage over surface codes in that all Clifford gates can be implemented transversally. However, thresholds of color codes under circuit-level noise are relatively low mainly because measurements of their high-weight stabilizer generators cause an increase in a circuit depth, and thus, substantial errors are introduced. This makes color codes not the best candidate for fault-tolerant quantum computing. Here, we propose a method to suppress the impact of such errors by optimizing weights of decoders using conditional error probabilities conditioned on the measurement outcomes of flag qubits. In numerical simulations, we improve the threshold of the (4.8.8) color code under circuit-level noise from 0.14% to around 0.27%, which is calculated by using an integer programming decoder. Furthermore, in the (6.6.6) color code, we achieve a circuit-level threshold of around 0.36%, which is almost the same value as the highest value in the previous studies employing the same noise model. In both cases, an effective code distance is also improved compared to a conventional method that uses a single ancilla qubit for each stabilizer measurement. Thereby, the achieved logical error rates at low physical error rates are almost one order of magnitude lower than those of the conventional method with the same code distance. Even when compared to the single ancilla method with higher code distance, considering the increased number of qubits used in our method, we achieve lower logical error rates in most cases. This method can also be applied to other weight-based decoders, making the color codes more promising for the candidate of experimental implementation of QEC. Furthermore, one can utilize this approach to improve a threshold of wider classes of QEC codes, such as high-rate quantum low-density parity check codes.
+
+## Coding Theorems for Repetition and Superposition Codes over Binary-Input Output-Symmetric Channels
+
+- **Status**: ❌
+- **Reason**: RaS/LDGM capacity-achieving 순수 부호화 정리(JSCC 포함), 표준 QC-LDPC 언급뿐 새 디코더/HW 이식 기법 없음
+- **ID**: arxiv:2402.13603v1
+- **Type**: preprint
+- **Published**: 2024-02-21
+- **Authors**: Yixin Wang, Xiao Ma
+- **PDF**: https://arxiv.org/pdf/2402.13603v1
+- **Abstract**: This paper is concerned with a class of low density generator matrix codes (LDGM), called repetition and superposition (RaS) codes, which have been proved to be capacity-achieving over binary-input output-symmetric (BIOS) channels in terms of bit-error rate (BER). We prove with a recently proposed framework that the RaS codes are also capacity-achieving over BIOS channels in terms of frame-error rate (FER). With this new framework, the theorem for the RaS codes can be generalized to source coding and joint source and channel coding (JSCC). In particular, we prove with this framework that the corresponding low-density parity-check (LDPC) codes, as an enlarged ensemble of quasi-cyclic LDPC (QC-LDPC) codes, can also achieve the capacity. To further improve the iterative decoding performance, we consider the convolutional RaS (Conv-RaS) code ensemble and prove it to be capacity-achieving over BIOS channels in terms of the first error event probability. The construction of Conv-RaS codes is flexible with rate (defined as the ratio of the input length to the encoding output length) ranging from less than one (typically for channel codes) to greater than one (typically for source codes), which can be implemented as a universal JSCC scheme, as confirmed by simulations.
+
+## Concatenate codes, save qubits
+
+- **Status**: ❌
+- **Reason**: 양자 concatenated code FTQC 프로토콜, 양자 space overhead/threshold 최적화 — NAND 바이너리 LDPC 이식 기법 없음
+- **ID**: arxiv:2402.09606v2
+- **Type**: preprint
+- **Published**: 2024-02-14
+- **Authors**: Satoshi Yoshida, Shiro Tamiya, Hayata Yamasaki
+- **PDF**: https://arxiv.org/pdf/2402.09606v2
+- **Abstract**: The essential requirement for fault-tolerant quantum computation (FTQC) is the total protocol design to achieve a fair balance of all the critical factors relevant to its practical realization, such as the space overhead, the threshold, and the modularity. A major obstacle in realizing FTQC with conventional protocols, such as those based on the surface code and the concatenated Steane code, has been the space overhead, i.e., the required number of physical qubits per logical qubit. Protocols based on high-rate quantum low-density parity-check (LDPC) codes gather considerable attention as a way to reduce the space overhead, but problematically, the existing fault-tolerant protocols for such quantum LDPC codes sacrifice the other factors. Here we construct a new fault-tolerant protocol to meet these requirements simultaneously based on more recent progress on the techniques for concatenated codes rather than quantum LDPC codes, achieving a constant space overhead, a high threshold, and flexibility in modular architecture designs. In particular, under a physical error rate of $0.1\%$, our protocol reduces the space overhead to achieve the logical CNOT error rates $10^{-10}$ and $10^{-24}$ by more than $90 \%$ and $96 \%$, respectively, compared to the protocol for the surface code. Furthermore, our protocol achieves the threshold of $2.5 \%$ under a conventional circuit-level error model, substantially outperforming that of the surface code. The use of concatenated codes also naturally introduces abstraction layers essential for the modularity of FTQC architectures. These results indicate that the code-concatenation approach opens a way to significantly save qubits in realizing FTQC while fulfilling the other essential requirements for the practical protocol design.
+
+## Novel Long Distance Free Space Quantum Secure Direct Communication for Web 3.0 Networks
+
+- **Status**: ❌
+- **Reason**: QSDC/Web3 보안, LDPC는 'Quantum-Aware'로 부수 언급 — 떼어낼 ECC 기법 없음
+- **ID**: arxiv:2402.09108v5
+- **Type**: preprint
+- **Published**: 2024-02-14
+- **Authors**: Yifan Zhou, Xinlin Zhou, Zi Yan Li +2
+- **PDF**: https://arxiv.org/pdf/2402.09108v5
+- **Abstract**: With the advent of Web 3.0, the swift advancement of technology confronts an imminent threat from quantum computing. Security protocols safeguarding the integrity of Web 2.0 and Web 3.0 are growing more susceptible to both quantum attacks and sophisticated classical threats. The article introduces our novel long-distance free-space quantum secure direct communication (LF QSDC) as a method to safeguard against security breaches in both quantum and classical contexts. Differing from techniques like quantum key distribution (QKD), LF QSDC surpasses constraints by facilitating encrypted data transmission sans key exchanges, thus diminishing the inherent weaknesses of key-based systems. The distinctiveness of this attribute, coupled with its quantum mechanics base, protects against quantum computer assaults and advanced non-quantum dangers, harmonizing seamlessly with the untrustworthy tenets of the Web 3.0 age. The focus of our study is the technical design and incorporation of LF QSDC into web 3.0 network infrastructures, highlighting its efficacy for extended-range communication. LF QSDC is based on the memory DL04 protocol and enhanced with our novel Quantum-Aware Low-Density Parity Check (LDPC), Pointing, Acquisition, and Tracking (PAT) technologies, and Atmospheric Quantum Correction Algorithm (AQCA). Utilizing this method not only bolsters the security of worldwide Web 3.0 networks but also guarantees their endurance in a time when quantum and sophisticated classical threats exist simultaneously. Consequently, LF QSDC stands out as a robust security solution, well-suited for Web 3.0 systems amidst the constantly evolving digital environment.
+
+## Expansion of higher-dimensional cubical complexes with application to quantum locally testable codes
+
+- **Status**: ❌
+- **Reason**: 양자 LTC/qLDPC 구성, 고차원 큐비컬 복합체 기반 — 양자 전용 개념(체인 복합체·co-cycle expansion)에 의존, 고전 바이너리 LDPC로 이식 불가
+- **ID**: arxiv:2402.07476v3
+- **Type**: preprint
+- **Published**: 2024-02-12
+- **Authors**: Irit Dinur, Ting-Chun Lin, Thomas Vidick
+- **PDF**: https://arxiv.org/pdf/2402.07476v3
+- **Abstract**: We introduce a high-dimensional cubical complex, for any dimension t>0, and apply it to the design of quantum locally testable codes. Our complex is a natural generalization of the constructions by Panteleev and Kalachev and by Dinur et. al of a square complex (case t=2), which have been applied to the design of classical locally testable codes (LTC) and quantum low-density parity check codes (qLDPC) respectively.   We turn the geometric (cubical) complex into a chain complex by relying on constant-sized local codes $h_1,\ldots,h_t$ as gadgets. A recent result of Panteleev and Kalachev on existence of tuples of codes that are product expanding enables us to prove lower bounds on the cycle and co-cycle expansion of our chain complex.   For t=4 our construction gives a new family of "almost-good" quantum LTCs -- with constant relative rate, inverse-polylogarithmic relative distance and soundness, and constant-size parity checks. Both the distance of the quantum code and its local testability are proven directly from the cycle and co-cycle expansion of our chain complex.
+
+## Coded Many-User Multiple Access via Approximate Message Passing
+
+- **Status**: ❌
+- **Reason**: Gaussian MAC용 coded CDMA의 AMP 디코더 — LDPC는 베이스라인일 뿐, 무선 다중접속 특이적이라 NAND로 떼어낼 ECC 기법 없음
+- **ID**: arxiv:2402.05625v5
+- **Type**: preprint
+- **Published**: 2024-02-08
+- **Authors**: Xiaoqi Liu, Kuan Hsieh, Ramji Venkataramanan
+- **PDF**: https://arxiv.org/pdf/2402.05625v5
+- **Abstract**: We consider communication over the Gaussian multiple-access channel in the regime where the number of users grows linearly with the codelength. In this regime, schemes based on sparse superposition coding can achieve a near-optimal tradeoff between spectral efficiency and signal-to-noise ratio. However, these schemes are feasible only for small values of user payload. This paper investigates efficient schemes for larger user payloads, focusing on coded CDMA schemes where each user's information is encoded via a linear code before being modulated with a signature sequence. We propose an efficient approximate message passing (AMP) decoder that can be tailored to the structure of the linear code, and provide an exact asymptotic characterization of its performance. Based on this result, we consider a decoder that integrates AMP and belief propagation and characterize its tradeoff between spectral efficiency and signal-to-noise ratio, for a given target error rate. Simulation results show that the decoder achieves state-of-the-art performance at finite lengths, with a coded CDMA scheme defined using LDPC codes and a spatially coupled matrix of signature sequences.
+
+## The closed-branch decoder for quantum LDPC codes
+
+- **Status**: ❌
+- **Reason**: qLDPC용 closed-branch 디코더 — 신드롬/스태빌라이저(BB codes) 기반, 양자 전용 노이즈 모델 의존, 고전 바이너리 LDPC로 이식 불가
+- **ID**: arxiv:2402.01532v2
+- **Type**: preprint
+- **Published**: 2024-02-02
+- **Authors**: Antonio deMarti iOlius, Josu Etxezarreta Martinez
+- **PDF**: https://arxiv.org/pdf/2402.01532v2
+- **Abstract**: Quantum error correction is the building block for constructing fault-tolerant quantum processors that can operate reliably even if its constituting elements are corrupted by decoherence. In this context, real-time decoding is a necessity for implementing arbitrary quantum computations on the logical level. In this work, we present a new decoder for Quantum Low Density Parity Check (QLDPC) codes, named the closed-branch decoder, with a worst-case complexity loosely upper bounded by $\mathcal{O}(n\text{max}_{\text{gr}}\text{max}_{\text{br}})$, where $\text{max}_{\text{gr}}$ and $\text{max}_{\text{br}}$ are tunable parameters that pose the accuracy versus speed trade-off of decoding algorithms. For the best precision, the $\text{max}_{\text{gr}}\text{max}_{\text{br}}$ product increases exponentially as $\propto dj^d$, where $d$ indicates the distance of the code and $j$ indicates the average row weight of its parity check matrix. Nevertheless, we numerically show that considering small values that are polynomials of the code distance are enough for good error correction performance. The decoder is described to great extent and compared with the Belief Propagation Ordered Statistics Decoder (BPOSD) operating over data qubit, phenomenological and circuit-level noise models for the class of Bivariate Bicycle (BB) codes. The results showcase a promising performance of the decoder, obtaining similar results with much lower complexity than BPOSD when considering the smallest distance codes, but experiencing some logical error probability degradation for the larger ones. Ultimately, the performance and complexity of the decoder depends on the product $\text{max}_{\text{gr}}\text{max}_{\text{br}}$, which can be considered taking into account benefiting one of the two aspects at the expense of the other.

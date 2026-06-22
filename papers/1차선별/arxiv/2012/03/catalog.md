@@ -1,0 +1,14 @@
+# arXiv — 2012-03 (1차선별 통과)
+
+
+## On constructions and parameters of symmetric configurations v_{k}
+
+- **Status**: ✅
+- **Reason**: 대칭 configuration 구성법으로 QC-LDPC 등 LDPC 코드 파라미터 범위 확장; 바이너리 코드 설계 기법 이식 가능(E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: arxiv:1203.0709v1
+- **Type**: preprint
+- **Published**: 2012-03-04
+- **Authors**: Alexander A. Davydov, Giorgio Faina, Massimo Giulietti +2
+- **PDF**: https://arxiv.org/pdf/1203.0709v1
+- **Abstract**: The spectrum of possible parameters of symmetric configurations is investigated. We both survey known constructions and results, and propose some new construction methods. Many new parameters are obtained, in particular for cyclic symmetric configurations, which are equivalent to deficient cyclic difference sets. Both Golomb rulers and modular Golomb rulers are a key tool in our investigation. Several new upper bounds on the minimum integer E(k) such that for each v >= E(k) there exists a symmetric configuration v_{k} are obtained. Upper bounds of the same type are provided for cyclic symmetric configurations. From the standpoint of applications, it should be noted that our results extend the range of possible parameters of LDPC codes, generalized LDPC codes, and quasi-cyclic LDPC codes.

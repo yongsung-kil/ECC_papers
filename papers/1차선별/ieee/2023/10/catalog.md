@@ -1,0 +1,206 @@
+# IEEE Xplore — 2023-10 (1차선별 통과)
+
+
+## LDPC Level Prediction Toward Read Performance of High-Density Flash Memories
+
+- **Status**: ✅
+- **Reason**: 고밀도 NAND LDPC read-level 예측·fine-grained 리딩으로 read-retry 지연 감소. NAND/LDPC 직접(A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10032056
+- **Type**: journal
+- **Published**: Oct. 2023
+- **Authors**: Yajuan Du, Yuan Gao, Siyi Huang +1
+- **PDF**: https://ieeexplore.ieee.org/document/10032056
+- **Abstract**: High-density NAND flash memories have been prevailing in storage systems to achieve large capacities for explosive data. However, they suffer from more severe reliability degradation due to the narrowed margins between threshold voltage states. Low-density parity-check (LDPC) codes have been widely applied in high-density flash memories to ensure data reliability. Due to the increased number of cell states, more read voltages are required in reading a flash page correctly. This induces more soft levels to read pages with high-bit error rates in LDPC decoding. Read latency is significantly increased in high-density flash memories. To enhance the read performance of high-density flash memories, this article proposes PreLDPC, an LDPC-level prediction approach with fine-grained LDPC reading. The key idea of PreLDPC is to predict the final read level during the early read iteration, thus, avoiding unnecessary read-retry latency. From a preliminary study, we observe that after decoding in the first two iterations, the ratio of cells that lie in the error-prone area (i.e., adjacent area of two cell states) can be obtained. The ratio is closely related to the final read level for a successful decoding. By exploiting this observation, PreLDPC directly uses the predicted read level for LDPC reading, which could eliminate the excessive number of read retries. Furthermore, by exploiting the benefit of fine-grained LDPC reading, this article further divides the existing integer level (called i-level, e.g., level-1 and level-2) into a finer decimal level (called d-level, e.g., level-1.25 and level-1.5), and proposes a fine-grained read method. By combining the prediction method and fine-grained method together, PreLDPC can first estimate the i-level and then perform the read-retry iteration with d-levels to eliminate unnecessary read latency as much as possible. From experimental results of real-world workloads on Disksim with SSD extensions, it is verified that PreLDPC can effectively reduce read latency in high-density flash memories.
+
+## RELDEC: Reinforcement Learning-Based Decoding of Moderate Length LDPC Codes
+
+- **Status**: ✅
+- **Reason**: RELDEC: 강화학습 기반 LDPC 체크노드 스케줄링 디코더 — 이식 가능 BP 개선 디코더(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10185577
+- **Type**: journal
+- **Published**: Oct. 2023
+- **Authors**: Salman Habib, Allison Beemer, Jörg Kliewer
+- **PDF**: https://ieeexplore.ieee.org/document/10185577
+- **Abstract**: In this work we propose RELDEC, a novel approach for sequential decoding of moderate length low-density parity-check (LDPC) codes. The main idea behind RELDEC is that an optimized decoding policy is subsequently obtained via reinforcement learning based on a Markov decision process (MDP). In contrast to our previous work, where an agent learns to schedule only a single check node (CN) within a group (cluster) of CNs per iteration, in this work we train the agent to schedule all CNs in a cluster, and all clusters in every iteration. That is, in each learning step of RELDEC an agent learns to schedule CN clusters sequentially depending on a reward associated with the outcome of scheduling a particular cluster. We also modify the state space representation of the MDP, enabling RELDEC to be suitable for larger block length LDPC codes than those studied in our previous work. Furthermore, to address decoding under varying channel conditions, we propose agile meta-RELDEC (AM-RELDEC) that employs meta-reinforcement learning. The proposed RELDEC scheme significantly outperforms standard flooding and random sequential decoding for a variety of LDPC codes, including codes designed for 5G new radio.
+
+## High-Precision Short-Term Lifetime Prediction in TLC 3-D NAND Flash Memory as Hot-Data Storage
+
+- **Status**: ✅
+- **Reason**: TLC 3D NAND read disturb 기반 self-adjustable LDPC 코드 예측 시스템. NAND/LDPC 직접(A)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10032126
+- **Type**: journal
+- **Published**: Oct. 2023
+- **Authors**: Xiaotong Fang, Meng Zhang, Yifan Guo +6
+- **PDF**: https://ieeexplore.ieee.org/document/10032126
+- **Abstract**: 3-D NAND flash memory is the ubiquitous nonvolatile memory (NVM) on the market because of its large storage capacities, high reliability, and low bit cost. The reliability characteristics of 3-D NAND flash memory, however, are considerably different from those of 2-D NAND flash memory due to the peculiar architectures. In this article, read disturb (RD) at various program/erase (P/E) stages is thoroughly explored. To adjust the low-density parity check (LDPC) codes dynamically and extend the lifetime of 3-D NAND flash memory, short-term lifetime prediction models of RD and endurance are proposed based on in-depth studies on the correlations of fail bit count (FBC) at various lifetime stages, and their accuracy is tested experimentally. A new short-term warning system (STWS) is proposed to extend the lifetime of 3-D NAND-based storages. It consists of the error-bits’ prediction module (EBPM) and the self-adjustable LDPC codes module (SLDPC), where EBPM predicts FBC periodically and SLDPC preallocates LDPC codes for future use based on the result of EBPM. The experimental result shows that our prediction models have high reliability, and STWS can effectively prolong the lifetime of NAND flash. The findings of this study provide fundamental insights into FBC degradation in 3-D NAND flash, as well as a simple and practical method for building 3-D NAND-based storage with high reliability.
+
+## Enhanced Error Correction Employing Natural Redundancy of Sensor Data
+
+- **Status**: ✅
+- **Reason**: 데이터 비균일 사전확률(자연 잉여) 활용해 ECC 디코딩 임계치 개선 — retention/시간상관 활용은 NAND LDPC LLR에 이식 여지, 애매하므로 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10194939
+- **Type**: journal
+- **Published**: Oct. 2023
+- **Authors**: Yair Mazal, Hugo Guterman
+- **PDF**: https://ieeexplore.ieee.org/document/10194939
+- **Abstract**: Standard error correction codes (ECC) assume good data compression, thus expecting uniform apriori distribution of data. This assumption does not allow the exploitation of actual non-uniform priors, which may exist, to improve the threshold at which ECC decoding fails. This work presents a new scheme that builds a probabilistic model for data and uses this model to enhance ECC decoding performance. The approach is flexible because training is done online and does not assume any specific data type or structure but only the existence of some temporal correlation between codewords. This scheme can be helpful for a large class of systems, such as wireless sensors and autonomous platforms. The method was tested via simulation using standard ECC from the IEEE802.11 standard and in experiments in which an autonomous platform transmitted data to the base station. The results show significant improvement in decoding performance. Additionally, the article explains the nature of the performance gain.
+
+## Gradient Descent Iterative Correction Unit for Fixed Point Parity Based Codes
+
+- **Status**: ✅
+- **Reason**: 신규 반복 디코딩 기법(Gradient Descent Symbol Update) + FPGA 아키텍처 제시 — 이식 가능 디코더/HW(C/D), 애매하나 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10313571
+- **Type**: conference
+- **Published**: 3-5 Oct. 2
+- **Authors**: Oana Boncalo, Alexandru Amaricai
+- **PDF**: https://ieeexplore.ieee.org/document/10313571
+- **Abstract**: This paper proposes a novel iterative decoding method - Gradient Descent Symbol Update - for real number parity based error correction codes, as well as its corresponding hardware architecture. The decoding process is based on the gradient descent optimization technique, as well as binary maximum likelihood error correction decoding. We present the error correction performance and the convergence rate of the gradient descent symbol update for a parity based BCH (26,16) code. Furthermore, FPGA implementation results for the corresponding decoder architecture are depicted.
+
+## On the Serial Concatenation of LDPC Codes
+
+- **Status**: ✅
+- **Reason**: C/E: 새 직렬 연접 LDPC 구성 + woven 디코더로 복잡도 절감 — 디코더/코드설계 신규 기여, 바이너리
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10316146
+- **Type**: conference
+- **Published**: 25-27 Oct.
+- **Authors**: Fedor Ivanov, Aleksey Kuvshinov
+- **PDF**: https://ieeexplore.ieee.org/document/10316146
+- **Abstract**: Concatenated codes are effectively used in different approaches of error-correcting theory. We suggest new concatenated code construction that is composed of outer LDPC code and a particular designed inner LDPC code. Special optimization procedure was developed to obtain inner code with specific error-correcting characteristics. We apply the decoder of woven codes to this construction, while reducing the complexity of decoding procedure compared to a classic decoder of LDPC code. Furthermore, we improve the performance of our scheme with puncturing the code symbols. The resulting concatenated construction outperforms low-rate LDPC from the 5G standard. Besides this, we demonstrate the performance of code with a special parity-check matrix consisting of parity-check matrices of inner and outer codes from our suggested construction.
+
+## About the Joint Correcting of Error Bursts and Independent Errors Using LDPC Codes
+
+- **Status**: ✅
+- **Reason**: LDPC 버스트+독립오류 공동정정 슬라이딩윈도우 리스트 디코더+블록순열 구성, 스토리지 명시 — 새 디코더/코드설계(C/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10330192
+- **Type**: conference
+- **Published**: 24-27 Oct.
+- **Authors**: Alina Veresova, Andrei Ovchinnikov
+- **PDF**: https://ieeexplore.ieee.org/document/10330192
+- **Abstract**: This article discusses the application of low-density parity-check (LDPC) codes for error correction, with a focus on the joint correction of both grouped and independent errors in communication and data storage systems. The error correction capabilities of LDPC codes with different constructions were estimated when correcting single error bursts and independent errors. Experiments showed that correcting even a single independent error significantly reduces the correctable burst length. A specialized sliding window list decoder designed for joint correction of burst and independent errors was introduced. It uses a single burst correction decoder with certain events and list decoding for independent single errors. The problem of reducing the list size was addressed based on the majority logic principle. However, reducing the list size increases the decoding error probability. Estimates of decoding error probabilities when simultaneously correcting burst and independent single errors are provided, considering burst lengths beyond the code correcting capability. Different strategies for selecting the number of blocks in the block-permutation construction of LDPC codes for burst-only and joint burst-independent error decoding are analyzed. Experiments show that for a fixed code length and rate, the code with three stripes of blocks provides better performance in this case.
+
+## Short codes for ADMM-based decoding
+
+- **Status**: ✅
+- **Reason**: ADMM 기반 디코딩용 단거리 코드 구성 — 이식 가능한 디코더 알고리즘/코드설계(C/E), 바이너리
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10330182
+- **Type**: conference
+- **Published**: 24-27 Oct.
+- **Authors**: Dmitry Artemasov, Anna Fominykh, Alexey Frolov +2
+- **PDF**: https://ieeexplore.ieee.org/document/10330182
+- **Abstract**: Modern communication systems are required to operate in different regimes depending on the channel state, size, and purpose of the message. Considering today’s widely used coding schemes, it is known that different code designs and decoding algorithms are optimal for different regimes. From the point of view of technical implementation, it is convenient to have a unified scheme of coding and decoding for the whole range of possible modes. For the solution of this problem it is necessary to consider decoding algorithms based on new principles and code constructions optimized for them. Intensive research in recent years has shown that iterative algorithms based on the Alternating Direction Method of Multipliers (ADMM) have good performance and are a perspective direction of research. In this paper, we consider short code constructions optimized for both classical decoding algorithms (successive cancellation and message-passing based algorithms) and ADMM-based algorithms, and compare their performance using numerical simulation methods.
+
+## Trapping and Absorbing Set Enumerators for Protograph-Based Generalized Low-Density Parity-Check Code Ensembles
+
+- **Status**: ✅
+- **Reason**: E: protograph GLDPC trapping/absorbing set 분석으로 error floor 코드 설계 지침 — 바이너리, 유한길이/error floor 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10330177
+- **Type**: conference
+- **Published**: 24-27 Oct.
+- **Authors**: Emna Ben Yacoub
+- **PDF**: https://ieeexplore.ieee.org/document/10330177
+- **Abstract**: Generalized low-density parity-check (GLDPC) codes have outstanding performance outperforming the standard low-density parity-check (LDPC) codes. However, the performance of these codes under iterative decoding can be degraded because of the presence of trapping, absorbing and fully absorbing sets in the code Tanner graphs. The (elementary) trapping and (fully) absorbing sets of protograph-based GLDPC codes are studied. The finite-length and asymptotic distributions of (elementary) trapping and (fully) absorbing sets for protograph-based GLDPC code ensembles are derived and evaluated. The asymptotic distributions can be efficiently computed by solving a system of equations. The relative minimum Δ-trapping/(fully) absorbing set size can be directly computed by adding one equation to the system of equations. This is useful for the code design where we can restrict the search to ensembles for which the minimum Δ-trapping and (fully) absorbing set sizes grow linearly with the blocklength. The normalized logarithmic asymptotic distributions of (elementary) trapping and (fully) absorbing sets for an example GLDPC code ensemble are evaluated.
+
+## On the Error-Reducing Properties of Superposition Codes
+
+- **Status**: ✅
+- **Reason**: C/E: 저복잡도 soft SIC 디코딩 LDPC 기반 superposition error-reducing 부호 — 바이너리 LDPC 디코더/구성 신규 기여, 애매하면 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10330085
+- **Type**: conference
+- **Published**: 24-27 Oct.
+- **Authors**: Kirill Andreev, Pavel Rybin, Alexey Frolov
+- **PDF**: https://ieeexplore.ieee.org/document/10330085
+- **Abstract**: Next-generation wireless communication systems impose much stricter requirements for transmission rate, latency, and reliability. The peak data rate of 6G networks should be no less than 1 Tb/s, which is comparable to existing long-haul optical transport networks. It is believed that using long error-correcting codes (ECC) with soft-decision decoding (SDD) is not feasible in this case due to the resulting high power consumption. On the other hand, ECC with hard-decision decoding (HDD) suffers from significant performance degradation. In this paper, we consider a concatenated solution consisting of an outer long HDD code and an inner short SDD code. The latter code is a crucial component of the system and the focus of our research. Due to its short length, the code cannot correct all errors, but it is designed to minimize the number of errors. Such codes are known as error-reducing codes. We investigate the error-reducing properties of superposition codes. Initially, we explore sparse regression codes (SPARCs) with Gaussian signals. This approach outperforms error-reducing binary LDPC codes optimized by Barakatain, et al. (2018) in terms of performance but faces limitations in practical applicability due to high implementation complexity. Subsequently, we propose an LDPC-based superposition code scheme with low-complexity soft successive interference cancellation (SIC) decoding. This scheme demonstrates comparable performance to SPARCs while maintaining manageable complexity. Numerical results were obtained for inner codes with an overhead (OH) of 8.24% within a concatenated scheme (15% OH) with an outer hard-decision decoded staircase code (6.25% OH).
+
+## Improved Informed Dynamic Scheduling Strategies for 5G LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 5G LDPC용 신규 IDS 스케줄링(LPSRB, NRBP residual BP) 제안 — 부호 비의존 BP 디코더 개선으로 NAND LDPC에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10419771
+- **Type**: conference
+- **Published**: 20-22 Oct.
+- **Authors**: Kun-Yang Li, Huai-Yi Li, Li Deng +3
+- **PDF**: https://ieeexplore.ieee.org/document/10419771
+- **Abstract**: In this paper, we propose two new scheduling algorithms to address the issues of existing informed dynamic scheduling (IDS) decoding algorithms of short low-density parity-check (LDPC) codes for the fifth-generation (5G) new radio (NR). The first issue is the complexity problem, where the high complexity of IDS makes hardware implementation difficult. By considering the impact of puncturing for the first two columns of base matrices, the proposed least-punctured and sum-residual-based (LPSRB) algorithm can reduce decoding complexity. The second issue is the significant degradation of decoding performance when the code length is short. By fully utilizing residuals, the proposed novel residual belief propagation (NRBP) algorithm allocates a significant amount of decoding resources to the less convergent edges. Simulation results demonstrate that NRBP achieves better frame error rate (FER) performance for short LDPC codes.
+
+## A Memory-Saving Approach for 5G New Radio Low-Density Parity-Check Decoders
+
+- **Status**: ✅
+- **Reason**: Enhanced single minimum Min-Sum(EsmMS) 신규 CNU 알고리즘 + memory split, FPGA 메모리 37% 절감·디코딩 게인 — C/D 신규 디코더·HW
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10299826
+- **Type**: conference
+- **Published**: 19-20 Oct.
+- **Authors**: Bich Ngoc Tran-Thi, Thien Truong Nguyen-Ly, Trang Hoang
+- **PDF**: https://ieeexplore.ieee.org/document/10299826
+- **Abstract**: This paper presents a memory efficient design for a Low-Density Parity-Check (LDPC) decoder. The design is based on a combination of two techniques that consists of (i) the proposed Enhanced single minimum Min-Sum (EsmMS) algorithm for check-node update processing, which requires only the first minimum value among variable-to-check input messages and its index instead of two minima, and (ii) the memory split method, which adapts to the varying check-node degree of 5G LDPC codes. The implementation results on Xilinx Kintex UltraScale+ (xcku5p) FPGA show that the proposed decoder requires 37% less storage space than MS-based decoders, provides a decoding throughput of 2.63 Gbps, while yielding a decoding gain up to 0.32 dB at the BER of 10−8 compared to the Min-Sum decoder.
+
+## Early HARQ using LLR Trend Analysis
+
+- **Status**: ✅
+- **Reason**: NMS LDPC 디코더의 반복 중 변수노드 LLR 추이 분석 기반 조기 종료/예측 — 부호 비의존적 디코더 기법으로 NAND BP에 이식 가능(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10392480
+- **Type**: conference
+- **Published**: 11-13 Oct.
+- **Authors**: Narayan Prasad Kusi, Jiho Kim, Dong Ho Kim
+- **PDF**: https://ieeexplore.ieee.org/document/10392480
+- **Abstract**: One of the key usage scenarios in the scope of 5G is ultra-reliable and low-latency communications (URLLC) and HARQ is one of the inherent parts to make the service reliable and efficient. In this work, we proposed a new and reliable metric for the subcode based early HARQ prediction which adopts NMS (Normalized Min Sum) LDPC decoder. It provides flexible iterative decoding with sub-codes of different lengths for early HARQ prediction using the substructure LDPC parity matrix. The proposed Early HARQ prediction analyses the changing trend of LLR values of variable nodes during iterations and predicts feedback of the decodability based on the trend analysis of posterior LLR values after some iterations. The early HARQ prediction using the LLR trend analysis enables us to provide reliable and earlier feedback making faster retransmissions.
+
+## Energy efficient operation method of iterative channel decoder in wireless communication systems
+
+- **Status**: ✅
+- **Reason**: 반복 채널디코더(LDPC) 에너지 효율적 반복횟수 제어(조기종료) 기법 — 부호 비의존적이며 NAND LDPC 디코더에 이식 가능(C), 애매하나 살림
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10392669
+- **Type**: conference
+- **Published**: 11-13 Oct.
+- **Authors**: Yong Su Lee, Jun Woo Kim, Moon Young Jin +6
+- **PDF**: https://ieeexplore.ieee.org/document/10392669
+- **Abstract**: In general, in a wireless communication system, iterative channel decoding such as an LDPC or turbo decoder is performed to improve performance according to a change in a wireless channel. If decoding is performed more iteratively, performance increases, but energy consumption also increases. This paper is about a method for operating Iteration (ITER) of channel decoding combined with AMC (Adaptive Modulation and Coding) technology in a receiver of wireless communication system in an energy-efficient manner.
+
+## Neural Adjusted Min-Sum Decoding for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Neural adjusted min-sum (NAMS) decoder for binary LDPC: new check-node selection between MS/BP rule, unfolded NN with trainable weights — transplantable decoder (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10333372
+- **Type**: conference
+- **Published**: 10-13 Oct.
+- **Authors**: Haochen Yu, Ming-Min Zhao, Ming Lei +1
+- **PDF**: https://ieeexplore.ieee.org/document/10333372
+- **Abstract**: In this work, we propose a neural adjusted min-sum (NAMS) decoder for low-density parity-check (LDPC) codes. In particular, we improve the traditional normalized min-sum (NMS) decoder by introducing a selection mechanism to adjust the check-node update step, where either the min-sum rule or the belief propagation (BP) rule is selected. Besides, we unfold the modified decoder into a model-driven neural network, where layer-dependent trainable parameters are introduced as weights in the Tanner graph and optimized by gradient descent-based methods during network training. Simulation results demonstrate that the proposed NAMS decoder is able to provide superior error-correction performance as compared to the neural NMS decoder, with only slightly increased computational complexity. Moreover, in certain circumstances, the proposed NAMS decoder even outperforms the neural BP decoder, with much lower computational complexity.
+
+## On a Unified Deep Neural Network Decoding Architecture
+
+- **Status**: ✅
+- **Reason**: Unified syndrome-based DNN decoder across multiple codes — code-independent neural decoder architecture potentially transplantable to LDPC; ambiguous, kept for Phase 3 (C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10333739
+- **Type**: conference
+- **Published**: 10-13 Oct.
+- **Authors**: Dmitry Artemasov, Kirill Andreev, Alexey Frolov
+- **PDF**: https://ieeexplore.ieee.org/document/10333739
+- **Abstract**: In modern communication systems, multiple types of error-correcting codes can be utilized for different transmission scenarios. Therefore, the receiver should include the decoder compatible with multiple codes used in the transmission scheme, which results in the increase of the resources required for its implementation. In this paper, we investigate the possibility of training a single syndrome-based DNN decoder to solve the problem of unified decoding. We observe, that the syndrome-based approach allows to extend the unified decoding capabilities to the codes with considerably larger lengths in comparison to the initially described by Wang et al. (2018) method. Through numerical experiments, we show that the model trained for decoding a pair of moderate lengths codes (BCH and CRC-Aided Polar) achieves performance results comparable with classical decoding solutions, while sharing the same architecture and the set of trainable weights. We note, that the unification of a syndrome-based DNN decoder does not lead to large performance degradation, in comparison to the decoder trained on a single code. The approach described in the paper is promising in terms of reducing the hardware resources required to implement the decoder.
+
+## A spatially coupled LDPC coding scheme with scalable decoders for space division multiplexing
+
+- **Status**: ✅
+- **Reason**: sub-block locality 가진 SC-LDPC와 scalable 디코더 전략(복잡도·정보흐름) — 바이너리 코드 설계+디코더 이식 가능(C/E)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10484661
+- **Type**: conference
+- **Published**: 1-5 Oct. 2
+- **Authors**: H. Li, L. Schmalen
+- **PDF**: https://ieeexplore.ieee.org/document/10484661
+- **Abstract**: In this paper, we study the application of spatially coupled LDPC codes with sub-block locality for space division multiplexing. We focus on the information exchange between the sub-blocks and compare decoding strategies with respect to the complexity, performance and the information flow.

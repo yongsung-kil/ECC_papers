@@ -1,0 +1,170 @@
+# IEEE Xplore — 2022-12 (1차선별 통과)
+
+
+## A Low-Complexity Neural Normalized Min-Sum LDPC Decoding Algorithm Using Tensor-Train Decomposition
+
+- **Status**: ✅
+- **Reason**: Tensor-Train 분해 기반 저복잡도 신경망 정규화 min-sum LDPC 디코더로 C 이식 가능 디코더 알고리즘
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9894373
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Yuanhui Liang, Chan-Tong Lam, Benjamin K. Ng
+- **PDF**: https://ieeexplore.ieee.org/document/9894373
+- **Abstract**: Compared with traditional low-density parity-check (LDPC) decoding algorithms, the current model-driven deep learning (DL)-based LDPC decoding algorithms face the disadvantage of high computational complexity. Based on the Neural Normalized Min-Sum (NNMS) algorithm, we propose a low-complexity model-driven DL-based LDPC decoding algorithm using Tensor-Train (TT) decomposition and syndrome loss function, called TT-NNMS+ algorithm. Our experiments show that the proposed TT-NNMS+ algorithm is more competitive than the NNMS algorithm in terms of bit error rate (BER) performance, memory requirement and computational complexity.
+
+## Decoding Short LDPC Codes via BP-RNN Diversity and Reliability-Based Post-Processing
+
+- **Status**: ✅
+- **Reason**: 짧은 LDPC용 BP-RNN 디코더 다양성 + OSD 후처리 — C(디코더) 새 기여, 바이너리 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9942354
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Joachim Rosseel, Valérian Mannoni, Inbar Fijalkow +1
+- **PDF**: https://ieeexplore.ieee.org/document/9942354
+- **Abstract**: This paper investigates decoder diversity architectures for short low-density parity-check (LDPC) codes, based on recurrent neural network (RNN) models of the belief-propagation (BP) algorithm. We propose a new approach to achieve decoder diversity in the waterfall region, by specializing BP-RNN decoders to specific classes of errors, with absorbing set support. We further combine our approach with an ordered statistics decoding (OSD) post-processing step, which effectively leverages the bit-error rate optimization deriving from the use of the binary cross-entropy loss function. We show that a single specialized BP-RNN decoder combines better than BP with the OSD post-processing step. Moreover, combining OSD post-processing with the diversity brought by the use of multiple BP-RNN decoders, provides an efficient way to bridge the gap to maximum likelihood decoding.
+
+## Fully Absorbing Set Enumerators for Protograph-Based LDPC Code Ensembles
+
+- **Status**: ✅
+- **Reason**: 프로토그래프 LDPC absorbing set 열거자로 error floor 추정 — E(코드설계, error floor) 이식 가능, 바이너리
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9899448
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Emna Ben Yacoub, Gianluigi Liva
+- **PDF**: https://ieeexplore.ieee.org/document/9899448
+- **Abstract**: The average finite-length (elementary) fully absorbing set enumerators for binary protograph-based low-density parity-check (LDPC) code ensembles are derived. The method relies on generating functions, and it provides an efficient mean to obtain the normalized logarithmic asymptotic distribution of (elementary) fully absorbing sets. Using these results, the asymptotic distribution of (elementary) fully absorbing sets is evaluated for some protograph-based LDPC code ensembles. Numerical results show how the distributions can be used to estimate the error floor performance of protograph LDPC codes.
+
+## Multi-Layer Progressive Tree-Structured Edge Growth Algorithm for Nested Lifting Design of 5G-NR-Like LDPC Codes
+
+- **Status**: ✅
+- **Reason**: 5G-NR형 바이너리 QC-LDPC 네스티드 리프팅 PEG 변형 코드설계+error floor 최적화로 E 신규 기여
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9874840
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Zhitong He, Kewu Peng, Jian Song
+- **PDF**: https://ieeexplore.ieee.org/document/9874840
+- **Abstract**: We proposed an algorithm called multi-layer progressive tree-structured edge growth, to design rate-compatible length-scalable raptor-like quasi-cyclic LDPC codes with nested base matrices and nested lifting, like 5G new radio (NR) LDPC codes. The nested lifting design is mainly investigated in this letter. To deal with the complicated dependency of the performance for nested base matrices and lifting sizes simply and effectively, the design of nested lifting is decomposed into the lifting design of each lifting size, which is called a layer. In each layer, the lifting of nested base matrices is designed via progressive tree-structured edge growth algorithm, where tree structure is employed to reserve diversified intermediate results and achieve better trade-off of error floor performance among nested base matrices. The criterion composed of improved cycle classification, minimum distance test and performance evaluation is employed for tree pruning, which could better optimize the error floor performance under acceptable complexity. The effectiveness of the proposed algorithm is demonstrated via construction and simulation.
+
+## Neural Min-Sum Decoding for Generalized LDPC Codes
+
+- **Status**: ✅
+- **Reason**: GLDPC용 neural min-sum 디코더 + 성분 PCM 최적화 — C(디코더) 새 기여, 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:9900340
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Hee-Youl Kwak, Jae-Won Kim, Yongjune Kim +2
+- **PDF**: https://ieeexplore.ieee.org/document/9900340
+- **Abstract**: In this letter, we investigate the min-sum (MS) and neural MS (NMS) decoding algorithms for generalized low-density parity-check (GLDPC) codes. Although the MS decoder is much simpler than the a posteriori probability (APP) decoder commonly used for GLDPC codes, the MS decoder has not been considered mainly due to its inferior decoding performance. However, we show that the performance can be improved by i) employing the NMS decoding algorithm and ii) optimizing the component parity check matrix (PCM). For the four representative short GLDPC codes in the literature, experimental results show that the NMS decoding performance with the optimized component PCM significantly outperforms the MS decoding performance and even outperforms the APP decoding performance for some cases.
+
+## Hardware Architecture of Layered Decoders for PLDPC-Hadamard Codes
+
+- **Status**: ✅
+- **Reason**: PLDPC-Hadamard 계층 디코더 FPGA HW 아키텍처(파이프라인·주소메모리)로 D 이식 가능 HW 기여
+- **알고리즘 기여**: 🔧 하드웨어 수정만
+- **ID**: ieee:9869760
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Peng-Wei Zhang, Sheng Jiang, Francis C. M. Lau +1
+- **PDF**: https://ieeexplore.ieee.org/document/9869760
+- **Abstract**: Protograph-based low-density parity-check Hadamard codes (PLDPC-HCs) are a new type of ultimate-Shannon-limit-approaching codes. In this paper, we propose a hardware architecture for the PLDPC-HC layered decoders. The decoders consist mainly of random address memories, Hadamard sub-decoders and control logics. Two types of pipelined structures are presented and the latency and throughput of these two structures are derived. Implementation of the decoder design on an FPGA board shows that a throughput of 1.48 Gbps is achieved with a bit error rate (BER) of  $10^{-5}$  at around  $E_{b}/N_{0}=-0.40$  dB. The decoder can also achieve the same BER at  $E_{b}/N_{0}=-1.14$  dB with a reduced throughput of 0.20 Gbps.
+
+## Writing on dirty flash memory: Combating inter-cell interference via coding with side information
+
+- **Status**: ✅
+- **Reason**: 플래시 메모리 ICI 대응 side-information 채널코딩(결함셀 모델) — NAND 직접(A), 명백 포함
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10012459
+- **Type**: journal
+- **Published**: Dec. 2022
+- **Authors**: Yongjune Kim, Euiseok Hwang, B. V. K. Vijaya Kumar
+- **PDF**: https://ieeexplore.ieee.org/document/10012459
+- **Abstract**: High-density flash memories suffer from inter-cell interference (ICI) which threatens the reliability of stored data. In order to cope with the ICI problem, we propose a channel coding scheme with channel state information of flash memories (i.e., side information of ICI). This side information is obtained before writing data into flash memories and incorporated during the encoding stage. We show that flash memories under ICI problem can be transformed into the model of memory with defective cells due to the unique asymmetry property between write (page write) and erase (block erase) operations. Then, the channel coding for memory with defective cells is employed to combat ICI. Simulation results support that the proposed scheme with the ICI side information can effectively improve the decoding failure probability.
+
+## Sign Aided Adaptive Noisy Gradient Descent Bit-Flipping Algorithm for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: C: LDPC용 GDBF 변형(sign-aided adaptive noisy GDBF) 새 디코더 알고리즘 제안, 0.5dB 코딩 게인+낮은 HW 오버헤드로 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10065989
+- **Type**: conference
+- **Published**: 9-12 Dec. 
+- **Authors**: Keyue Deng, Yuxing Chen, Suwen Song +1
+- **PDF**: https://ieeexplore.ieee.org/document/10065989
+- **Abstract**: The adjustment factor aided noisy gradient descent bit-flipping (ANGDBF) offers a significant improvement in error correction capability compared with other gradient descent bit-flipping (GDBF) variants. However, there still exists a considerable performance gap between the ANGDBF algorithm and the belief propagation (BP) algorithm. This paper presents a sign aided adaptive noisy GDBF (SANGDBF) algorithm, in which the mean of noise perturbation shows an adaptive property, facilitating the decoding process to escape from the local maxima more effectively. Moreover, the sign of the correlation term is fully utilized to improve the reliability of the inversion function. Simulation results show that the SANGDBF algorithm can achieve about 0.5 dB coding gain compared with the ANGDBF algorithm with limited hardware overhead.
+
+## A Variable Node Design with Check Node Aware Quantization Leveraging 2-Bit LDPC Decoding
+
+- **Status**: ✅
+- **Reason**: 체크노드-aware 2-bit 변수노드 설계 + 저복잡도 체크노드 HW(트랜지스터 2/9, 지연 1/4) — 거친 양자화 디코더+HW 신기여, NAND 저정밀 LDPC에 직접 이식(C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10000665
+- **Type**: conference
+- **Published**: 4-8 Dec. 2
+- **Authors**: Philipp Mohr, Gerhard Bauch
+- **PDF**: https://ieeexplore.ieee.org/document/10000665
+- **Abstract**: For improving coarsely quantized decoding of LDPC codes, we propose a check node aware design of the variable node update. In contrast to previous works, we optimize the variable node to explicitly maximize the mutual information preserved in the check-to-variable instead of the variable-to-check node messages. The extended optimization leads to a significantly different solution for the compression operation at the variable node. Simulation results for regular LDPC codes confirm that the check node aware design, especially for very coarse quantization with 2- or 3-bit messages, achieves performance gains of up to 0.2 dB - without additional hardware costs. We also show that the 2-bit message resolution enables a very efficient implementation of the check node update, which requires only 2/9 of the 3-bit check node's transistor count and reduces the signal propagation delay by a factor of 4.
+
+## Uniform vs. Non-Uniform Coarse Quantization in Mutual Information Maximizing LDPC Decoding
+
+- **Status**: ✅
+- **Reason**: MI 최대화 LDPC 디코더의 균일 양자화 제안 — 저해상도 LLR 양자화·3비트 디코더 HW 단순화, NAND LDPC 디코더에 직접 이식 가능 (C/D)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10001452
+- **Type**: conference
+- **Published**: 4-8 Dec. 2
+- **Authors**: Philipp Mohr, Gerhard Bauch
+- **PDF**: https://ieeexplore.ieee.org/document/10001452
+- **Abstract**: Recently, low-resolution LDPC decoders have been introduced that perform mutual information maximizing signal processing. However, the optimal quantization in variable and check nodes requires expensive non-uniform operations. Instead, we propose to use uniform quantization with a simple hardware structure, which reduces the complexity of individual node operations approximately by half and shortens the decoding delay significantly. Our analysis shows that the loss of preserved mutual information resulting from restriction to uniform quantization is very small. Furthermore, the error rate simulations with regular LDPC codes confirm that the uniform quantization causes only minor performance degradation within 0.01 dB compared to the non-uniform alternative. Due to the complexity reduction, especially the proposed 3-bit decoder is a promising candidate to replace 4-bit conventional decoders.
+
+## Mutual Information-Maximizing Quantized Layered Min-Sum Decoding of QC-LDPC Codes
+
+- **Status**: ✅
+- **Reason**: MIM 양자화 레이어드 min-sum 디코더(QC-LDPC) + LUT 메모리 통합 — 저정밀(3/4bit) 디코더 신기여, NAND LDPC에 직접 이식(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10001160
+- **Type**: conference
+- **Published**: 4-8 Dec. 2
+- **Authors**: Cheng Lv, Xuan He, Peng Kang +3
+- **PDF**: https://ieeexplore.ieee.org/document/10001160
+- **Abstract**: In this paper, we propose a mutual information-maximizing quantized layered min-sum (MIM-QLMS) decoder for quasi-cyclic low-density parity-check (QC-LDPC) codes. Our proposed decoder operates similarly to a layered min-sum decoder with additional reconstruction and quantization operations by using single-input lookup tables (LUTs). In particular, we first develop the protograph-based MIM density evolution to design the LUTs, which may differ for each iteration and each edge in the protograph of the QC-LDPC codes. Furthermore, to minimize the memory requirement for storing the LUTs, we propose an optimization method to unify all LUTs into only four distinct LUTs, which can be used for all decoding iterations. To the best of our knowledge, the proposed MIM-QLMS decoders are the first class of layered finite alphabet iterative decoders (FAIDs) that are designed based on accurately tracking the probability distributions of the exchanged messages. Simulation results show that for 3-bit (resp. 4-bit) exchanged message precision, the proposed MIM-QLMS decoders can reasonably (resp. generally) outperform the state-of-the-art layered FAIDs and the layered normalized min-sum decoder, in terms of both the error rate performance and the average number of iterations.
+
+## Graph Neural Networks for Channel Decoding
+
+- **Status**: ✅
+- **Reason**: GNN 기반 채널 디코더로 LDPC/BCH BP 메시지패싱을 학습 — 신경망 디코더(C), NAND LDPC에 이식 가능
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10008601
+- **Type**: conference
+- **Published**: 4-8 Dec. 2
+- **Authors**: Sebastian Cammerer, Jakob Hoydis, Fayçal Aït Aoudia +1
+- **PDF**: https://ieeexplore.ieee.org/document/10008601
+- **Abstract**: In this work, we propose a fully differentiable graph neural network (GNN)-based architecture for channel decoding and showcase a competitive decoding performance for various coding schemes, such as low-density parity-check (LDPC) and BCH codes. The idea is to let a neural network (NN) learn a generalized message passing algorithm over a given graph that represents the forward error correction (FEC) code structure by replacing node and edge message updates with trainable functions. Contrary to many other deep learning-based decoding approaches, the proposed solution enjoys scalability to arbitrary block lengths and the training is not limited by the curse of dimensionality. We benchmark our proposed decoder against state-of-the-art in conventional channel decoding as well as against recent deep learning-based results. For the (63,45) BCH code, our solution outperforms weighted belief propagation (BP) decoding by approximately 0.4 dB with significantly less decoding iterations and even for 5G NR LDPC codes, we observe a competitive performance when compared to conventional BP decoding. For the BCH codes, the resulting GNN decoder can be fully parametrized with only 9640 weights.
+
+## Learning Quantization in LDPC Decoders
+
+- **Status**: ✅
+- **Reason**: C: BP 디코더 메시지 양자화 비트폭을 딥러닝으로 최적화 - 저복잡도 디코더용 이식 가능 기법(LLR/메시지 양자화는 NAND LDPC 핵심)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10008635
+- **Type**: conference
+- **Published**: 4-8 Dec. 2
+- **Authors**: Marvin Geiselhart, Ahmed Elkelesh, Jannis Clausius +4
+- **PDF**: https://ieeexplore.ieee.org/document/10008635
+- **Abstract**: Finding optimal message quantization is a key requirement for low complexity belief propagation (BP) decoding. To this end, we propose a floating-point surrogate model that imitates quantization effects as additions of uniform noise, whose amplitudes are trainable variables. We verify that the surrogate model closely matches the behavior of a fixed-point implementation and propose a hand-crafted loss function to realize a trade-off between complexity and error-rate performance. A deep learning-based method is then applied to optimize the message bitwidths. Moreover, we show that parameter sharing can both ensure implementation-friendly solutions and results in faster training convergence than independent parameters. We provide simulation results for 5G low-density parity-check (LDPC) codes and report an error-rate performance within 0.2 dB of floating-point decoding at an average message quantization bitwidth of 3.1 bits. In addition, we show that the learned bitwidths also generalize to other code rates and channels
+
+## Simulation of Dynamic Weighted MS Decoding Algorithm on LDPC for 5G
+
+- **Status**: ✅
+- **Reason**: Dynamic weighted min-sum 디코더 변형 — 이식 가능한 디코더 알고리즘(C)
+- **알고리즘 기여**: ✅ 알고리즘/코드 기여
+- **ID**: ieee:10016607
+- **Type**: conference
+- **Published**: 16-18 Dec.
+- **Authors**: Wang Qianchun, Jonathan M. Caballero
+- **PDF**: https://ieeexplore.ieee.org/document/10016607
+- **Abstract**: According to the characteristics of high-speed, low delay, large-capacity data transmission and various scenarios in 5G mobile communication, an improved decoding algorithm based on LDPC code for 5G is proposed. The algorithm adopts dynamic weighting decoding method to dynamically weight the information. In this way, the iteration can be accelerated when the information is transmitted, to reduce the number of iterations and improve the gain at the same time. From the point of view that 5G channel coding needs to support more bit rates, the simulation results show that compared with the traditional decoding algorithm, the performance of the improved MS algorithm is improved by about 0.4dB, and the dynamic weighting method improves the decoding performance and reduces the number of decoding iterations.

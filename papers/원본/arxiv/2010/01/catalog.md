@@ -1,0 +1,90 @@
+# arXiv — 2010-01
+
+
+## Worst Configurations (Instantons) for Compressed Sensing over Reals: a Channel Coding Approach
+
+- **Status**: ✅
+- **Reason**: LDPC error floor의 instanton(최악 에러패턴) 탐색 알고리즘 일반화 — error floor 분석 기법으로 코드설계에 이식 가능(E)
+- **ID**: arxiv:1001.5113v2
+- **Type**: preprint
+- **Published**: 2010-01-28
+- **Authors**: Shashi Kiran Chilappagari, Michael Chertkov, Bane Vasic
+- **PDF**: https://arxiv.org/pdf/1001.5113v2
+- **Abstract**: We consider the Linear Programming (LP) solution of the Compressed Sensing (CS) problem over reals, also known as the Basis Pursuit (BasP) algorithm. The BasP allows interpretation as a channel-coding problem, and it guarantees error-free reconstruction with a properly chosen measurement matrix and sufficiently sparse error vectors. In this manuscript, we examine how the BasP performs on a given measurement matrix and develop an algorithm to discover the sparsest vectors for which the BasP fails. The resulting algorithm is a generalization of our previous results on finding the most probable error-patterns degrading performance of a finite size Low-Density Parity-Check (LDPC) code in the error-floor regime. The BasP fails when its output is different from the actual error-pattern. We design a CS-Instanton Search Algorithm (ISA) generating a sparse vector, called a CS-instanton, such that the BasP fails on the CS-instanton, while the BasP recovery is successful for any modification of the CS-instanton replacing a nonzero element by zero. We also prove that, given a sufficiently dense random input for the error-vector, the CS-ISA converges to an instanton in a small finite number of steps. The performance of the CS-ISA is illustrated on a randomly generated $120\times 512$ matrix. For this example, the CS-ISA outputs the shortest instanton (error vector) pattern of length 11.
+
+## VLSI Architectures for WIMAX Channel Decoders
+
+- **Status**: ❌
+- **Reason**: WiMax 채널디코더 VLSI 챕터로 conv/turbo 중심·LDPC 부수 언급, 새 LDPC 디코더 HW 기여 불명확
+- **ID**: arxiv:1001.4694v1
+- **Type**: preprint
+- **Published**: 2010-01-26
+- **Authors**: Maurizio Martina, Guido Masera
+- **PDF**: https://arxiv.org/pdf/1001.4694v1
+- **Abstract**: This chapter describes the main architectures proposed in the literature to implement the channel decoders required by the WiMax standard, namely convolutional codes, turbo codes (both block and convolutional) and LDPC. Then it shows a complete design of a convolutional turbo code encoder/decoder system for WiMax.
+
+## Girth-12 Quasi-Cyclic LDPC Codes with Consecutive Lengths
+
+- **Status**: ✅
+- **Reason**: girth-12 (3,6) QC-LDPC 구성법(연속 길이) — 바이너리 QC-LDPC 코드설계 기법(E), NAND 이식 가능
+- **ID**: arxiv:1001.3916v1
+- **Type**: preprint
+- **Published**: 2010-01-22
+- **Authors**: Guohua Zhang, Xinmei Wang
+- **PDF**: https://arxiv.org/pdf/1001.3916v1
+- **Abstract**: A method to construct girth-12 (3,L) quasi-cyclic low-density parity-check (QC-LDPC) codes with all lengths larger than a certain given number is proposed, via a given girth-12 code subjected to some constraints. The lengths of these codes can be arbitrary integers of the form LP, provided that P is larger than a tight lower bound determined by the maximal element within the exponent matrix of the given girth-12 code. By applying the method to the case of row-weight six, we obtained a family of girth-12 (3,6) QC-LDPC codes for arbitrary lengths above 2688, which includes 30 member codes with shorter code lengths compared with the shortest girth-12 (3,6) QC-LDPC codes reported by O'Sullivan.
+
+## Dirty Paper Coding using Sign-bit Shaping and LDPC Codes
+
+- **Status**: ❌
+- **Reason**: dirty paper coding/sign-bit shaping의 무선 응용 특이적, LDPC는 채널코딩 베이스라인일뿐 떼어낼 ECC 기법 없음
+- **ID**: arxiv:1001.3476v1
+- **Type**: preprint
+- **Published**: 2010-01-20
+- **Authors**: G Shilpa, Andrew Thangaraj, Srikrishna Bhashyam
+- **PDF**: https://arxiv.org/pdf/1001.3476v1
+- **Abstract**: Dirty paper coding (DPC) refers to methods for pre-subtraction of known interference at the transmitter of a multiuser communication system. There are numerous applications for DPC, including coding for broadcast channels. Recently, lattice-based coding techniques have provided several designs for DPC. In lattice-based DPC, there are two codes - a convolutional code that defines a lattice used for shaping and an error correction code used for channel coding. Several specific designs have been reported in the recent literature using convolutional and graph-based codes for capacity-approaching shaping and coding gains. In most of the reported designs, either the encoder works on a joint trellis of shaping and channel codes or the decoder requires iterations between the shaping and channel decoders. This results in high complexity of implementation. In this work, we present a lattice-based DPC scheme that provides good shaping and coding gains with moderate complexity at both the encoder and the decoder. We use a convolutional code for sign-bit shaping, and a low-density parity check (LDPC) code for channel coding. The crucial idea is the introduction of a one-codeword delay and careful parsing of the bits at the transmitter, which enable an LDPC decoder to be run first at the receiver. This provides gains without the need for iterations between the shaping and channel decoders. Simulation results confirm that at high rates the proposed DPC method performs close to capacity with moderate complexity. As an application of the proposed DPC method, we show a design for superposition coding that provides rates better than time-sharing over a Gaussian broadcast channel.
+
+## Multilevel Decoders Surpassing Belief Propagation on the Binary Symmetric Channel
+
+- **Status**: ✅
+- **Reason**: trapping set 기반 신규 3비트 양자화 메시지패싱 디코더(BP/min-sum 능가) — 이식 가능 디코더 알고리즘(C)
+- **ID**: arxiv:1001.3421v2
+- **Type**: preprint
+- **Published**: 2010-01-19
+- **Authors**: Shiva Kumar Planjery, David Declercq, Shashi Kiran Chilappagari +1
+- **PDF**: https://arxiv.org/pdf/1001.3421v2
+- **Abstract**: In this paper, we propose a new class of quantized message-passing decoders for LDPC codes over the BSC. The messages take values (or levels) from a finite set. The update rules do not mimic belief propagation but instead are derived using the knowledge of trapping sets. We show that the update rules can be derived to correct certain error patterns that are uncorrectable by algorithms such as BP and min-sum. In some cases even with a small message set, these decoders can guarantee correction of a higher number of errors than BP and min-sum. We provide particularly good 3-bit decoders for 3-left-regular LDPC codes. They significantly outperform the BP and min-sum decoders, but more importantly, they achieve this at only a fraction of the complexity of the BP and min-sum decoders.
+
+## Source Coding With Side Information Using List Decoding
+
+- **Status**: ❌
+- **Reason**: 소스코딩(SCSI) + list decoding으로 RS/BCH/Reed-Muller 설계; 채널 ECC 아니고 비-LDPC 부호, 떼어낼 LDPC 기법 없음
+- **ID**: arxiv:1001.2805v1
+- **Type**: preprint
+- **Published**: 2010-01-16
+- **Authors**: Mortuza Ali, Margreta Kuijper
+- **PDF**: https://arxiv.org/pdf/1001.2805v1
+- **Abstract**: The problem of source coding with side information (SCSI) is closely related to channel coding. Therefore, existing literature focuses on using the most successful channel codes namely, LDPC codes, turbo codes, and their variants, to solve this problem assuming classical unique decoding of the underlying channel code. In this paper, in contrast to classical decoding, we have taken the list decoding approach. We show that syndrome source coding using list decoding can achieve the theoretical limit. We argue that, as opposed to channel coding, the correct sequence from the list produced by the list decoder can effectively be recovered in case of SCSI, since we are dealing with a virtual noisy channel rather than a real noisy channel. Finally, we present a guideline for designing constructive SCSI schemes using Reed Solomon code, BCH code, and Reed-Muller code, which are the known list-decodable codes.
+
+## Check Reliability Based Bit-Flipping Decoding Algorithms for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: LDPC용 신규 check-reliability 기반 bit-flipping 디코더(HD/SD), 부호 비의존 이식 가능 디코더 알고리즘(C)
+- **ID**: arxiv:1001.2503v1
+- **Type**: preprint
+- **Published**: 2010-01-14
+- **Authors**: Chi-Yuan Chang, Yu T. Su, Yu-Liang Chen +1
+- **PDF**: https://arxiv.org/pdf/1001.2503v1
+- **Abstract**: We introduce new reliability definitions for bit and check nodes. Maximizing global reliability, which is the sum reliability of all bit nodes, is shown to be equivalent to minimizing a decoding metric which is closely related to the maximum likelihood decoding metric. We then propose novel bit-flipping (BF) decoding algorithms that take into account the check node reliability. Both hard-decision (HD) and soft-decision (SD) versions are considered. The former performs better than the conventional BF algorithm and, in most cases, suffers less than 1 dB performance loss when compared with some well known SD BF decoders. For one particular code it even outperforms those SD BF decoders. The performance of the SD version is superior to that of SD BF decoders and is comparable to or even better than that of the sum-product algorithm (SPA). The latter is achieved with a complexity much less than that required by the SPA.
+
+## Divide & Concur and Difference-Map BP Decoders for LDPC Codes
+
+- **Status**: ✅
+- **Reason**: Divide&Concur 기반 DMBP 디코더로 LDPC error-floor 대폭 개선, 이식 가능 BP 변형 디코더(C)
+- **ID**: arxiv:1001.1730v1
+- **Type**: preprint
+- **Published**: 2010-01-11
+- **Authors**: Jonathan S. Yedidia, Yige Wang, Stark C. Draper
+- **PDF**: https://arxiv.org/pdf/1001.1730v1
+- **Abstract**: The "Divide and Concur'' (DC) algorithm, recently introduced by Gravel and Elser, can be considered a competitor to the belief propagation (BP) algorithm, in that both algorithms can be applied to a wide variety of constraint satisfaction, optimization, and probabilistic inference problems. We show that DC can be interpreted as a message-passing algorithm on a constraint graph, which helps make the comparison with BP more clear. The "difference-map'' dynamics of the DC algorithm enables it to avoid "traps'' which may be related to the "trapping sets'' or "pseudo-codewords'' that plague BP decoders of low-density parity check (LDPC) codes in the error-floor regime.   We investigate two decoders for low-density parity-check (LDPC) codes based on these ideas. The first decoder is based directly on DC, while the second decoder borrows the important "difference-map'' concept from the DC algorithm and translates it into a BP-like decoder. We show that this "difference-map belief propagation'' (DMBP) decoder has dramatically improved error-floor performance compared to standard BP decoders, while maintaining a similar computational complexity. We present simulation results for LDPC codes on the additive white Gaussian noise and binary symmetric channels, comparing DC and DMBP decoders with other decoders based on BP, linear programming, and mixed-integer linear programming.
