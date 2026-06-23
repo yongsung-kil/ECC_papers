@@ -23,17 +23,6 @@
 - **PDF**: https://arxiv.org/pdf/2104.06328v1
 - **Abstract**: A decoding algorithm for $q$-ary low-density parity-check codes over the $q$-ary symmetric channel is introduced. The exchanged messages are lists of symbols from $\Fq$. A density evolution analysis for maximum list sizes $1$ and $2$ is developed. Thresholds for selected regular low-density parity-check code ensembles are computed showing gains with respect to a similar algorithm in the literature. Finite-length simulation results confirm the asymptotic analysis.
 
-## Irregular-Mapped Protograph LDPC-Coded Modulation: A Bandwidth-Efficient Solution for $5$G Networks with Massive Data-Storage Requirement
-
-- **Status**: ✅
-- **Reason**: MLC NAND 플래시 직접 대상, protograph IMARA 코드설계+EPEXIT 분석+read-voltage 최적화 — A/E 명확 포함
-- **ID**: arxiv:2104.02856v2
-- **Type**: preprint
-- **Published**: 2021-04-07
-- **Authors**: Yi Fang, Yingcheng Bu, Pingping Chen +3
-- **PDF**: https://arxiv.org/pdf/2104.02856v2
-- **Abstract**: The huge amount of data produced in the fifth-generation (5G) networks not only brings new challenges to the reliability and efficiency of mobile devices but also drives rapid development of new storage techniques. With the benefits of fast access speed and high reliability, NAND flash memory has become a promising storage solution for the 5G networks. In this paper, we investigate a protograph-coded bit-interleaved coded modulation with iterative detection and decoding (BICM-ID) utilizing irregular mapping (IM) in the multi-level-cell (MLC) NAND flash-memory systems. First, we propose an enhanced protograph-based extrinsic information transfer (EPEXIT) algorithm to facilitate the analysis of protograph codes in the IM-BICM-ID systems. With the use of EPEXIT algorithm, a simple design method is conceived for the construction of a family of high-rate protograph codes, called irregular-mapped accumulate-repeat-accumulate (IMARA) codes, which possess both excellent decoding thresholds and linear-minimum-distance-growth property. Furthermore, motivated by the voltage-region iterative gain characteristics of IM-BICM-ID systems, a novel read-voltage optimization scheme is developed to acquire accurate read-voltage levels, thus minimizing the decoding thresholds of protograph codes. Theoretical analyses and error-rate simulations indicate that the proposed IMARA-aided IM-BICM-ID scheme and the proposed read-voltage optimization scheme remarkably improve the convergence and decoding performance of flash-memory systems. Thus, the proposed protograph-coded IM-BICM-ID flash-memory systems can be viewed as a reliable and efficient storage solution for the new-generation mobile networks with massive data-storage requirement.
-
 ## Log-domain decoding of quantum LDPC codes over binary finite fields
 
 - **Status**: ❌
