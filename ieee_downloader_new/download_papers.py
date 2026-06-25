@@ -31,6 +31,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
+from urllib.parse import quote, urljoin, urlparse
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -52,6 +53,10 @@ DL_TIMEOUT = 90         # 논문 1편 다운로드 대기 최대 초
 PAGE_TIMEOUT = 15       # stamp 페이지에서 iframe(실제 PDF)이 뜰 때까지 최대 초
 POLITE_DELAY = 1.5      # 논문 사이 간격(초) — 너무 빠르면 IEEE 가 막을 수 있어 둠
 FAIL_DELAY = 5          # 실패 시 추가 휴식(초)
+USE_YONSEI_PROXY = True
+YONSEI_PROXY_PREFIX = "https://access.yonsei.ac.kr/link.n2s?url="
+ID = "2022313262"
+PW = "Password1!"
 # ───────────────────────────────────────────────────────────────────────
 
 
@@ -108,14 +113,52 @@ def clear_staging():
 
 
 def staging_pdf():
-    """staging 에 완성된(.crdownload 없는) .pdf 가 있으면 경로, 없으면 None."""
+    """
+    STAGING 폴더에 다운로드가 완료된 PDF가 있으면 파일 경로 반환.
+    연세 proxy를 거치면 파일명이 getPDF.jsp로 저장될 수 있으므로,
+    확장자가 .pdf가 아니어도 실제 파일 내용이 PDF이면 인정한다.
+    """
     if not os.path.isdir(STAGING):
         return None
+
     files = os.listdir(STAGING)
-    if any(f.endswith(".crdownload") for f in files):
+
+    # 아직 다운로드 중이면 기다림
+    if any(
+        f.lower().endswith((".crdownload", ".tmp"))
+        for f in files
+    ):
         return None
-    pdfs = [f for f in files if f.lower().endswith(".pdf")]
-    return os.path.join(STAGING, pdfs[0]) if pdfs else None
+
+    for f in files:
+        path = os.path.join(STAGING, f)
+
+        if not os.path.isfile(path):
+            continue
+
+        # 너무 작은 파일은 오류 페이지일 가능성이 높으니 제외
+        try:
+            if os.path.getsize(path) < 1000:
+                continue
+        except OSError:
+            continue
+
+        # 1) 일반적인 PDF 파일명
+        if f.lower().endswith(".pdf"):
+            return path
+
+        # 2) getPDF.jsp 같은 이름이어도 실제 내용이 PDF이면 인정
+        try:
+            with open(path, "rb") as fp:
+                header = fp.read(5)
+
+            if header == b"%PDF-":
+                return path
+
+        except Exception:
+            pass
+
+    return None
 
 
 def wait_download(timeout):
@@ -129,33 +172,235 @@ def wait_download(timeout):
     return None
 
 
-def download_one(driver, arnumber):
-    """stamp 페이지 → iframe(실제 PDF) 로 곧장 이동해 다운로드.
-    완성 파일경로 반환 or None."""
-    stamp = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={arnumber}"
-    clear_staging()
-    driver.get(stamp)
+def proxify(url):
+    if not USE_YONSEI_PROXY:
+        return url
 
-    # iframe 의 PDF src 가 나타나는 즉시 이동 (무의미한 고정 대기 제거).
-    # 드물게 stamp 가 바로 다운로드를 트리거하면 그 사이 staging 에 파일이 생긴다.
+    if url.startswith(YONSEI_PROXY_PREFIX):
+        return url
+
+    if url.startswith("//"):
+        url = "https:" + url
+
+    return YONSEI_PROXY_PREFIX + quote(url, safe="")
+
+
+def find_first_visible(driver, selectors, timeout=3):
+    from selenium.webdriver.common.by import By
+
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        for sel in selectors:
+            try:
+                elements = driver.find_elements(By.CSS_SELECTOR, sel)
+                for e in elements:
+                    if e.is_displayed() and e.is_enabled():
+                        return e
+            except Exception:
+                pass
+
+        time.sleep(0.2)
+
+    return None
+
+
+def login_yonsei_if_needed(driver, timeout=5):
+    """
+    현재 페이지가 연세 로그인 페이지이면 ID/PW 입력 후 로그인.
+    로그인 페이지가 아니면 False 반환.
+    """
+
+    # 아무 사이트에나 비밀번호를 넣지 않도록 yonsei 도메인에서만 작동
+    host = urlparse(driver.current_url).netloc.lower()
+    if "yonsei.ac.kr" not in host:
+        return False
+
+    user_selectors = [
+        "input[name='id']",
+        "input[name='userId']",
+        "input[name='userid']",
+        "input[name='username']",
+        "input[name='loginId']",
+        "input#id",
+        "input#userId",
+        "input#userid",
+        "input[type='text']",
+        "input[type='email']",
+    ]
+
+    pw_selectors = [
+        "input[name='pw']",
+        "input[name='password']",
+        "input[name='passwd']",
+        "input#pw",
+        "input#password",
+        "input[type='password']",
+    ]
+
+    button_selectors = [
+        "button[type='submit']",
+        "input[type='submit']",
+        "button#loginBtn",
+        "button#btnLogin",
+        "input#loginBtn",
+        ".login_btn",
+        ".btn_login",
+    ]
+
+    pw_box = find_first_visible(driver, pw_selectors, timeout=timeout)
+
+    # password input이 없으면 로그인 페이지가 아니라고 판단
+    if pw_box is None:
+        return False
+
+    user_box = find_first_visible(driver, user_selectors, timeout=timeout)
+
+    if user_box is None:
+        print("! 로그인 페이지로 보이지만 ID 입력칸을 찾지 못함")
+        return False
+
+    try:
+        user_box.clear()
+    except Exception:
+        pass
+
+    user_box.send_keys(ID)
+
+    try:
+        pw_box.clear()
+    except Exception:
+        pass
+
+    pw_box.send_keys(PW)
+
+    btn = find_first_visible(driver, button_selectors, timeout=1)
+
+    if btn is not None:
+        driver.execute_script("arguments[0].click();", btn)
+    else:
+        from selenium.webdriver.common.keys import Keys
+        pw_box.send_keys(Keys.ENTER)
+
+    time.sleep(3)
+    return True
+
+
+def click_open_button_if_exists(driver, timeout=2):
+    """
+    연세 proxy 중간 페이지에서 '열기' 버튼이 뜨면 자동 클릭.
+    없으면 False.
+
+    이전 구현은 5개 xpath를 각각 WebDriverWait(timeout)로 '순차' 대기해
+    버튼이 없는 정상 케이스에서 timeout×5 만큼 낭비했다.
+    여기서는 전체 timeout 안에서 5개 xpath를 함께 폴링해
+    버튼이 없으면 timeout 한 번만 소진하고 즉시 빠져나온다.
+    """
+    from selenium.webdriver.common.by import By
+
+    xpaths = [
+        "//button[normalize-space()='열기']",
+        "//a[normalize-space()='열기']",
+        "//input[@value='열기']",
+        "//*[self::button or self::a][contains(normalize-space(), '열기')]",
+        "//*[self::button or self::a][contains(normalize-space(), 'Open')]",
+    ]
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        for xp in xpaths:
+            try:
+                for btn in driver.find_elements(By.XPATH, xp):
+                    if btn.is_displayed() and btn.is_enabled():
+                        driver.execute_script("arguments[0].click();", btn)
+                        time.sleep(0.5)
+                        return True
+            except Exception:
+                pass
+        time.sleep(0.2)
+
+    return False
+
+
+def open_url_with_yonsei_handling(driver, url, max_rounds=3):
+    """
+    URL 접근 시:
+    1. 로그아웃 상태면 자동 로그인
+    2. proxy '열기' 버튼이 있으면 자동 클릭
+    3. 로그인 후 원래 URL 재접근
+    """
+
+    for _ in range(max_rounds):
+        driver.get(url)
+        time.sleep(0.5)
+
+        did_login = login_yonsei_if_needed(driver, timeout=2)
+
+        if did_login:
+            # 로그인 후 원래 PDF/IEEE URL로 다시 접근
+            time.sleep(2)
+            continue
+
+        clicked = click_open_button_if_exists(driver, timeout=2)
+
+        if clicked:
+            time.sleep(1)
+
+            # 열기 클릭 후 로그인 페이지로 넘어가는 경우까지 처리
+            did_login_after_click = login_yonsei_if_needed(driver, timeout=2)
+
+            if did_login_after_click:
+                time.sleep(2)
+                continue
+
+        return
+    
+
+def download_one(driver, arnumber):
+    """
+    연세 proxy 경유:
+    stamp 페이지 접근 → proxy '열기' 자동 클릭 → iframe PDF src 추출
+    → PDF src 접근 → proxy '열기' 자동 클릭 → 다운로드 대기
+    """
+
+    raw_stamp = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={arnumber}"
+    stamp = proxify(raw_stamp)
+
+    clear_staging()
+    open_url_with_yonsei_handling(driver, stamp)
+
+    # 연세 proxy에서 '열기' 버튼 뜨면 자동 클릭
+    click_open_button_if_exists(driver, timeout=2)
+
     src = None
     deadline = time.time() + PAGE_TIMEOUT
+
     while time.time() < deadline:
         got = staging_pdf()
         if got:
             return got
+
         try:
             iframe = driver.find_element("css selector", "iframe")
             s = iframe.get_attribute("src")
-            if s and ".pdf" in s:
-                src = s
+
+            if s and ("pdf" in s.lower() or "getpdf" in s.lower()):
+                s = urljoin(driver.current_url, s)
+                src = proxify(s)
                 break
+
         except Exception:
             pass
+
         time.sleep(0.5)
 
     if src:
-        driver.get(src)
+        src = proxify(src)
+        open_url_with_yonsei_handling(driver, src)
+
+        # PDF src로 들어간 뒤에도 proxy '열기'가 다시 뜨면 자동 클릭
+        click_open_button_if_exists(driver, timeout=2)
+
     return wait_download(DL_TIMEOUT)
 
 
